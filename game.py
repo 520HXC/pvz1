@@ -2388,7 +2388,7 @@ class BattleState:
         if self.field.sky_sun and not self.mode_bool("no_sky_sun", False) and self.sky_t >= sun_interval:
             self.sky_t = 0.0
             self.tokens.append(Token(random.randint(LAWN_X + 36, self.lawn_right() - 36), random.randint(LAWN_Y + 36, self.lawn_bottom() - 36), 25, 9.0, "sun"))
-        if self.field.is_night and self.grave_t >= 18.0:
+        if self.field.is_night and self.uses_wave_system() and self.grave_t >= 18.0:
             self.grave_t = 0.0
             for _ in range(8):
                 row = random.randrange(self.rows())
@@ -5813,6 +5813,7 @@ class Game:
                     "mode_name": "puzzle_i_zombie",
                     "return_scene": scene,
                     "start_sun_override": 0.0,
+                    "no_sky_sun": True,
                     "zombie_cards": ["normal", "normal", "conehead", "buckethead", "pole_vaulting", "football"],
                 }
                 self.start_level(idx, selected_cards=[], mode_rules=rules)
