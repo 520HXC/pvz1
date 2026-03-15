@@ -2413,7 +2413,7 @@ class BattleState:
             elif not self.cards and not self.zombies:
                 self.result = "lose"
         target_duration = self.target_duration if self.target_duration > 0 else self.level.duration
-        if (not self.uses_wave_system()) and self.elapsed >= target_duration and not self.zombies:
+        if (not self.uses_wave_system()) and (not self.is_vasebreaker_mode()) and (not self.is_i_zombie_mode()) and self.elapsed >= target_duration and not self.zombies:
             self.result = "win"
 
     def update_conveyor(self) -> None:
