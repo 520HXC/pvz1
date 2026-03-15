@@ -1049,6 +1049,10 @@ class LevelConfig:
     cards: List[str]
     danger: int = 1
     tag_key: str = "tag_general"
+    total_waves: int = 0
+    large_wave_indices: Tuple[int, ...] = ()
+    final_wave_index: int = 0
+    wave_budgets: Tuple[int, ...] = ()
 
 
 @dataclass
@@ -1300,6 +1304,51 @@ def build_levels(total: int = 50) -> List[LevelConfig]:
     levels: List[LevelConfig] = []
     idx = 1
 
+    def build_wave_plan(level_idx: int, danger: int, battlefield: str) -> Tuple[int, Tuple[int, ...], int, Tuple[int, ...]]:
+        if level_idx <= 8:
+            total = 2 + (level_idx - 1) // 3
+        elif level_idx <= 16:
+            total = 4 + (level_idx - 9) // 3
+        elif level_idx <= 24:
+            total = 5 + (level_idx - 17) // 3
+        elif level_idx <= 32:
+            total = 6 + (level_idx - 25) // 4
+        elif level_idx <= 40:
+            total = 6 + (level_idx - 33) // 3
+        elif level_idx <= 49:
+            total = 7 + (level_idx - 41) // 4
+        else:
+            total = 9
+        total = int(clamp(float(total), 2.0, 9.0))
+
+        large = {total}
+        if total >= 4:
+            large.add(max(2, total // 2))
+        if total >= 6:
+            large.add(max(3, total - 2))
+        if level_idx >= 41:
+            large.add(max(2, total - 1))
+        if level_idx == 50:
+            large.update({3, 6, 9})
+        large = {wave for wave in large if 1 <= wave <= total}
+
+        base_budget = 3 + danger
+        if battlefield in ("pool", "fog", "roof"):
+            base_budget += 1
+        budgets: List[int] = []
+        for wave_idx in range(1, total + 1):
+            budget = base_budget + wave_idx
+            if wave_idx in large:
+                budget += 2 + max(1, danger // 2)
+            if wave_idx == total:
+                budget += 3 + danger
+            if level_idx <= 3:
+                budget = max(3, budget - 2)
+            elif level_idx <= 8:
+                budget = max(4, budget - 1)
+            budgets.append(int(budget))
+        return total, tuple(sorted(large)), total, tuple(budgets)
+
     def add_level(
         battlefield: str,
         duration: float,
@@ -1313,6 +1362,7 @@ def build_levels(total: int = 50) -> List[LevelConfig]:
         tag_key: str,
     ) -> None:
         nonlocal idx
+        total_waves, large_wave_indices, final_wave_index, wave_budgets = build_wave_plan(idx, danger, battlefield)
         levels.append(
             LevelConfig(
                 idx=idx,
@@ -1327,6 +1377,10 @@ def build_levels(total: int = 50) -> List[LevelConfig]:
                 cards=list(dict.fromkeys(cards)),
                 danger=int(clamp(float(danger), 1.0, 6.0)),
                 tag_key=tag_key,
+                total_waves=total_waves,
+                large_wave_indices=large_wave_indices,
+                final_wave_index=final_wave_index,
+                wave_budgets=wave_budgets,
             )
         )
         idx += 1
@@ -1703,6 +1757,13 @@ class BattleState:
         self.shovel_mode = False
         self.wave_warning_t = 0.0
         self.next_wave = 25.0
+        self.current_wave = 0
+        self.total_waves = 0
+        self.final_wave_index = 0
+        self.large_wave_indices: Tuple[int, ...] = ()
+        self.wave_budgets: List[int] = []
+        self.wave_spawn_remaining = 0
+        self.wave_pause_t = 0.0
         self.result: Optional[str] = None
         self.almanac_open = False
         self.main: Dict[Tuple[int, int], Plant] = {}
@@ -1722,6 +1783,9 @@ class BattleState:
         self.conveyor_cap = 8
         self.initial_selected_cards: List[str] = []
         self.imitater_target: Optional[str] = None
+        self.vases: Dict[Tuple[int, int], Dict[str, object]] = {}
+        self.brains: Dict[int, float] = {}
+        self.brain_goal = 0
 
     def mode_bool(self, key: str, default: bool = False) -> bool:
         val = self.mode_rules.get(key, default)
@@ -1745,6 +1809,15 @@ class BattleState:
     def is_wallnut_bowling_mode(self) -> bool:
         return self.mode_name() == "mini_wallnut_bowling"
 
+    def is_vasebreaker_mode(self) -> bool:
+        return self.mode_name() == "puzzle_vasebreaker"
+
+    def is_i_zombie_mode(self) -> bool:
+        return self.mode_name() == "puzzle_i_zombie"
+
+    def uses_wave_system(self) -> bool:
+        return not (self.is_vasebreaker_mode() or self.is_i_zombie_mode())
+
     def resolve_card_kind(self, card_kind: str) -> str:
         if card_kind == "imitater" and self.imitater_target in self.plant_types:
             return self.imitater_target
@@ -1764,11 +1837,7 @@ class BattleState:
     def bowling_roll_profile(self, kind: str) -> Optional[Tuple[float, float, int, int, float]]:
         profiles = {
             "wallnut": (238.0, 280.0, 3, 24, 0.0),
-            "tall_nut": (210.0, 420.0, 5, 28, 0.0),
-            "potato_mine": (232.0, 220.0, 1, 22, 104.0),
             "cherrybomb": (226.0, 250.0, 1, 22, 148.0),
-            "jalapeno": (254.0, 210.0, 1, 20, 132.0),
-            "squash": (216.0, 360.0, 2, 24, 0.0),
         }
         return profiles.get(kind)
 
@@ -1787,10 +1856,178 @@ class BattleState:
             pierce=pierce,
             radius=radius,
             splash=splash,
-            ttl=8.0 if kind in ("tall_nut", "squash") else 6.6,
+            ttl=6.6 if kind == "wallnut" else 5.8,
             spin=random.uniform(0.0, math.tau),
         )
         self.rolling_nuts.append(nut)
+        return True
+
+    def mode_wave_budgets(self, level: LevelConfig) -> Tuple[int, Tuple[int, ...], int, List[int]]:
+        total_waves = int(self.mode_float("total_waves_override", float(level.total_waves)))
+        if total_waves <= 0:
+            total_waves = max(1, level.total_waves)
+        raw_large = self.mode_rules.get("large_wave_indices", level.large_wave_indices)
+        large_wave_indices = tuple(sorted({int(x) for x in raw_large if 1 <= int(x) <= total_waves})) if raw_large else tuple()
+        final_wave_index = int(self.mode_float("final_wave_index", float(level.final_wave_index or total_waves)))
+        final_wave_index = int(clamp(float(final_wave_index), 1.0, float(total_waves)))
+        raw_budgets = self.mode_rules.get("wave_budgets", list(level.wave_budgets))
+        budgets: List[int] = []
+        if isinstance(raw_budgets, (list, tuple)):
+            for x in raw_budgets:
+                try:
+                    budgets.append(max(1, int(x)))
+                except (TypeError, ValueError):
+                    continue
+        if not budgets:
+            budgets = [4 + level.danger for _ in range(total_waves)]
+        if len(budgets) < total_waves:
+            budgets.extend([budgets[-1] if budgets else 4 + level.danger] * (total_waves - len(budgets)))
+        return total_waves, large_wave_indices, final_wave_index, budgets[:total_waves]
+
+    def spawn_plant_direct(self, kind: str, row: int, col: int) -> bool:
+        if kind not in self.plant_types or not self.can_place(kind, row, col):
+            return False
+        cfg = self.plant_types[kind]
+        slot = "armor" if cfg.is_overlay else ("support" if cfg.is_support else "main")
+        plant = Plant(kind=kind, row=row, col=col, hp=float(cfg.hp), slot=slot, cd=random.uniform(0.2, 0.8))
+        self.ensure_plant_anim_state(plant)
+        if kind == "potato_mine":
+            plant.cd = 0.0
+            plant.state["arm_t"] = 10.0
+            plant.state["armed"] = 0.0
+        if kind in ("cherrybomb", "jalapeno", "doom_shroom", "ice_shroom", "blover"):
+            plant.cd = 0.8
+        if kind == "sunflower":
+            plant.cd = random.uniform(4.5, 7.0)
+        if kind == "sun_shroom":
+            plant.cd = random.uniform(4.0, 6.0)
+        if kind == "marigold":
+            plant.cd = random.uniform(9.0, 12.0)
+        if slot == "main":
+            self.main[(row, col)] = plant
+        elif slot == "support":
+            self.support[(row, col)] = plant
+        else:
+            self.armor[(row, col)] = plant
+        return True
+
+    def spawn_zombie_instance(
+        self,
+        kind: str,
+        row: int,
+        x: float,
+        wave_idx: int = 1,
+        hp_scale: float = 1.0,
+        speed_scale: float = 1.0,
+        dps_scale: float = 1.0,
+    ) -> Zombie:
+        zcfg = self.zombie_types.get(kind, self.zombie_types["normal"])
+        wave_prog = 0.0 if self.total_waves <= 1 else (wave_idx - 1) / max(1, self.total_waves - 1)
+        hp = random.uniform(zcfg.hp * 0.95, zcfg.hp * 1.05) * (1.0 + wave_prog * 0.12)
+        spd = random.uniform(zcfg.speed[0], zcfg.speed[1]) * (1.0 + wave_prog * 0.05)
+        dps = random.uniform(zcfg.dps[0], zcfg.dps[1]) * (1.0 + wave_prog * 0.07)
+        if wave_idx in self.large_wave_indices:
+            hp *= 1.08
+            dps *= 1.05
+        if wave_idx == self.final_wave_index:
+            hp *= 1.14
+            dps *= 1.10
+        hp *= self.mode_float("zombie_hp_scale", 1.0) * hp_scale
+        spd *= self.mode_float("zombie_speed_scale", 1.0) * speed_scale
+        dps *= self.mode_float("zombie_dps_scale", 1.0) * dps_scale
+        z = Zombie(kind=kind, row=row, x=x, hp=hp, hp_max=hp, speed=spd, dps=dps)
+        self.ensure_zombie_anim_state(z)
+        return z
+
+    def start_next_wave(self) -> None:
+        if self.current_wave >= self.total_waves:
+            return
+        self.current_wave += 1
+        budget_idx = max(0, self.current_wave - 1)
+        self.wave_spawn_remaining = self.wave_budgets[budget_idx] if budget_idx < len(self.wave_budgets) else (4 + self.level.danger)
+        self.spawn_t = 0.0
+        self.next_wave = 0.0
+        if self.current_wave in self.large_wave_indices or self.current_wave == self.final_wave_index:
+            self.wave_warning_t = 3.0
+
+    def setup_vasebreaker_board(self) -> None:
+        self.cards = []
+        self.card_timer = {}
+        self.selected = ""
+        self.vases.clear()
+        plant_pool = ["puff_shroom", "sun_shroom", "fume_shroom", "wallnut", "potato_mine", "cherrybomb"]
+        zombie_pool = ["normal", "conehead", "buckethead", "newspaper", "screen_door"]
+        slots = [(r, c) for r in range(self.rows()) for c in range(3, COLS)]
+        random.shuffle(slots)
+        plant_count = min(6, len(slots))
+        zombie_count = min(7, max(4, self.rows() + 1))
+        sun_count = min(4, max(2, self.rows() - 1))
+        for _ in range(plant_count):
+            pos = slots.pop()
+            self.vases[pos] = {"kind": "plant", "value": random.choice(plant_pool)}
+        for _ in range(zombie_count):
+            pos = slots.pop()
+            self.vases[pos] = {"kind": "zombie", "value": random.choice(zombie_pool)}
+        for _ in range(sun_count):
+            pos = slots.pop()
+            self.vases[pos] = {"kind": "sun", "value": random.choice([25, 50])}
+
+    def setup_i_zombie_board(self) -> None:
+        self.cards = [k for k in self.mode_list("zombie_cards") if k in self.zombie_types]
+        if not self.cards:
+            self.cards = ["normal", "normal", "conehead", "buckethead", "pole_vaulting", "football"]
+        self.initial_selected_cards = list(self.cards)
+        self.selected = self.cards[0] if self.cards else "normal"
+        self.card_timer = {}
+        self.cleaners = [False for _ in range(self.rows())]
+        self.brains = {row: 1.0 for row in range(self.rows())}
+        self.brain_goal = len(self.brains)
+        preset = [
+            ("sunflower", 0, 1),
+            ("peashooter", 0, 3),
+            ("wallnut", 1, 2),
+            ("snowpea", 1, 4),
+            ("peashooter", 2, 2),
+            ("wallnut", 2, 4),
+            ("chomper", 3, 3),
+            ("repeater", 3, 5),
+            ("sunflower", 4, 1),
+            ("peashooter", 4, 4),
+        ]
+        for kind, row, col in preset:
+            self.spawn_plant_direct(kind, row, col)
+
+    def reveal_vase(self, row: int, col: int) -> bool:
+        payload = self.vases.pop((row, col), None)
+        if not payload:
+            return False
+        payload_kind = str(payload.get("kind", ""))
+        payload_value = payload.get("value")
+        if payload_kind == "plant" and isinstance(payload_value, str):
+            return self.spawn_plant_direct(payload_value, row, col)
+        if payload_kind == "zombie" and isinstance(payload_value, str):
+            z = self.spawn_zombie_instance(payload_value, row, self.cell_center(row, col)[0] + 18, wave_idx=max(1, self.current_wave))
+            self.zombies.append(z)
+            return True
+        if payload_kind == "sun":
+            cx, cy = self.cell_center(row, col)
+            self.tokens.append(Token(cx, cy - 12, int(payload_value or 25), 9.0, "sun"))
+            return True
+        return False
+
+    def place_i_zombie(self, kind: str, row: int, col: int) -> bool:
+        if not self.is_i_zombie_mode() or kind not in self.zombie_types:
+            return False
+        if col < COLS - 2:
+            return False
+        if any(z.row == row and z.x > LAWN_X + (COLS - 2) * CELL_W - 8 for z in self.zombies if z.hp > 0):
+            return False
+        x = LAWN_X + col * CELL_W + CELL_W * 0.72
+        z = self.spawn_zombie_instance(kind, row, x, wave_idx=max(1, self.current_wave))
+        self.zombies.append(z)
+        if kind in self.cards:
+            self.cards.remove(kind)
+        self.selected = self.cards[0] if self.cards else ""
         return True
 
     def card_runtime_cost(self, card_kind: str) -> int:
@@ -1888,7 +2125,8 @@ class BattleState:
         self.target_duration = self.mode_float("duration_override", level.duration)
         if self.target_duration <= 0:
             self.target_duration = level.duration * self.mode_float("duration_mult", 1.0)
-        self.wave_interval = max(14.0, self.mode_float("wave_interval", 25.0))
+        self.wave_interval = max(10.0, self.mode_float("wave_interval", 25.0))
+        self.total_waves, self.large_wave_indices, self.final_wave_index, self.wave_budgets = self.mode_wave_budgets(level)
         self.elapsed = 0.0
         self.spawn_t = 0.0
         self.sky_t = 0.0
@@ -1899,7 +2137,10 @@ class BattleState:
         self.paused = False
         self.shovel_mode = False
         self.wave_warning_t = 0.0
-        self.next_wave = self.wave_interval
+        self.next_wave = 1.0
+        self.current_wave = 0
+        self.wave_spawn_remaining = 0
+        self.wave_pause_t = 1.8
         self.result = None
         self.almanac_open = False
         self.main.clear()
@@ -1911,6 +2152,9 @@ class BattleState:
         self.rolling_nuts.clear()
         self.tokens.clear()
         self.cleaners = [True for _ in range(self.rows())]
+        self.vases.clear()
+        self.brains.clear()
+        self.brain_goal = 0
         if self.mode_bool("conveyor", False):
             self.conveyor_pool = [k for k in self.mode_list("conveyor_pool") if k in self.plant_types] or list(available)
             self.conveyor_cap = max(4, int(self.mode_float("conveyor_cap", 8.0)))
@@ -1921,25 +2165,29 @@ class BattleState:
         else:
             self.conveyor_pool = []
             self.conveyor_cap = 8
+        if self.is_vasebreaker_mode():
+            self.cleaners = [False for _ in range(self.rows())]
+            self.total_waves = 0
+            self.large_wave_indices = ()
+            self.final_wave_index = 0
+            self.wave_budgets = []
+            self.setup_vasebreaker_board()
+        elif self.is_i_zombie_mode():
+            self.total_waves = 0
+            self.large_wave_indices = ()
+            self.final_wave_index = 0
+            self.wave_budgets = []
+            self.setup_i_zombie_board()
 
-    def spawn_zombie(self) -> None:
+    def spawn_zombie(self, wave_idx: Optional[int] = None) -> None:
         if not self.level:
             return
         kinds = list(self.level.z_weights.keys())
         kind = random.choices(kinds, weights=list(self.level.z_weights.values()), k=1)[0]
-        zcfg = self.zombie_types.get(kind, self.zombie_types["normal"])
         row = random.randrange(self.rows())
         if kind in ("ducky_tube", "snorkel", "dolphin_rider", "bobsled_team") and self.field.water_rows:
             row = random.choice(self.field.water_rows)
-        prog = self.elapsed / max(1.0, self.target_duration if self.target_duration > 0 else self.level.duration)
-        hp = random.uniform(zcfg.hp * 0.94, zcfg.hp * 1.06) * (1 + prog * 0.18)
-        spd = random.uniform(zcfg.speed[0], zcfg.speed[1]) * (1 + prog * 0.06)
-        dps = random.uniform(zcfg.dps[0], zcfg.dps[1]) * (1 + prog * 0.09)
-        hp *= self.mode_float("zombie_hp_scale", 1.0)
-        spd *= self.mode_float("zombie_speed_scale", 1.0)
-        dps *= self.mode_float("zombie_dps_scale", 1.0)
-        z = Zombie(kind=kind, row=row, x=self.lawn_right() + random.randint(12, 72), hp=hp, hp_max=hp, speed=spd, dps=dps)
-        self.ensure_zombie_anim_state(z)
+        z = self.spawn_zombie_instance(kind, row, self.lawn_right() + random.randint(12, 72), wave_idx=wave_idx or max(1, self.current_wave))
         self.zombies.append(z)
 
     def mushroom_sleeping(self, plant: Plant) -> bool:
@@ -2044,7 +2292,7 @@ class BattleState:
                 if self.selected == kind:
                     self.selected = self.cards[0] if self.cards else (self.conveyor_pool[0] if self.conveyor_pool else kind)
             return True
-        if self.is_wallnut_bowling_mode() and self.spawn_rolling_nut(place_kind, row, col):
+        if self.is_wallnut_bowling_mode() and place_kind in ("wallnut", "cherrybomb") and self.spawn_rolling_nut(place_kind, row, col):
             if conveyor_mode and kind in self.cards:
                 self.cards.remove(kind)
                 if self.selected == kind:
@@ -2102,21 +2350,38 @@ class BattleState:
         self.fog_clear_t = max(0.0, self.fog_clear_t - dt)
         for k in list(self.card_timer.keys()):
             self.card_timer[k] = max(0.0, self.card_timer[k] - dt)
-        if self.elapsed >= self.next_wave:
-            self.wave_warning_t = 3.0
-            self.next_wave += self.wave_interval
-        spawn_cd = max(self.level.spawn_min, self.level.spawn_base - self.elapsed * self.level.spawn_acc)
-        spawn_cd /= max(0.25, self.mode_float("spawn_rate_mult", 1.0))
-        rhythm_cycle = self.mode_float("rhythm_cycle", 24.0)
-        if rhythm_cycle > 0:
-            phase = (self.elapsed % rhythm_cycle) / rhythm_cycle
-            if phase < 0.22:
-                spawn_cd *= 1.22
-            elif phase > 0.82:
-                spawn_cd *= 0.74
-        if self.spawn_t >= spawn_cd:
-            self.spawn_t = 0.0
-            self.spawn_zombie()
+        self.wave_pause_t = max(0.0, self.wave_pause_t - dt)
+        if self.uses_wave_system():
+            active_zombies = [z for z in self.zombies if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0]
+            if self.current_wave == 0 and self.wave_pause_t <= 0.0 and int(self.next_wave) == 1:
+                self.start_next_wave()
+            spawn_cd = max(self.level.spawn_min, self.level.spawn_base - self.elapsed * self.level.spawn_acc)
+            spawn_cd /= max(0.25, self.mode_float("spawn_rate_mult", 1.0))
+            rhythm_cycle = self.mode_float("rhythm_cycle", 24.0)
+            if rhythm_cycle > 0:
+                phase = (self.elapsed % rhythm_cycle) / rhythm_cycle
+                if phase < 0.22:
+                    spawn_cd *= 1.18
+                elif phase > 0.82:
+                    spawn_cd *= 0.78
+            while self.wave_spawn_remaining > 0 and self.spawn_t >= spawn_cd:
+                self.spawn_t -= spawn_cd
+                self.spawn_zombie(self.current_wave)
+                self.wave_spawn_remaining -= 1
+            lane_pressure_limit = max(1, self.level.danger - 1)
+            if self.wave_spawn_remaining <= 0 and self.current_wave > 0:
+                if self.current_wave < self.total_waves:
+                    if len(active_zombies) <= lane_pressure_limit:
+                        if int(self.next_wave) != self.current_wave + 1:
+                            self.next_wave = float(self.current_wave + 1)
+                            self.wave_pause_t = 4.2 if (self.current_wave + 1) in self.large_wave_indices else 2.8
+                        elif self.wave_pause_t <= 0.0:
+                            self.start_next_wave()
+                    else:
+                        self.next_wave = 0.0
+                        self.wave_pause_t = 0.0
+                elif not active_zombies and not self.rolling_nuts:
+                    self.result = "win"
         if self.mode_bool("conveyor", False):
             self.update_conveyor()
         sun_interval = 7.2 * self.mode_float("sky_sun_interval_scale", 1.0)
@@ -2140,8 +2405,15 @@ class BattleState:
             t.update(dt)
             if t.life <= 0:
                 self.tokens.remove(t)
+        if self.is_vasebreaker_mode() and not self.vases and not self.zombies:
+            self.result = "win"
+        if self.is_i_zombie_mode():
+            if not self.brains:
+                self.result = "win"
+            elif not self.cards and not self.zombies:
+                self.result = "lose"
         target_duration = self.target_duration if self.target_duration > 0 else self.level.duration
-        if self.elapsed >= target_duration and not self.zombies:
+        if (not self.uses_wave_system()) and self.elapsed >= target_duration and not self.zombies:
             self.result = "win"
 
     def update_conveyor(self) -> None:
@@ -2403,19 +2675,13 @@ class BattleState:
             else:
                 hit_target.x -= 18
 
-            if nut.kind == "jalapeno":
-                for z in self.zombies:
-                    if z.row == nut.row and abs(z.x - nut.x) <= CELL_W * 2.8:
-                        z.hp -= nut.damage * 0.92
-                        z.state["hit_flash"] = 0.14
-                nut.pierce = 0
-            elif nut.splash > 0:
+            if nut.splash > 0:
                 self.boom(nut.x, self.row_y(nut.row), nut.splash, nut.damage * 1.15)
                 nut.pierce = 0
             else:
                 nut.pierce -= 1
 
-            if nut.kind in ("wallnut", "tall_nut", "squash") and random.random() < 0.32:
+            if nut.kind == "wallnut" and random.random() < 0.32:
                 lane_shift = random.choice([-1, 1])
                 next_row = int(clamp(float(nut.row + lane_shift), 0.0, float(self.rows() - 1)))
                 if next_row != nut.row:
@@ -2528,6 +2794,12 @@ class BattleState:
                 mul = 0.55 if z.slow_t > 0 else 1.0
                 z.x += direction * z.speed * mul * dt
             if not z.hypnotized and z.x < LAWN_X - 18:
+                if self.is_i_zombie_mode():
+                    if z.row in self.brains:
+                        self.brains.pop(z.row, None)
+                    if z in self.zombies:
+                        self.zombies.remove(z)
+                    continue
                 if self.cleaners[z.row]:
                     self.cleaners[z.row] = False
                     for lane_z in self.zombies:
@@ -2572,10 +2844,27 @@ class BattleState:
         for row, active in enumerate(self.cleaners):
             y = self.row_y(row)
             rect = pygame.Rect(LAWN_X - 34, y - 16, 28, 32)
+            if self.is_i_zombie_mode():
+                if row in self.brains:
+                    brain = pygame.Rect(rect.x - 2, rect.y + 2, 34, 24)
+                    pygame.draw.ellipse(screen, (212, 132, 148), brain)
+                    pygame.draw.ellipse(screen, (136, 76, 92), brain, 2)
+                continue
             pygame.draw.rect(screen, (220, 60, 60) if active else (120, 120, 120), rect, border_radius=5)
         for (r, c) in self.graves:
             cx, cy = self.cell_center(r, c)
             pygame.draw.rect(screen, (142, 132, 142), (cx - 20, cy - 26, 40, 52), border_radius=8)
+        for (r, c), payload in self.vases.items():
+            cx, cy = self.cell_center(r, c)
+            vase = pygame.Rect(cx - 18, cy - 28, 36, 56)
+            pygame.draw.ellipse(screen, (202, 172, 138), vase)
+            pygame.draw.ellipse(screen, (126, 92, 62), vase, 3)
+            neck = pygame.Rect(cx - 10, cy - 34, 20, 18)
+            pygame.draw.ellipse(screen, (214, 186, 150), neck)
+            pygame.draw.ellipse(screen, (126, 92, 62), neck, 2)
+            marker = str(payload.get("kind", ""))
+            marker_col = (86, 168, 96) if marker == "plant" else ((146, 164, 136) if marker == "zombie" else (248, 212, 92))
+            pygame.draw.circle(screen, marker_col, (cx, cy - 4), 6)
         def sprite_fx(
             sprite: pygame.Surface,
             scale: float = 1.0,
@@ -2603,9 +2892,7 @@ class BattleState:
         for nut in self.rolling_nuts:
             cy = self.row_y(nut.row) + 6
             angle = math.degrees(nut.spin) % 360.0
-            scale = 0.50 if nut.kind in ("tall_nut", "squash") else 0.46
-            if nut.kind in ("cherrybomb", "jalapeno", "potato_mine"):
-                scale = 0.42
+            scale = 0.46 if nut.kind == "wallnut" else 0.42
             sprite = plant_sprite_fn(nut.kind, "main")
             if sprite is not None:
                 rs = sprite_fx(sprite, scale=scale, angle=angle)
@@ -2614,10 +2901,6 @@ class BattleState:
                 col = (166, 114, 66)
                 if nut.kind == "cherrybomb":
                     col = (214, 62, 62)
-                elif nut.kind == "jalapeno":
-                    col = (214, 72, 38)
-                elif nut.kind == "potato_mine":
-                    col = (154, 106, 74)
                 r = max(10, nut.radius - 4)
                 pygame.draw.circle(screen, col, (int(nut.x), int(cy)), r)
                 pygame.draw.circle(screen, (82, 58, 34), (int(nut.x), int(cy)), r, 3)
@@ -2833,7 +3116,14 @@ class BattleState:
             level_title = f"\u5173\u5361 {self.level.idx}"
         screen.blit(fonts["mid"].render(level_title, True, (30, 30, 30)), (18, 8))
         screen.blit(fonts["ui"].render(f"{tr('sun')}: {self.sun}", True, (35, 35, 35)), (150, 34))
-        screen.blit(fonts["mid"].render(f"{tr('time')}: {remain}{tr('sec')}", True, (30, 30, 30)), (1010, 26))
+        if self.uses_wave_system() and self.total_waves > 0:
+            wave_text = f"Wave {self.current_wave}/{self.total_waves}" if lang == "en" else f"波次 {self.current_wave}/{self.total_waves}"
+            screen.blit(fonts["mid"].render(wave_text, True, (30, 30, 30)), (980, 26))
+        elif self.is_i_zombie_mode():
+            brain_text = f"Brains: {len(self.brains)}/{self.brain_goal}" if lang == "en" else f"脑子: {len(self.brains)}/{self.brain_goal}"
+            screen.blit(fonts["mid"].render(brain_text, True, (30, 30, 30)), (980, 26))
+        else:
+            screen.blit(fonts["mid"].render(f"{tr('time')}: {remain}{tr('sec')}", True, (30, 30, 30)), (1010, 26))
         screen.blit(fonts["mid"].render(f"{tr('kills')}: {self.kills}", True, (30, 30, 30)), (1010, 52))
         screen.blit(fonts["mid"].render(f"{tr('coins')}: {int(self.save_data.get('coins', 0))}", True, (30, 30, 30)), (1010, 78))
         msg = f"{tr('field')}: {tr('field_' + self.field.key)} | {tr('cleaner')}: {tr(self.field.cleaner_name)}"
@@ -4743,6 +5033,18 @@ class Game:
     def draw_seed_bank(self, bank: pygame.Rect, mouse: Tuple[int, int]) -> None:
         self.draw_framed_panel(bank, fill=(224, 198, 148), border=(116, 78, 34), radius=10, inner=(236, 216, 176))
         conveyor_mode = self.battle.mode_bool("conveyor", False)
+        if self.battle.is_vasebreaker_mode():
+            title = self.fonts["small"].render(self.tr("puzzle_vasebreaker"), True, (60, 42, 24))
+            hint = self.fonts["tiny"].render("Break vases to reveal contents" if self.lang == "en" else "点击花瓶揭示植物、僵尸或阳光", True, (86, 62, 34))
+            self.screen.blit(title, (bank.x + 12, bank.y + 8))
+            self.screen.blit(hint, (bank.x + 12, bank.y + 34))
+            return
+        if self.battle.is_i_zombie_mode():
+            for kind, rect in self.battle_card_buttons():
+                self.draw_zombie_packet(rect, kind, selected=(kind == self.battle.selected), hover=rect.collidepoint(mouse), small=True)
+            label = self.fonts["tiny"].render(self.tr("puzzle_i_zombie"), True, (60, 42, 24))
+            self.screen.blit(label, (bank.x + 10, bank.y + 4))
+            return
         for kind, rect in self.battle_card_buttons():
             sel = kind == self.battle.selected
             hover = rect.collidepoint(mouse)
@@ -5440,7 +5742,7 @@ class Game:
                     "mode_name": "mini_wallnut_bowling",
                     "return_scene": scene,
                     "conveyor": True,
-                    "conveyor_pool": ["wallnut", "tall_nut", "potato_mine", "squash", "cherrybomb", "jalapeno", "spikeweed"],
+                    "conveyor_pool": ["wallnut", "cherrybomb"],
                     "conveyor_interval": 1.7,
                     "conveyor_cap": 9,
                     "no_sun_cost": True,
@@ -5497,36 +5799,23 @@ class Game:
         if scene == "puzzle_select":
             if entry_id == "puzzle_vasebreaker":
                 idx = self.find_level_by_field("night")
-                pool = ["puff_shroom", "sun_shroom", "fume_shroom", "grave_buster", "potato_mine", "cherrybomb", "wallnut", "scaredy_shroom"]
                 rules = {
                     "mode_name": "puzzle_vasebreaker",
                     "return_scene": scene,
-                    "start_sun_override": 425.0,
+                    "start_sun_override": 0.0,
                     "no_sky_sun": True,
-                    "spawn_rate_mult": 0.92,
-                    "zombie_hp_scale": 0.84,
-                    "zombie_dps_scale": 0.88,
-                    "duration_mult": 0.95,
-                    "wave_interval": 27.0,
-                    "rhythm_cycle": 26.0,
                 }
-                self.open_plant_select(idx, forced_pool=pool, pick_limit=6, mode_rules=rules, return_scene=scene)
+                self.start_level(idx, selected_cards=[], mode_rules=rules)
                 return
             if entry_id == "puzzle_i_zombie":
                 idx = self.find_level_by_field("day")
-                pool = ["sunflower", "peashooter", "wallnut", "potato_mine", "snowpea", "chomper", "squash"]
                 rules = {
-                    "mode_name": "puzzle_limited_plants",
+                    "mode_name": "puzzle_i_zombie",
                     "return_scene": scene,
-                    "start_sun_override": 300.0,
-                    "spawn_rate_mult": 0.86,
-                    "zombie_hp_scale": 0.82,
-                    "zombie_dps_scale": 0.86,
-                    "duration_mult": 0.92,
-                    "wave_interval": 28.0,
-                    "rhythm_cycle": 24.0,
+                    "start_sun_override": 0.0,
+                    "zombie_cards": ["normal", "normal", "conehead", "buckethead", "pole_vaulting", "football"],
                 }
-                self.open_plant_select(idx, forced_pool=pool, pick_limit=5, mode_rules=rules, return_scene=scene)
+                self.start_level(idx, selected_cards=[], mode_rules=rules)
                 return
             if entry_id == "puzzle_portal":
                 idx = self.find_level_by_field("pool")
@@ -5767,6 +6056,25 @@ class Game:
             name_font = self.fonts["small"]
             self.screen.blit(name_font.render(self.plant_display_name(plant_key), True, info_col), (rect.x + 44, rect.y + 8))
             self.screen.blit(self.fonts["tiny"].render(f"{shown_cost} {self.tr('sun')}", True, info_col), (rect.x + 44, rect.y + rect.h - 18))
+
+    def draw_zombie_packet(self, rect: pygame.Rect, zombie_key: str, selected: bool = False, hover: bool = False, small: bool = True) -> None:
+        base = (216, 208, 190) if not selected else (230, 218, 196)
+        if hover:
+            base = (236, 224, 204)
+        self.draw_framed_panel(rect, fill=base, border=(112, 84, 56), radius=10, inner=(242, 236, 218))
+        top = pygame.Rect(rect.x + 6, rect.y + 6, rect.w - 12, 18 if small else 24)
+        self.draw_framed_panel(top, fill=(128, 88, 54), border=(78, 50, 28), radius=6, inner=(150, 108, 72))
+        name = self.zombie_display_name(zombie_key)
+        font = self.fonts["tiny"] if small else self.fonts["small"]
+        label = font.render(name, True, (248, 240, 220))
+        self.screen.blit(label, label.get_rect(center=top.center))
+        icon = self.get_zombie_sprite(zombie_key, size=(34, 42) if small else (44, 54))
+        icon_x = rect.centerx
+        icon_y = rect.centery + (6 if small else 10)
+        if icon is not None:
+            self.screen.blit(icon, icon.get_rect(center=(icon_x, icon_y)))
+        else:
+            pygame.draw.rect(self.screen, (132, 146, 124), (icon_x - 14, icon_y - 18, 28, 36), border_radius=6)
 
     def draw_seed_chooser_card(self, rect: pygame.Rect, plant_key: str, selected: bool, hover: bool, disabled: bool) -> None:
         cfg = self.plants[plant_key]
@@ -6071,7 +6379,12 @@ class Game:
                 return
             col = int((p[0] - LAWN_X) // CELL_W)
             row = int((p[1] - LAWN_Y) // CELL_H)
-            if self.battle.shovel_mode:
+            if self.battle.is_vasebreaker_mode():
+                self.battle.reveal_vase(row, col)
+            elif self.battle.is_i_zombie_mode():
+                if self.battle.selected:
+                    self.battle.place_i_zombie(self.battle.selected, row, col)
+            elif self.battle.shovel_mode:
                 self.battle.shovel(row, col)
             else:
                 self.battle.place(self.battle.selected, row, col)
@@ -6714,7 +7027,7 @@ class Game:
             "mini_speed_mode": "mini_slot_machine",
             "mini_last_stand": "mini_last_stand",
             "puzzle_vasebreaker": "puzzle_vasebreaker",
-            "puzzle_limited_plants": "puzzle_i_zombie",
+            "puzzle_i_zombie": "puzzle_i_zombie",
             "puzzle_lane_mix": "puzzle_portal",
             "survival_day": "survival_day",
             "survival_night": "survival_night",
@@ -6723,7 +7036,14 @@ class Game:
         }
         mode_text = self.tr(mode_key_map[mode_name]) if mode_name in mode_key_map else self.tr("adventure")
         line1 = f"{level_text} | {self.tr('field')}: {self.tr('field_' + self.battle.field.key)} | {mode_text}"
-        line2 = f"{self.tr('time')}: {remain}{self.tr('sec')}  {self.tr('coins')}: {int(self.save_data.get('coins', 0))}"
+        if self.battle.uses_wave_system() and self.battle.total_waves > 0:
+            wave_text = f"Wave {self.battle.current_wave}/{self.battle.total_waves}" if self.lang == "en" else f"波次 {self.battle.current_wave}/{self.battle.total_waves}"
+            line2 = f"{wave_text}  {self.tr('coins')}: {int(self.save_data.get('coins', 0))}"
+        elif self.battle.is_i_zombie_mode():
+            brain_text = f"Brains {len(self.battle.brains)}/{self.battle.brain_goal}" if self.lang == "en" else f"脑子 {len(self.battle.brains)}/{self.battle.brain_goal}"
+            line2 = f"{brain_text}  {self.tr('coins')}: {int(self.save_data.get('coins', 0))}"
+        else:
+            line2 = f"{self.tr('time')}: {remain}{self.tr('sec')}  {self.tr('coins')}: {int(self.save_data.get('coins', 0))}"
         self.screen.blit(self.fonts["tiny"].render(line1, True, (46, 38, 26)), (cluster.x + 60, cluster.y + 16))
         self.screen.blit(self.fonts["tiny"].render(line2, True, (46, 38, 26)), (cluster.x + 60, cluster.y + 32))
 

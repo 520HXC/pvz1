@@ -1,10 +1,12 @@
 {
   "unlocked": 1,
-  "coins": 150,
+  "coins": 175,
   "upgrades": {},
   "options_music": true,
   "options_sfx": true,
   "zen_growth": {
-    "sunflower": 1
+    "sunflower": 5,
+    "peashooter": 5,
+    "wallnut": 5
   }
 }
