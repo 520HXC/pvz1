@@ -166,9 +166,14 @@ I18N = {
 I18N.setdefault("en", {}).update(
     {
         "encyclopedia": "Encyclopedia",
+        "encyclopedia_menu_title": "Almanac Book",
+        "encyclopedia_choose_side": "Choose a category",
+        "open_encyclopedia": "Open Encyclopedia",
         "plants_tab": "Plants",
         "zombies_tab": "Zombies",
+        "intro": "Intro",
         "description": "Description",
+        "gameplay": "Gameplay",
         "gameplay_summary": "Gameplay Summary",
         "threat": "Threat",
         "threat_summary": "Threat Summary",
@@ -179,14 +184,20 @@ I18N.setdefault("en", {}).update(
         "cooldown": "Cooldown",
         "close": "Close",
         "page": "Page",
+        "pick_count": "Pick Plants",
     }
 )
 I18N.setdefault("zh", {}).update(
     {
         "encyclopedia": "\u56fe\u9274",
+        "encyclopedia_menu_title": "\u56fe\u9274\u4e66",
+        "encyclopedia_choose_side": "\u9009\u62e9\u5206\u7c7b",
+        "open_encyclopedia": "\u6253\u5f00\u56fe\u9274",
         "plants_tab": "\u690d\u7269",
         "zombies_tab": "\u50f5\u5c38",
+        "intro": "\u7b80\u4ecb",
         "description": "\u63cf\u8ff0",
+        "gameplay": "\u73a9\u6cd5",
         "gameplay_summary": "\u73a9\u6cd5\u603b\u7ed3",
         "threat": "\u5a01\u80c1",
         "threat_summary": "\u5a01\u80c1\u5206\u6790",
@@ -197,6 +208,7 @@ I18N.setdefault("zh", {}).update(
         "cooldown": "\u51b7\u5374",
         "close": "\u5173\u95ed",
         "page": "\u9875",
+        "pick_count": "\u9009\u62e9\u690d\u7269",
     }
 )
 
@@ -1382,19 +1394,33 @@ class Game:
         self.plant_select_pool: List[str] = []
         self.plant_select_selected: List[str] = []
         self.plant_select_pick_limit = 8
+        self.plant_select_scroll_y = 0
         self.almanac_tab = "plants"
         self.almanac_selected_key = {"plants": "", "zombies": ""}
         self.almanac_page = {"plants": 0, "zombies": 0}
         self.almanac_list_page_size = 11
+        self.encyclopedia_mode = "menu"
+        self.encyclopedia_tab = "plants"
+        self.encyclopedia_selected_key = {"plants": "", "zombies": ""}
+        self.encyclopedia_scroll_y = 0
+        self.encyclopedia_scroll_step = 40
         self.tip_idx = random.randrange(len(START_TIPS)) if START_TIPS else 0
         self.lang_zh_btn = pygame.Rect(SCREEN_WIDTH - 210, 20, 84, 38)
         self.lang_en_btn = pygame.Rect(SCREEN_WIDTH - 115, 20, 84, 38)
         self.pause_btn = pygame.Rect(SCREEN_WIDTH - 260, 20, 42, 38)
         self.shovel_btn = pygame.Rect(18, 22, 120, 38)
+        self.start_adventure_btn = pygame.Rect(760, 250, 380, 80)
+        self.start_shop_btn = pygame.Rect(760, 350, 380, 70)
+        self.start_quit_btn = pygame.Rect(760, 435, 380, 70)
+        self.start_book_btn = pygame.Rect(828, 530, 244, 96)
         self.back_btn = pygame.Rect(40, 640, 150, 48)
         self.shop_btn = pygame.Rect(1060, 640, 140, 48)
         self.plant_select_back_btn = pygame.Rect(36, 640, 170, 50)
         self.plant_select_start_btn = pygame.Rect(952, 626, 286, 64)
+        self.encyclopedia_menu_back_btn = pygame.Rect(46, 642, 170, 50)
+        self.encyclopedia_plants_btn = pygame.Rect(214, 212, 376, 282)
+        self.encyclopedia_zombies_btn = pygame.Rect(690, 212, 376, 282)
+        self.encyclopedia_back_btn = pygame.Rect(36, 640, 170, 50)
         self.result_btn = pygame.Rect(0, 0, 260, 56)
         self.result_btn.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 45)
 
@@ -2321,6 +2347,7 @@ class Game:
         level = self.levels[idx]
         self.plant_select_pool = self.battle.level_available_cards(level)
         self.plant_select_selected = []
+        self.plant_select_scroll_y = 0
         self.scene = "plant_select"
 
     def start_level(self, idx: int, selected_cards: Optional[List[str]] = None) -> None:
@@ -2329,6 +2356,7 @@ class Game:
         self.pending_level_idx = None
         self.plant_select_pool = []
         self.plant_select_selected = []
+        self.plant_select_scroll_y = 0
         self.scene = "battle"
 
     def level_buttons(self) -> List[Tuple[int, pygame.Rect]]:
@@ -2341,7 +2369,28 @@ class Game:
             btns.append((idx, pygame.Rect(240 + col * 470, 160 + row * 96, 430, 74)))
         return btns
 
-    def plant_select_grid_buttons(self) -> List[Tuple[str, pygame.Rect]]:
+    def plant_select_available_viewport(self) -> pygame.Rect:
+        return pygame.Rect(62, 184, 806, 434)
+
+    def plant_select_scroll_max(self) -> int:
+        cols = 5
+        card_h = 66
+        gap_y = 6
+        rows = math.ceil(len(self.plant_select_pool) / max(1, cols))
+        if rows <= 0:
+            return 0
+        content_h = rows * card_h + max(0, rows - 1) * gap_y
+        viewport_h = self.plant_select_available_viewport().h
+        return max(0, content_h - viewport_h)
+
+    def clamp_plant_select_scroll(self) -> None:
+        self.plant_select_scroll_y = int(clamp(float(self.plant_select_scroll_y), 0.0, float(self.plant_select_scroll_max())))
+
+    def scroll_plant_select(self, delta: int) -> None:
+        self.plant_select_scroll_y += int(delta)
+        self.clamp_plant_select_scroll()
+
+    def plant_select_grid_buttons(self, apply_scroll: bool = True) -> List[Tuple[str, pygame.Rect]]:
         buttons: List[Tuple[str, pygame.Rect]] = []
         cols = 5
         card_w = 154
@@ -2353,7 +2402,10 @@ class Game:
         for i, kind in enumerate(self.plant_select_pool):
             col = i % cols
             row = i // cols
-            rect = pygame.Rect(x0 + col * (card_w + gap_x), y0 + row * (card_h + gap_y), card_w, card_h)
+            y = y0 + row * (card_h + gap_y)
+            if apply_scroll:
+                y -= int(self.plant_select_scroll_y)
+            rect = pygame.Rect(x0 + col * (card_w + gap_x), y, card_w, card_h)
             buttons.append((kind, rect))
         return buttons
 
@@ -2367,6 +2419,66 @@ class Game:
         for i in range(self.plant_select_pick_limit):
             slots.append(pygame.Rect(x0 + i * (slot_w + gap), y0, slot_w, slot_h))
         return slots
+
+    def get_encyclopedia_keys(self, tab: str) -> List[str]:
+        if tab == "zombies":
+            return list(self.zombies.keys())
+        return list(self.plants.keys())
+
+    def encyclopedia_detail_layout(self) -> Dict[str, pygame.Rect]:
+        panel = pygame.Rect(44, 38, SCREEN_WIDTH - 88, SCREEN_HEIGHT - 86)
+        header = pygame.Rect(panel.x + 18, panel.y + 12, panel.w - 36, 42)
+        tabs = pygame.Rect(panel.x + 22, panel.y + 62, 256, 40)
+        left = pygame.Rect(panel.x + 20, panel.y + 110, 356, panel.h - 178)
+        list_view = pygame.Rect(left.x + 10, left.y + 48, left.w - 20, left.h - 58)
+        right = pygame.Rect(left.right + 18, panel.y + 110, panel.right - left.right - 38, panel.h - 178)
+        tab_plants = pygame.Rect(tabs.x, tabs.y, 120, 36)
+        tab_zombies = pygame.Rect(tabs.x + 132, tabs.y, 120, 36)
+        return {
+            "panel": panel,
+            "header": header,
+            "tabs": tabs,
+            "left": left,
+            "list_view": list_view,
+            "right": right,
+            "tab_plants": tab_plants,
+            "tab_zombies": tab_zombies,
+        }
+
+    def encyclopedia_scroll_max(self) -> int:
+        keys = self.get_encyclopedia_keys(self.encyclopedia_tab)
+        row_h = 44
+        gap = 6
+        content_h = len(keys) * row_h + max(0, len(keys) - 1) * gap
+        view_h = self.encyclopedia_detail_layout()["list_view"].h
+        return max(0, content_h - view_h)
+
+    def ensure_encyclopedia_state(self) -> None:
+        if self.encyclopedia_tab not in ("plants", "zombies"):
+            self.encyclopedia_tab = "plants"
+        for tab in ("plants", "zombies"):
+            keys = self.get_encyclopedia_keys(tab)
+            if not keys:
+                self.encyclopedia_selected_key[tab] = ""
+            elif self.encyclopedia_selected_key.get(tab, "") not in keys:
+                self.encyclopedia_selected_key[tab] = keys[0]
+        self.encyclopedia_scroll_y = int(clamp(float(self.encyclopedia_scroll_y), 0.0, float(self.encyclopedia_scroll_max())))
+
+    def scroll_encyclopedia(self, delta: int) -> None:
+        self.encyclopedia_scroll_y += int(delta)
+        self.ensure_encyclopedia_state()
+
+    def encyclopedia_entry_buttons(self) -> List[Tuple[str, pygame.Rect]]:
+        self.ensure_encyclopedia_state()
+        keys = self.get_encyclopedia_keys(self.encyclopedia_tab)
+        list_view = self.encyclopedia_detail_layout()["list_view"]
+        row_h = 44
+        gap = 6
+        buttons: List[Tuple[str, pygame.Rect]] = []
+        for i, key in enumerate(keys):
+            y = list_view.y + i * (row_h + gap) - int(self.encyclopedia_scroll_y)
+            buttons.append((key, pygame.Rect(list_view.x, y, list_view.w, row_h)))
+        return buttons
 
     def get_almanac_keys(self, tab: str) -> List[str]:
         if tab == "zombies":
@@ -2561,11 +2673,17 @@ class Game:
         if self.handle_lang_click(p):
             return
         if self.scene == "start":
-            if pygame.Rect(760, 250, 380, 80).collidepoint(p):
+            if self.start_adventure_btn.collidepoint(p):
                 self.scene = "select"
-            elif pygame.Rect(760, 350, 380, 70).collidepoint(p):
+            elif self.start_shop_btn.collidepoint(p):
                 self.scene = "shop"
-            elif pygame.Rect(760, 435, 380, 70).collidepoint(p):
+            elif self.start_book_btn.collidepoint(p):
+                self.encyclopedia_mode = "menu"
+                self.encyclopedia_tab = "plants"
+                self.encyclopedia_scroll_y = 0
+                self.ensure_encyclopedia_state()
+                self.scene = "encyclopedia_menu"
+            elif self.start_quit_btn.collidepoint(p):
                 self.save_mgr.save(self.save_data)
                 pygame.quit()
                 sys.exit()
@@ -2595,13 +2713,57 @@ class Game:
                 if rect.collidepoint(p) and i < len(self.plant_select_selected):
                     del self.plant_select_selected[i]
                     return
-            for kind, rect in self.plant_select_grid_buttons():
-                if rect.collidepoint(p):
-                    if kind in self.plant_select_selected:
-                        self.plant_select_selected.remove(kind)
-                    elif len(self.plant_select_selected) < self.plant_select_pick_limit:
-                        self.plant_select_selected.append(kind)
-                    return
+            viewport = self.plant_select_available_viewport()
+            if viewport.collidepoint(p):
+                for kind, rect in self.plant_select_grid_buttons(apply_scroll=True):
+                    if rect.collidepoint(p):
+                        if kind in self.plant_select_selected:
+                            self.plant_select_selected.remove(kind)
+                        elif len(self.plant_select_selected) < self.plant_select_pick_limit:
+                            self.plant_select_selected.append(kind)
+                        return
+            return
+        if self.scene == "encyclopedia_menu":
+            if self.encyclopedia_menu_back_btn.collidepoint(p):
+                self.scene = "start"
+                return
+            if self.encyclopedia_plants_btn.collidepoint(p):
+                self.encyclopedia_mode = "detail"
+                self.encyclopedia_tab = "plants"
+                self.encyclopedia_scroll_y = 0
+                self.ensure_encyclopedia_state()
+                self.scene = "encyclopedia_detail"
+                return
+            if self.encyclopedia_zombies_btn.collidepoint(p):
+                self.encyclopedia_mode = "detail"
+                self.encyclopedia_tab = "zombies"
+                self.encyclopedia_scroll_y = 0
+                self.ensure_encyclopedia_state()
+                self.scene = "encyclopedia_detail"
+                return
+            return
+        if self.scene == "encyclopedia_detail":
+            self.ensure_encyclopedia_state()
+            layout = self.encyclopedia_detail_layout()
+            if self.encyclopedia_back_btn.collidepoint(p):
+                self.encyclopedia_mode = "menu"
+                self.scene = "encyclopedia_menu"
+                return
+            if layout["tab_plants"].collidepoint(p):
+                self.encyclopedia_tab = "plants"
+                self.encyclopedia_scroll_y = 0
+                self.ensure_encyclopedia_state()
+                return
+            if layout["tab_zombies"].collidepoint(p):
+                self.encyclopedia_tab = "zombies"
+                self.encyclopedia_scroll_y = 0
+                self.ensure_encyclopedia_state()
+                return
+            if layout["list_view"].collidepoint(p):
+                for key, rect in self.encyclopedia_entry_buttons():
+                    if rect.collidepoint(p):
+                        self.encyclopedia_selected_key[self.encyclopedia_tab] = key
+                        return
             return
         if self.scene == "shop":
             if self.back_btn.collidepoint(p):
@@ -2668,10 +2830,25 @@ class Game:
         title = self.fonts["title"].render(self.tr("pvz_title"), True, (28, 30, 36))
         title = pygame.transform.smoothscale(title, (int(title.get_width() * 0.62), int(title.get_height() * 0.62)))
         self.screen.blit(title, title.get_rect(center=(panel.centerx, 190)))
-        for text, rect in [(self.tr("start_adventure"), pygame.Rect(760, 250, 380, 80)), (self.tr("shop"), pygame.Rect(760, 350, 380, 70)), (self.tr("quit"), pygame.Rect(760, 435, 380, 70))]:
+        for text, rect in [
+            (self.tr("start_adventure"), self.start_adventure_btn),
+            (self.tr("shop"), self.start_shop_btn),
+            (self.tr("quit"), self.start_quit_btn),
+        ]:
             pygame.draw.rect(self.screen, (140, 145, 160), rect, border_radius=14)
             pygame.draw.rect(self.screen, (72, 76, 90), rect, 3, border_radius=14)
             self.screen.blit(self.fonts["mid"].render(text, True, (24, 26, 32)), self.fonts["mid"].render(text, True, (24, 26, 32)).get_rect(center=rect.center))
+        book = self.start_book_btn
+        pygame.draw.rect(self.screen, (229, 193, 94), book, border_radius=14)
+        pygame.draw.rect(self.screen, (154, 118, 36), book, 3, border_radius=14)
+        spine = pygame.Rect(book.x + 12, book.y + 10, 28, book.h - 20)
+        pygame.draw.rect(self.screen, (196, 152, 62), spine, border_radius=8)
+        pygame.draw.rect(self.screen, (128, 92, 28), spine, 2, border_radius=8)
+        page = pygame.Rect(book.x + 46, book.y + 16, book.w - 62, book.h - 32)
+        pygame.draw.rect(self.screen, (245, 224, 162), page, border_radius=10)
+        pygame.draw.rect(self.screen, (148, 112, 42), page, 2, border_radius=10)
+        self.screen.blit(self.fonts["mid"].render(self.tr("encyclopedia"), True, (68, 44, 18)), (page.x + 14, page.y + 8))
+        self.screen.blit(self.fonts["small"].render(self.tr("open_encyclopedia"), True, (88, 62, 28)), (page.x + 14, page.y + 34))
         self.screen.blit(self.fonts["small"].render(f"{self.tr('coins')}: {int(self.save_data.get('coins', 0))}", True, (250, 241, 208)), (760, 525))
         if START_TIPS:
             self.screen.blit(self.fonts["small"].render(START_TIPS[self.tip_idx % len(START_TIPS)], True, (250, 241, 208)), (250, 675))
@@ -2704,6 +2881,7 @@ class Game:
         self.screen.blit(self.fonts["mid"].render(self.tr("shop"), True, (39, 32, 22)), (self.shop_btn.x + 42, self.shop_btn.y + 10))
 
     def draw_plant_select(self) -> None:
+        self.clamp_plant_select_scroll()
         for y in range(SCREEN_HEIGHT):
             t = y / SCREEN_HEIGHT
             pygame.draw.line(self.screen, (int(112 + 38 * t), int(86 + 30 * t), int(56 + 24 * t)), (0, y), (SCREEN_WIDTH, y))
@@ -2744,7 +2922,12 @@ class Game:
             self.screen.blit(self.fonts["small"].render(self.plant_display_name(kind), True, (36, 32, 24)), (rect.left + 42, rect.top + 10))
 
         self.screen.blit(self.fonts["mid"].render(self.tr("available_plants"), True, (64, 46, 24)), (72, 152))
-        for kind, rect in self.plant_select_grid_buttons():
+        viewport = self.plant_select_available_viewport()
+        old_clip = self.screen.get_clip()
+        self.screen.set_clip(viewport)
+        for kind, rect in self.plant_select_grid_buttons(apply_scroll=True):
+            if not rect.colliderect(viewport):
+                continue
             chosen = kind in self.plant_select_selected
             pygame.draw.rect(self.screen, (250, 238, 202) if chosen else (244, 227, 185), rect, border_radius=10)
             pygame.draw.rect(self.screen, (229, 150, 42) if chosen else (136, 100, 52), rect, 2, border_radius=10)
@@ -2756,6 +2939,14 @@ class Game:
                 pygame.draw.circle(self.screen, (84, 168, 98), (rect.left + 22, rect.centery), 14)
             self.screen.blit(self.fonts["small"].render(self.plant_display_name(kind), True, (34, 34, 34)), (rect.left + 44, rect.top + 8))
             self.screen.blit(self.fonts["small"].render(f"{cfg.cost} {self.tr('sun')}", True, (76, 62, 42)), (rect.left + 44, rect.top + 34))
+        self.screen.set_clip(old_clip)
+        scroll_max = self.plant_select_scroll_max()
+        if scroll_max > 0:
+            track = pygame.Rect(viewport.right - 8, viewport.top + 8, 4, viewport.h - 16)
+            pygame.draw.rect(self.screen, (180, 146, 92), track, border_radius=2)
+            knob_h = max(36, int(track.h * viewport.h / max(viewport.h, viewport.h + scroll_max)))
+            knob_y = track.y + int((track.h - knob_h) * (self.plant_select_scroll_y / scroll_max))
+            pygame.draw.rect(self.screen, (224, 172, 84), (track.x - 2, knob_y, 8, knob_h), border_radius=4)
 
         self.screen.blit(self.fonts["mid"].render(self.tr("zombie_preview"), True, (64, 46, 24)), (906, 94))
         zy = 132
@@ -2786,6 +2977,212 @@ class Game:
         pygame.draw.rect(self.screen, bd_col, self.plant_select_start_btn, 3, border_radius=14)
         txt = self.fonts["ui"].render(self.tr("start_battle"), True, txt_col)
         self.screen.blit(txt, txt.get_rect(center=self.plant_select_start_btn.center))
+
+    def draw_encyclopedia_menu(self) -> None:
+        for y in range(SCREEN_HEIGHT):
+            t = y / SCREEN_HEIGHT
+            pygame.draw.line(self.screen, (int(148 + 40 * t), int(102 + 32 * t), int(56 + 18 * t)), (0, y), (SCREEN_WIDTH, y))
+        main = pygame.Rect(74, 52, SCREEN_WIDTH - 148, SCREEN_HEIGHT - 126)
+        pygame.draw.rect(self.screen, (236, 208, 140), main, border_radius=22)
+        pygame.draw.rect(self.screen, (128, 90, 38), main, 4, border_radius=22)
+        title = self.fonts["title"].render(self.tr("encyclopedia_menu_title"), True, (76, 52, 20))
+        self.screen.blit(title, title.get_rect(center=(main.centerx, main.y + 58)))
+        tip = self.fonts["mid"].render(self.tr("encyclopedia_choose_side"), True, (96, 70, 34))
+        self.screen.blit(tip, tip.get_rect(center=(main.centerx, main.y + 108)))
+
+        for tab, rect, bg in [
+            ("plants", self.encyclopedia_plants_btn, (242, 221, 162)),
+            ("zombies", self.encyclopedia_zombies_btn, (228, 206, 152)),
+        ]:
+            pygame.draw.rect(self.screen, bg, rect, border_radius=20)
+            pygame.draw.rect(self.screen, (136, 98, 46), rect, 4, border_radius=20)
+            icon_box = pygame.Rect(rect.x + 26, rect.y + 26, rect.w - 52, 162)
+            pygame.draw.rect(self.screen, (252, 240, 204), icon_box, border_radius=14)
+            pygame.draw.rect(self.screen, (156, 118, 58), icon_box, 2, border_radius=14)
+            if tab == "plants":
+                spr = None
+                if "sunflower" in self.plants:
+                    spr = self.load_image(self.plants["sunflower"].sprite_path, size=(126, 126))
+                if spr is not None:
+                    self.screen.blit(spr, spr.get_rect(center=icon_box.center))
+                else:
+                    pygame.draw.circle(self.screen, (90, 188, 102), icon_box.center, 56)
+                label = self.tr("plants_tab")
+            else:
+                spr = None
+                if "normal" in self.zombies:
+                    spr = self.load_image(self.zombies["normal"].sprite_path, size=(122, 164))
+                if spr is not None:
+                    self.screen.blit(spr, spr.get_rect(center=icon_box.center))
+                else:
+                    pygame.draw.rect(self.screen, (124, 148, 114), (icon_box.centerx - 36, icon_box.centery - 54, 72, 108), border_radius=14)
+                label = self.tr("zombies_tab")
+            txt = self.fonts["ui"].render(label, True, (62, 44, 22))
+            self.screen.blit(txt, txt.get_rect(center=(rect.centerx, rect.bottom - 46)))
+
+        pygame.draw.rect(self.screen, (231, 188, 90), self.encyclopedia_menu_back_btn, border_radius=10)
+        pygame.draw.rect(self.screen, (120, 78, 24), self.encyclopedia_menu_back_btn, 3, border_radius=10)
+        self.screen.blit(self.fonts["mid"].render(self.tr("back"), True, (39, 32, 22)), (self.encyclopedia_menu_back_btn.x + 52, self.encyclopedia_menu_back_btn.y + 11))
+
+    def draw_encyclopedia_detail(self) -> None:
+        self.ensure_encyclopedia_state()
+        for y in range(SCREEN_HEIGHT):
+            t = y / SCREEN_HEIGHT
+            pygame.draw.line(self.screen, (int(142 + 28 * t), int(104 + 25 * t), int(58 + 15 * t)), (0, y), (SCREEN_WIDTH, y))
+        ui = self.encyclopedia_detail_layout()
+        panel = ui["panel"]
+        left = ui["left"]
+        list_view = ui["list_view"]
+        right = ui["right"]
+        pygame.draw.rect(self.screen, (236, 212, 158), panel, border_radius=20)
+        pygame.draw.rect(self.screen, (126, 88, 40), panel, 4, border_radius=20)
+        pygame.draw.rect(self.screen, (232, 210, 160), left, border_radius=14)
+        pygame.draw.rect(self.screen, (132, 96, 48), left, 3, border_radius=14)
+        pygame.draw.rect(self.screen, (246, 230, 192), right, border_radius=14)
+        pygame.draw.rect(self.screen, (132, 96, 48), right, 3, border_radius=14)
+
+        title = self.fonts["ui"].render(self.tr("encyclopedia"), True, (60, 42, 22))
+        self.screen.blit(title, (ui["header"].x + 6, ui["header"].y + 4))
+
+        p_sel = self.encyclopedia_tab == "plants"
+        z_sel = self.encyclopedia_tab == "zombies"
+        pygame.draw.rect(self.screen, (231, 188, 90) if p_sel else (214, 196, 154), ui["tab_plants"], border_radius=9)
+        pygame.draw.rect(self.screen, (231, 188, 90) if z_sel else (214, 196, 154), ui["tab_zombies"], border_radius=9)
+        pygame.draw.rect(self.screen, (120, 78, 24), ui["tab_plants"], 2, border_radius=9)
+        pygame.draw.rect(self.screen, (120, 78, 24), ui["tab_zombies"], 2, border_radius=9)
+        self.screen.blit(self.fonts["small"].render(self.tr("plants_tab"), True, (34, 28, 18)), self.fonts["small"].render(self.tr("plants_tab"), True, (34, 28, 18)).get_rect(center=ui["tab_plants"].center))
+        self.screen.blit(self.fonts["small"].render(self.tr("zombies_tab"), True, (34, 28, 18)), self.fonts["small"].render(self.tr("zombies_tab"), True, (34, 28, 18)).get_rect(center=ui["tab_zombies"].center))
+
+        self.screen.blit(self.fonts["mid"].render(self.tr("plants_tab") if p_sel else self.tr("zombies_tab"), True, (66, 46, 24)), (left.x + 14, left.y + 12))
+        old_clip = self.screen.get_clip()
+        self.screen.set_clip(list_view)
+        selected_key = self.encyclopedia_selected_key.get(self.encyclopedia_tab, "")
+        for key, rect in self.encyclopedia_entry_buttons():
+            if not rect.colliderect(list_view):
+                continue
+            is_sel = key == selected_key
+            pygame.draw.rect(self.screen, (246, 228, 188) if is_sel else (238, 220, 178), rect, border_radius=8)
+            pygame.draw.rect(self.screen, (224, 144, 36) if is_sel else (142, 104, 54), rect, 2, border_radius=8)
+            if self.encyclopedia_tab == "plants":
+                label = self.plant_display_name(key)
+            else:
+                label = self.zombie_display_name(key)
+            self.screen.blit(self.fonts["small"].render(label, True, (40, 34, 26)), (rect.x + 10, rect.y + 12))
+        self.screen.set_clip(old_clip)
+        scroll_max = self.encyclopedia_scroll_max()
+        if scroll_max > 0:
+            track = pygame.Rect(list_view.right - 6, list_view.y + 6, 4, list_view.h - 12)
+            pygame.draw.rect(self.screen, (176, 140, 88), track, border_radius=2)
+            knob_h = max(34, int(track.h * list_view.h / max(list_view.h, list_view.h + scroll_max)))
+            knob_y = track.y + int((track.h - knob_h) * (self.encyclopedia_scroll_y / scroll_max))
+            pygame.draw.rect(self.screen, (222, 168, 82), (track.x - 2, knob_y, 8, knob_h), border_radius=4)
+
+        keys = self.get_encyclopedia_keys(self.encyclopedia_tab)
+        if keys and selected_key not in keys:
+            selected_key = keys[0]
+            self.encyclopedia_selected_key[self.encyclopedia_tab] = selected_key
+        title_y = right.y + 18
+        sprite_box = pygame.Rect(right.x + 20, right.y + 60, 258, 262)
+        pygame.draw.rect(self.screen, (238, 218, 176), sprite_box, border_radius=12)
+        pygame.draw.rect(self.screen, (142, 104, 54), sprite_box, 2, border_radius=12)
+        if keys:
+            if self.encyclopedia_tab == "plants":
+                cfg = self.plants[selected_key]
+                spr = self.load_image(cfg.sprite_path, size=(184, 184))
+                if spr is not None:
+                    self.screen.blit(spr, spr.get_rect(center=sprite_box.center))
+                else:
+                    self.draw_fallback_almanac_sprite("plants", selected_key, sprite_box)
+                name_en = cfg.display_name_en or cfg.name
+                name_zh = cfg.display_name_zh or cfg.name
+                self.screen.blit(self.fonts["ui"].render(name_en, True, (58, 40, 22)), (right.x + 300, title_y))
+                self.screen.blit(self.fonts["mid"].render(name_zh, True, (98, 68, 34)), (right.x + 300, title_y + 36))
+                info = self.get_plant_almanac_text(selected_key, cfg)
+                stat_x = right.x + 300
+                stat_y = right.y + 88
+                stats = [
+                    f"{self.tr('cost')}: {cfg.cost}",
+                    f"{self.tr('hp')}: {int(cfg.hp)}",
+                    f"{self.tr('cooldown')}: {cfg.cooldown:.1f}s",
+                    f"{self.tr('behavior')}: {info['behavior_en']} / {info['behavior_zh']}",
+                ]
+                for line in stats:
+                    self.screen.blit(self.fonts["small"].render(line, True, (52, 40, 28)), (stat_x, stat_y))
+                    stat_y += 28
+                text_box = pygame.Rect(right.x + 20, right.y + 336, right.w - 40, right.h - 356)
+                pygame.draw.rect(self.screen, (240, 224, 186), text_box, border_radius=10)
+                pygame.draw.rect(self.screen, (142, 104, 54), text_box, 2, border_radius=10)
+                y = text_box.y + 10
+                self.screen.blit(self.fonts["small"].render(f"{self.tr('intro')} EN", True, (74, 52, 28)), (text_box.x + 10, y))
+                y += 22
+                for line in self.wrap_text_lines(self.fonts["small"], info["short_en"], text_box.w - 20)[:3]:
+                    self.screen.blit(self.fonts["small"].render(line, True, (48, 36, 26)), (text_box.x + 10, y))
+                    y += 20
+                self.screen.blit(self.fonts["small"].render(f"{self.tr('intro')} ZH", True, (74, 52, 28)), (text_box.x + 10, y + 2))
+                y += 24
+                for line in self.wrap_text_lines(self.fonts["small"], info["short_zh"], text_box.w - 20)[:3]:
+                    self.screen.blit(self.fonts["small"].render(line, True, (48, 36, 26)), (text_box.x + 10, y))
+                    y += 20
+                self.screen.blit(self.fonts["small"].render(f"{self.tr('gameplay')} EN", True, (74, 52, 28)), (text_box.x + 10, y + 2))
+                y += 24
+                for line in self.wrap_text_lines(self.fonts["small"], info["summary_en"], text_box.w - 20)[:3]:
+                    self.screen.blit(self.fonts["small"].render(line, True, (48, 36, 26)), (text_box.x + 10, y))
+                    y += 20
+                self.screen.blit(self.fonts["small"].render(f"{self.tr('gameplay')} ZH", True, (74, 52, 28)), (text_box.x + 10, y + 2))
+                y += 24
+                for line in self.wrap_text_lines(self.fonts["small"], info["summary_zh"], text_box.w - 20)[:3]:
+                    self.screen.blit(self.fonts["small"].render(line, True, (48, 36, 26)), (text_box.x + 10, y))
+                    y += 20
+            else:
+                cfg = self.zombies[selected_key]
+                spr = self.load_image(cfg.sprite_path, size=(188, 246))
+                if spr is not None:
+                    self.screen.blit(spr, spr.get_rect(center=sprite_box.center))
+                else:
+                    self.draw_fallback_almanac_sprite("zombies", selected_key, sprite_box)
+                name_en = cfg.display_name_en or cfg.name
+                name_zh = cfg.display_name_zh or cfg.name
+                self.screen.blit(self.fonts["ui"].render(name_en, True, (58, 40, 22)), (right.x + 300, title_y))
+                self.screen.blit(self.fonts["mid"].render(name_zh, True, (98, 68, 34)), (right.x + 300, title_y + 36))
+                info = self.get_zombie_almanac_text(selected_key, cfg)
+                stat_x = right.x + 300
+                stat_y = right.y + 88
+                stats = [
+                    f"{self.tr('hp')}: {int(cfg.hp)}",
+                    f"{self.tr('movement')}: {info['movement_en']} / {info['movement_zh']}",
+                    f"{self.tr('behavior')}: {cfg.behavior}",
+                ]
+                for line in stats:
+                    self.screen.blit(self.fonts["small"].render(line, True, (52, 40, 28)), (stat_x, stat_y))
+                    stat_y += 28
+                text_box = pygame.Rect(right.x + 20, right.y + 336, right.w - 40, right.h - 356)
+                pygame.draw.rect(self.screen, (240, 224, 186), text_box, border_radius=10)
+                pygame.draw.rect(self.screen, (142, 104, 54), text_box, 2, border_radius=10)
+                y = text_box.y + 10
+                self.screen.blit(self.fonts["small"].render(f"{self.tr('intro')} EN", True, (74, 52, 28)), (text_box.x + 10, y))
+                y += 22
+                for line in self.wrap_text_lines(self.fonts["small"], info["short_en"], text_box.w - 20)[:4]:
+                    self.screen.blit(self.fonts["small"].render(line, True, (48, 36, 26)), (text_box.x + 10, y))
+                    y += 20
+                self.screen.blit(self.fonts["small"].render(f"{self.tr('intro')} ZH", True, (74, 52, 28)), (text_box.x + 10, y + 2))
+                y += 24
+                for line in self.wrap_text_lines(self.fonts["small"], info["short_zh"], text_box.w - 20)[:4]:
+                    self.screen.blit(self.fonts["small"].render(line, True, (48, 36, 26)), (text_box.x + 10, y))
+                    y += 20
+                self.screen.blit(self.fonts["small"].render(f"{self.tr('threat')} EN", True, (74, 52, 28)), (text_box.x + 10, y + 2))
+                y += 24
+                for line in self.wrap_text_lines(self.fonts["small"], info["threat_en"], text_box.w - 20)[:4]:
+                    self.screen.blit(self.fonts["small"].render(line, True, (48, 36, 26)), (text_box.x + 10, y))
+                    y += 20
+                self.screen.blit(self.fonts["small"].render(f"{self.tr('threat')} ZH", True, (74, 52, 28)), (text_box.x + 10, y + 2))
+                y += 24
+                for line in self.wrap_text_lines(self.fonts["small"], info["threat_zh"], text_box.w - 20)[:4]:
+                    self.screen.blit(self.fonts["small"].render(line, True, (48, 36, 26)), (text_box.x + 10, y))
+                    y += 20
+
+        pygame.draw.rect(self.screen, (231, 188, 90), self.encyclopedia_back_btn, border_radius=10)
+        pygame.draw.rect(self.screen, (120, 78, 24), self.encyclopedia_back_btn, 3, border_radius=10)
+        self.screen.blit(self.fonts["mid"].render(self.tr("back"), True, (39, 32, 22)), (self.encyclopedia_back_btn.x + 52, self.encyclopedia_back_btn.y + 11))
 
     def draw_shop(self) -> None:
         self.screen.fill((176, 201, 170))
@@ -3027,6 +3424,10 @@ class Game:
             self.draw_select()
         elif self.scene == "plant_select":
             self.draw_plant_select()
+        elif self.scene == "encyclopedia_menu":
+            self.draw_encyclopedia_menu()
+        elif self.scene == "encyclopedia_detail":
+            self.draw_encyclopedia_detail()
         elif self.scene == "shop":
             self.draw_shop()
         elif self.scene in ("battle", "result"):
@@ -3074,8 +3475,40 @@ class Game:
                             self.level_page = int(clamp(self.level_page + 1, 0, max(0, math.ceil(len(self.levels) / self.page_size) - 1)))
                         if e.key == pygame.K_LEFT:
                             self.level_page = int(clamp(self.level_page - 1, 0, max(0, math.ceil(len(self.levels) / self.page_size) - 1)))
+                    if self.scene == "plant_select":
+                        if e.key == pygame.K_DOWN:
+                            self.scroll_plant_select(52)
+                        elif e.key == pygame.K_UP:
+                            self.scroll_plant_select(-52)
+                        elif e.key == pygame.K_PAGEDOWN:
+                            self.scroll_plant_select(self.plant_select_available_viewport().h - 64)
+                        elif e.key == pygame.K_PAGEUP:
+                            self.scroll_plant_select(-(self.plant_select_available_viewport().h - 64))
+                    if self.scene == "encyclopedia_detail":
+                        if e.key == pygame.K_DOWN:
+                            self.scroll_encyclopedia(self.encyclopedia_scroll_step)
+                        elif e.key == pygame.K_UP:
+                            self.scroll_encyclopedia(-self.encyclopedia_scroll_step)
+                        elif e.key == pygame.K_PAGEDOWN:
+                            self.scroll_encyclopedia(self.encyclopedia_detail_layout()["list_view"].h - 72)
+                        elif e.key == pygame.K_PAGEUP:
+                            self.scroll_encyclopedia(-(self.encyclopedia_detail_layout()["list_view"].h - 72))
+                if e.type == pygame.MOUSEWHEEL:
+                    if self.scene == "plant_select":
+                        if self.plant_select_available_viewport().collidepoint(pygame.mouse.get_pos()):
+                            self.scroll_plant_select(-e.y * 40)
+                    elif self.scene == "encyclopedia_detail":
+                        if self.encyclopedia_detail_layout()["list_view"].collidepoint(pygame.mouse.get_pos()):
+                            self.scroll_encyclopedia(-e.y * self.encyclopedia_scroll_step)
                 if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
                     self.handle_click(e.pos)
+                if e.type == pygame.MOUSEBUTTONDOWN and e.button in (4, 5):
+                    if self.scene == "plant_select":
+                        if self.plant_select_available_viewport().collidepoint(e.pos):
+                            self.scroll_plant_select(40 if e.button == 5 else -40)
+                    elif self.scene == "encyclopedia_detail":
+                        if self.encyclopedia_detail_layout()["list_view"].collidepoint(e.pos):
+                            self.scroll_encyclopedia(self.encyclopedia_scroll_step if e.button == 5 else -self.encyclopedia_scroll_step)
             if self.scene == "battle":
                 self.battle.update(dt)
                 if self.battle.result:
