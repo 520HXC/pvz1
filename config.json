@@ -1,0 +1,19 @@
+{
+  "battle_settings": {
+    "game_speed": 3.0,
+    "auto_collect_sun": true,
+    "auto_collect_coins": true,
+    "show_zombie_hp_bars": true,
+    "show_plant_hp_bars": true,
+    "show_wave_number": true,
+    "show_next_wave_countdown": true,
+    "starting_sun_value": -1,
+    "zombie_health_multiplier": 1.0,
+    "plant_health_multiplier": 1.0,
+    "zombie_damage_multiplier": 1.0,
+    "plant_damage_multiplier": 1.0,
+    "cooldown_multiplier": 1.0,
+    "infinite_sun": false,
+    "no_cooldown": false
+  }
+}
