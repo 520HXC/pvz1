@@ -157,6 +157,66 @@ CLASSIC_MODE_SUBTITLE_BY_ID: Dict[str, str] = {
     **{entry_id: zh for entry_id, _, zh in CLASSIC_SURVIVAL_LIST},
 }
 
+ALL_CLASSIC_MODE_IDS: List[str] = [
+    *[entry_id for entry_id, _, _ in CLASSIC_MINI_GAME_LIST],
+    *[entry_id for entry_id, _, _ in CLASSIC_PUZZLE_VASEBREAKER_LIST],
+    *[entry_id for entry_id, _, _ in CLASSIC_PUZZLE_IZOMBIE_LIST],
+    *[entry_id for entry_id, _, _ in CLASSIC_SURVIVAL_LIST],
+]
+
+MODE_THUMBNAILS: Dict[str, str] = {mode_id: f"assets/ui/modes/{mode_id}.png" for mode_id in ALL_CLASSIC_MODE_IDS}
+
+MINI_MODE_THUMB_THEMES: Dict[str, str] = {
+    "mini_zombotany": "zombotany",
+    "mini_wallnut_bowling": "wallnut_bowling",
+    "mini_slot_machine": "slot_machine",
+    "mini_its_raining_seeds": "raining_seeds",
+    "mini_beghouled": "beghouled",
+    "mini_invisi_ghoul": "invisi_ghoul",
+    "mini_seeing_stars": "seeing_stars",
+    "mini_zombiquarium": "zombiquarium",
+    "mini_beghouled_twist": "beghouled_twist",
+    "mini_big_trouble_little_zombie": "big_trouble_little_zombie",
+    "mini_portal_combat": "portal_combat",
+    "mini_column_like_you_see_em": "column_like_you_see_em",
+    "mini_bobsled_bonanza": "bobsled_bonanza",
+    "mini_zombie_nimble_zombie_quick": "zombie_nimble_zombie_quick",
+    "mini_whack_a_zombie": "whack_a_zombie",
+    "mini_last_stand": "last_stand",
+    "mini_zombotany_2": "zombotany_2",
+    "mini_wallnut_bowling_2": "wallnut_bowling_2",
+    "mini_pogo_party": "pogo_party",
+    "mini_dr_zomboss_revenge": "dr_zomboss_revenge",
+}
+
+MODE_THUMB_META: Dict[str, Dict[str, str]] = {
+    mode_id: {"theme": theme, "variant": "normal"} for mode_id, theme in MINI_MODE_THUMB_THEMES.items()
+}
+
+for idx, (entry_id, _title, _zh) in enumerate(CLASSIC_PUZZLE_VASEBREAKER_LIST):
+    MODE_THUMB_META[entry_id] = {"theme": "vasebreaker", "variant": str(idx)}
+
+for idx, (entry_id, _title, _zh) in enumerate(CLASSIC_PUZZLE_IZOMBIE_LIST):
+    MODE_THUMB_META[entry_id] = {"theme": "i_zombie", "variant": str(idx)}
+
+for entry_id, _title, _zh in CLASSIC_SURVIVAL_LIST:
+    if entry_id == "survival_endless":
+        theme = "survival_endless"
+    elif "night" in entry_id:
+        theme = "survival_night"
+    elif "pool" in entry_id:
+        theme = "survival_pool"
+    elif "fog" in entry_id:
+        theme = "survival_fog"
+    elif "roof" in entry_id:
+        theme = "survival_roof"
+    else:
+        theme = "survival_day"
+    MODE_THUMB_META[entry_id] = {
+        "theme": theme,
+        "variant": "hard" if entry_id.endswith("_hard") else "normal",
+    }
+
 IMPLEMENTED_MINI_GAME_IDS = {
     "mini_zombotany",
     "mini_wallnut_bowling",
@@ -4736,7 +4796,9 @@ class Game:
         self.assets_root = Path(__file__).resolve().parent / "assets"
         for sub in ("plants", "zombies", "ui"):
             os.makedirs(self.assets_root / sub, exist_ok=True)
+        os.makedirs(self.assets_root / "ui" / "modes", exist_ok=True)
         self.image_cache: Dict[Tuple[str, Optional[Tuple[int, int]]], Optional[pygame.Surface]] = {}
+        self.mode_thumb_cache: Dict[Tuple[str, Tuple[int, int]], pygame.Surface] = {}
         self.logged_loaded_sprites = set()
         self.logged_missing_sprites = set()
         self.download_attempted_keys = set()
@@ -6934,6 +6996,626 @@ class Game:
                 self.logged_missing_sprites.add(log_key)
         return sprite
 
+    def scale_surface_cover(self, image: pygame.Surface, size: Tuple[int, int]) -> pygame.Surface:
+        tw, th = max(1, int(size[0])), max(1, int(size[1]))
+        iw, ih = max(1, image.get_width()), max(1, image.get_height())
+        scale = max(tw / iw, th / ih)
+        sw = max(1, int(iw * scale))
+        sh = max(1, int(ih * scale))
+        scaled = pygame.transform.smoothscale(image, (sw, sh))
+        out = pygame.Surface((tw, th), pygame.SRCALPHA)
+        ox = (tw - sw) // 2
+        oy = (th - sh) // 2
+        out.blit(scaled, (ox, oy))
+        return out
+
+    def mode_thumb_seed(self, mode_id: str) -> int:
+        return zlib.adler32(mode_id.encode("utf-8")) & 0xFFFFFFFF
+
+    def mode_thumb_meta(self, mode_id: str) -> Dict[str, str]:
+        return MODE_THUMB_META.get(mode_id, {"theme": "survival_day", "variant": "normal"})
+
+    def draw_mode_thumb_gradient(
+        self,
+        surf: pygame.Surface,
+        rect: pygame.Rect,
+        top: Tuple[int, int, int],
+        bottom: Tuple[int, int, int],
+    ) -> None:
+        for y in range(rect.h):
+            t = y / max(1, rect.h - 1)
+            col = (
+                int(top[0] + (bottom[0] - top[0]) * t),
+                int(top[1] + (bottom[1] - top[1]) * t),
+                int(top[2] + (bottom[2] - top[2]) * t),
+            )
+            pygame.draw.line(surf, col, (rect.x, rect.y + y), (rect.right, rect.y + y))
+
+    def draw_mode_thumb_brain(self, surf: pygame.Surface, x: int, y: int, scale: float = 1.0) -> None:
+        w = int(26 * scale)
+        h = int(16 * scale)
+        lobes = [
+            (x - w // 3, y - h // 4, int(10 * scale)),
+            (x, y - h // 4, int(10 * scale)),
+            (x + w // 3, y - h // 5, int(9 * scale)),
+            (x - w // 4, y + h // 5, int(9 * scale)),
+            (x + w // 5, y + h // 4, int(8 * scale)),
+        ]
+        for cx, cy, r in lobes:
+            pygame.draw.circle(surf, (236, 184, 170), (cx, cy), max(2, r))
+        pygame.draw.ellipse(surf, (226, 168, 156), (x - w // 2, y - h // 2, w, h))
+        pygame.draw.ellipse(surf, (130, 84, 78), (x - w // 2, y - h // 2, w, h), 2)
+
+    def draw_mode_thumb_vase(self, surf: pygame.Surface, x: int, y: int, scale: float = 1.0, cracked: bool = False) -> None:
+        w = int(18 * scale)
+        h = int(28 * scale)
+        body = pygame.Rect(x - w // 2, y - h, w, h)
+        pygame.draw.ellipse(surf, (166, 184, 206), body)
+        pygame.draw.ellipse(surf, (90, 104, 132), body, 2)
+        neck = pygame.Rect(x - w // 4, y - h - int(6 * scale), w // 2, int(8 * scale))
+        pygame.draw.ellipse(surf, (178, 198, 218), neck)
+        pygame.draw.ellipse(surf, (96, 110, 140), neck, 2)
+        if cracked:
+            zig = [(x - w // 5, y - h + 4), (x, y - h // 2), (x - w // 6, y - 4), (x + w // 8, y - 2)]
+            pygame.draw.lines(surf, (70, 78, 102), False, zig, 2)
+
+    def draw_mode_thumb_grave(self, surf: pygame.Surface, x: int, y: int, scale: float = 1.0) -> None:
+        w = int(18 * scale)
+        h = int(22 * scale)
+        body = pygame.Rect(x - w // 2, y - h, w, h)
+        pygame.draw.rect(surf, (108, 112, 126), body, border_radius=4)
+        pygame.draw.rect(surf, (58, 60, 76), body, 1, border_radius=4)
+        cap = pygame.Rect(body.x + 2, body.y - int(5 * scale), body.w - 4, int(8 * scale))
+        pygame.draw.ellipse(surf, (124, 128, 142), cap)
+        pygame.draw.ellipse(surf, (62, 64, 80), cap, 1)
+        pygame.draw.line(surf, (194, 198, 208), (x, body.y + 3), (x, body.bottom - 4), 1)
+        pygame.draw.line(surf, (194, 198, 208), (x - 4, body.y + 8), (x + 4, body.y + 8), 1)
+
+    def draw_mode_thumb_wallnut(self, surf: pygame.Surface, x: int, y: int, scale: float = 1.0, angry: bool = False) -> None:
+        r = max(6, int(11 * scale))
+        pygame.draw.circle(surf, (172, 120, 74), (x, y), r)
+        pygame.draw.circle(surf, (102, 70, 42), (x, y), r, 2)
+        eye_dx = max(2, int(3 * scale))
+        eye_y = y - max(1, int(2 * scale))
+        pygame.draw.circle(surf, (28, 22, 18), (x - eye_dx, eye_y), 1)
+        pygame.draw.circle(surf, (28, 22, 18), (x + eye_dx, eye_y), 1)
+        if angry:
+            pygame.draw.line(surf, (70, 46, 24), (x - eye_dx - 2, eye_y - 2), (x - eye_dx + 1, eye_y - 1), 1)
+            pygame.draw.line(surf, (70, 46, 24), (x + eye_dx + 2, eye_y - 2), (x + eye_dx - 1, eye_y - 1), 1)
+        pygame.draw.arc(
+            surf,
+            (78, 48, 30),
+            (x - max(2, int(4 * scale)), y - 1, max(3, int(8 * scale)), max(2, int(6 * scale))),
+            0.2,
+            2.9,
+            1,
+        )
+
+    def draw_mode_thumb_plant(self, surf: pygame.Surface, x: int, y: int, kind: str = "pea", scale: float = 1.0) -> None:
+        stem_h = int(10 * scale)
+        stem_w = max(2, int(2 * scale))
+        pygame.draw.rect(surf, (58, 132, 62), (x - stem_w // 2, y - stem_h, stem_w, stem_h))
+        pygame.draw.ellipse(surf, (74, 160, 78), (x - int(8 * scale), y - int(6 * scale), int(7 * scale), int(4 * scale)))
+        pygame.draw.ellipse(surf, (74, 160, 78), (x + int(1 * scale), y - int(6 * scale), int(7 * scale), int(4 * scale)))
+        if kind == "sunflower":
+            pygame.draw.circle(surf, (116, 74, 38), (x, y - stem_h - int(6 * scale)), int(6 * scale))
+            for a in range(0, 360, 30):
+                px = x + int(math.cos(math.radians(a)) * 9 * scale)
+                py = y - stem_h - int(6 * scale) + int(math.sin(math.radians(a)) * 9 * scale)
+                pygame.draw.circle(surf, (244, 204, 78), (px, py), max(2, int(3 * scale)))
+        elif kind == "mushroom":
+            pygame.draw.rect(surf, (224, 210, 180), (x - int(3 * scale), y - stem_h - int(4 * scale), int(6 * scale), int(6 * scale)), border_radius=3)
+            pygame.draw.ellipse(surf, (138, 84, 170), (x - int(10 * scale), y - stem_h - int(12 * scale), int(20 * scale), int(10 * scale)))
+        elif kind == "star":
+            pts = []
+            cx = x
+            cy = y - stem_h - int(8 * scale)
+            for i in range(10):
+                r = 8 * scale if i % 2 == 0 else 4 * scale
+                ang = math.radians(-90 + i * 36)
+                pts.append((cx + int(math.cos(ang) * r), cy + int(math.sin(ang) * r)))
+            pygame.draw.polygon(surf, (242, 214, 86), pts)
+            pygame.draw.polygon(surf, (120, 92, 36), pts, 1)
+        elif kind == "wallnut":
+            self.draw_mode_thumb_wallnut(surf, x, y - stem_h - int(2 * scale), scale=0.92 * scale)
+        else:
+            head_col = (86, 192, 96) if kind != "snowpea" else (128, 214, 236)
+            pygame.draw.circle(surf, head_col, (x, y - stem_h - int(8 * scale)), int(8 * scale))
+            mouth = pygame.Rect(x + int(4 * scale), y - stem_h - int(11 * scale), int(10 * scale), int(6 * scale))
+            pygame.draw.ellipse(surf, head_col, mouth)
+            pygame.draw.ellipse(surf, (44, 102, 50), mouth, 1)
+
+    def draw_mode_thumb_seed_packet(self, surf: pygame.Surface, x: int, y: int, kind: str = "pea", scale: float = 1.0, falling: bool = False) -> None:
+        w = max(14, int(18 * scale))
+        h = max(20, int(24 * scale))
+        rect = pygame.Rect(x - w // 2, y - h // 2, w, h)
+        self.draw_mode_thumb_gradient(surf, rect, (246, 238, 212), (222, 204, 168))
+        pygame.draw.rect(surf, (118, 86, 46), rect, 1, border_radius=4)
+        top_band = pygame.Rect(rect.x, rect.y, rect.w, max(4, int(5 * scale)))
+        self.draw_mode_thumb_gradient(surf, top_band, (114, 190, 112), (72, 126, 72))
+        pygame.draw.line(surf, (244, 232, 196), (rect.x + 2, rect.y + 1), (rect.right - 3, rect.y + 1), 1)
+        self.draw_mode_thumb_plant(surf, rect.centerx, rect.bottom - max(4, int(4 * scale)), kind=kind, scale=0.28 * scale)
+        if falling:
+            pygame.draw.arc(surf, (230, 242, 250), (rect.x - 6, rect.y - 8, 10, 10), 4.8, 0.7, 1)
+            pygame.draw.arc(surf, (230, 242, 250), (rect.right - 4, rect.y - 10, 10, 12), 2.6, 4.8, 1)
+
+    def draw_mode_thumb_portal_ring(
+        self,
+        surf: pygame.Surface,
+        rect: pygame.Rect,
+        outer: Tuple[int, int, int],
+        inner: Tuple[int, int, int],
+    ) -> None:
+        pygame.draw.ellipse(surf, outer, rect, 4)
+        inner_rect = rect.inflate(-8, -10)
+        if inner_rect.w > 4 and inner_rect.h > 4:
+            pygame.draw.ellipse(surf, inner, inner_rect, 2)
+
+    def draw_mode_thumb_action_burst(self, surf: pygame.Surface, x: int, y: int, scale: float = 1.0) -> None:
+        pts = [
+            (x - int(10 * scale), y - int(2 * scale)),
+            (x - int(4 * scale), y - int(10 * scale)),
+            (x + int(1 * scale), y - int(3 * scale)),
+            (x + int(8 * scale), y - int(8 * scale)),
+            (x + int(6 * scale), y),
+            (x + int(11 * scale), y + int(5 * scale)),
+            (x + int(2 * scale), y + int(4 * scale)),
+            (x - int(3 * scale), y + int(10 * scale)),
+            (x - int(5 * scale), y + int(2 * scale)),
+        ]
+        pygame.draw.polygon(surf, (252, 228, 132), pts)
+        pygame.draw.polygon(surf, (168, 114, 52), pts, 1)
+
+    def draw_mode_thumb_zombie(self, surf: pygame.Surface, x: int, y: int, kind: str = "normal", scale: float = 1.0) -> None:
+        if kind in {"zomboni", "catapult", "bobsled"}:
+            body = pygame.Rect(x - int(16 * scale), y - int(10 * scale), int(34 * scale), int(18 * scale))
+            pygame.draw.rect(surf, (124, 132, 150), body, border_radius=4)
+            pygame.draw.rect(surf, (64, 70, 84), body, 2, border_radius=4)
+            pygame.draw.circle(surf, (42, 44, 50), (body.x + int(6 * scale), body.bottom), int(4 * scale))
+            pygame.draw.circle(surf, (42, 44, 50), (body.right - int(6 * scale), body.bottom), int(4 * scale))
+            if kind == "catapult":
+                arm = [(body.right - int(8 * scale), body.y + 2), (body.right + int(10 * scale), body.y - int(8 * scale))]
+                pygame.draw.line(surf, (88, 66, 40), arm[0], arm[1], 2)
+            return
+
+        head_r = max(3, int(5 * scale))
+        head = (x, y - int(20 * scale))
+        torso = pygame.Rect(x - int(5 * scale), y - int(15 * scale), int(10 * scale), int(14 * scale))
+        pygame.draw.circle(surf, (152, 186, 142), head, head_r)
+        pygame.draw.rect(surf, (98, 112, 122), torso, border_radius=3)
+        pygame.draw.rect(surf, (52, 58, 70), torso, 1, border_radius=3)
+        pygame.draw.rect(surf, (68, 84, 146), (x - int(5 * scale), y - int(1 * scale), int(4 * scale), int(8 * scale)), border_radius=2)
+        pygame.draw.rect(surf, (68, 84, 146), (x + int(1 * scale), y - int(1 * scale), int(4 * scale), int(8 * scale)), border_radius=2)
+        pygame.draw.circle(surf, (22, 22, 22), (head[0] - max(1, int(2 * scale)), head[1] - 1), 1)
+        pygame.draw.circle(surf, (22, 22, 22), (head[0] + max(1, int(2 * scale)), head[1] - 1), 1)
+        pygame.draw.line(surf, (48, 38, 32), (head[0] - 1, head[1] + 2), (head[0] + int(4 * scale), head[1] + 3), 1)
+
+        if kind == "conehead":
+            cone = [(x - int(6 * scale), y - int(25 * scale)), (x + int(6 * scale), y - int(25 * scale)), (x, y - int(35 * scale))]
+            pygame.draw.polygon(surf, (238, 140, 62), cone)
+            pygame.draw.polygon(surf, (122, 74, 28), cone, 1)
+        elif kind == "buckethead":
+            buck = pygame.Rect(x - int(7 * scale), y - int(31 * scale), int(14 * scale), int(9 * scale))
+            pygame.draw.rect(surf, (166, 174, 188), buck, border_radius=2)
+            pygame.draw.rect(surf, (94, 98, 108), buck, 1, border_radius=2)
+        elif kind == "newspaper":
+            paper = pygame.Rect(x - int(14 * scale), y - int(18 * scale), int(16 * scale), int(12 * scale))
+            pygame.draw.rect(surf, (226, 224, 206), paper, border_radius=2)
+            pygame.draw.rect(surf, (122, 118, 102), paper, 1, border_radius=2)
+        elif kind == "football":
+            helm = pygame.Rect(x - int(8 * scale), y - int(30 * scale), int(16 * scale), int(10 * scale))
+            pygame.draw.rect(surf, (198, 54, 54), helm, border_radius=3)
+            pygame.draw.rect(surf, (80, 24, 24), helm, 1, border_radius=3)
+            pygame.draw.rect(surf, (178, 42, 42), (torso.x - 1, torso.y, torso.w + 2, torso.h + 2), border_radius=3)
+        elif kind == "dancer":
+            pygame.draw.rect(surf, (96, 66, 128), (x - int(6 * scale), y - int(16 * scale), int(12 * scale), int(13 * scale)), border_radius=3)
+            pygame.draw.line(surf, (70, 38, 106), (x - int(10 * scale), y - int(10 * scale)), (x + int(11 * scale), y - int(14 * scale)), 2)
+        elif kind == "pogo":
+            pygame.draw.line(surf, (188, 162, 122), (x + int(6 * scale), y - int(14 * scale)), (x + int(6 * scale), y + int(10 * scale)), 2)
+            pygame.draw.ellipse(surf, (164, 132, 80), (x + int(2 * scale), y + int(10 * scale), int(10 * scale), int(4 * scale)))
+        elif kind == "ladder":
+            rail = pygame.Rect(x + int(8 * scale), y - int(24 * scale), int(8 * scale), int(26 * scale))
+            pygame.draw.rect(surf, (170, 124, 70), rail, border_radius=2)
+            pygame.draw.rect(surf, (102, 72, 42), rail, 1, border_radius=2)
+            for i in range(4):
+                yy = rail.y + 4 + i * 5
+                pygame.draw.line(surf, (102, 72, 42), (rail.x + 1, yy), (rail.right - 2, yy), 1)
+        elif kind == "gargantuar":
+            big_torso = pygame.Rect(x - int(10 * scale), y - int(18 * scale), int(20 * scale), int(20 * scale))
+            pygame.draw.rect(surf, (106, 96, 120), big_torso, border_radius=4)
+            pygame.draw.rect(surf, (58, 54, 70), big_torso, 2, border_radius=4)
+        elif kind == "imp":
+            pygame.draw.circle(surf, (162, 198, 152), (x, y - int(13 * scale)), int(4 * scale))
+            pygame.draw.rect(surf, (118, 84, 74), (x - int(4 * scale), y - int(10 * scale), int(8 * scale), int(9 * scale)), border_radius=2)
+
+    def draw_mode_thumbnail_fallback(self, mode_id: str, size: Tuple[int, int]) -> pygame.Surface:
+        w, h = max(74, int(size[0])), max(54, int(size[1]))
+        surf = pygame.Surface((w, h), pygame.SRCALPHA)
+        meta = self.mode_thumb_meta(mode_id)
+        theme = meta.get("theme", "survival_day")
+        variant = meta.get("variant", "normal")
+        seed = self.mode_thumb_seed(mode_id)
+        rng = random.Random(seed)
+        sky = (162, 214, 242)
+        horizon = int(h * 0.42)
+        ground_top = (126, 186, 102)
+        ground_bottom = (78, 132, 70)
+        if theme in {"survival_night", "invisi_ghoul"}:
+            sky = (58, 78, 126)
+            ground_top, ground_bottom = (74, 110, 82), (44, 74, 58)
+        elif theme in {"survival_fog"}:
+            sky = (132, 156, 170)
+            ground_top, ground_bottom = (98, 128, 98), (62, 92, 70)
+        elif theme in {"survival_roof"}:
+            sky = (196, 214, 226)
+            ground_top, ground_bottom = (168, 116, 86), (122, 82, 58)
+        elif theme in {"zombiquarium"}:
+            sky = (74, 146, 196)
+            ground_top, ground_bottom = (58, 110, 170), (34, 76, 128)
+        elif theme in {"vasebreaker", "i_zombie"}:
+            sky = (168, 178, 198)
+            ground_top, ground_bottom = (114, 126, 146), (78, 90, 112)
+
+        self.draw_mode_thumb_gradient(surf, pygame.Rect(0, 0, w, horizon), self.shift_color(sky, 24), self.shift_color(sky, -18))
+        for i in range(3):
+            cloud_w = int(w * (0.24 + 0.06 * (i % 2)))
+            cloud_h = int(h * 0.10)
+            cx = int(w * (0.12 + i * 0.31))
+            cy = int(h * (0.12 + 0.03 * (i % 2)))
+            cloud = pygame.Rect(cx, cy, cloud_w, cloud_h)
+            pygame.draw.ellipse(surf, (248, 250, 246, 92), cloud)
+            pygame.draw.ellipse(surf, (236, 242, 236, 64), cloud.inflate(-8, -6))
+        hills = [
+            pygame.Rect(int(-0.10 * w), int(horizon - 0.03 * h), int(0.58 * w), int(0.30 * h)),
+            pygame.Rect(int(0.30 * w), int(horizon - 0.01 * h), int(0.52 * w), int(0.28 * h)),
+            pygame.Rect(int(0.68 * w), int(horizon - 0.02 * h), int(0.46 * w), int(0.30 * h)),
+        ]
+        for hr in hills:
+            pygame.draw.ellipse(surf, self.shift_color(ground_top, 8), hr)
+        ground = pygame.Rect(0, horizon, w, h - horizon)
+        self.draw_mode_thumb_gradient(surf, ground, ground_top, ground_bottom)
+        if theme not in {"survival_roof", "zombiquarium"}:
+            fence_y = horizon + max(4, int(h * 0.04))
+            post_h = max(5, int(h * 0.07))
+            for fx in range(4, w, 14):
+                pygame.draw.rect(surf, (168, 138, 96), (fx, fence_y - post_h, 3, post_h), border_radius=1)
+            pygame.draw.line(surf, (188, 156, 112), (0, fence_y - post_h + 4), (w, fence_y - post_h + 2), 1)
+            pygame.draw.line(surf, (150, 118, 82), (0, fence_y - post_h + 8), (w, fence_y - post_h + 6), 1)
+        lane_h = max(8, int(ground.h / 5))
+        tile_w = max(12, int(w / 8))
+        for lane in range(5):
+            y = horizon + lane * lane_h
+            row = pygame.Rect(0, y, w, lane_h)
+            for c in range(0, w + tile_w, tile_w):
+                if (lane + c // tile_w) % 2 == 0:
+                    tile = pygame.Rect(c, y, tile_w, lane_h)
+                    pygame.draw.rect(surf, self.shift_color(ground_top, -8), tile)
+            lane_y = horizon + int((lane + 1) * (ground.h / 5.0))
+            pygame.draw.line(surf, self.shift_color(ground_bottom, -12), (0, lane_y), (w, lane_y), 1)
+
+        if theme in {"survival_pool", "zombiquarium"}:
+            pool = pygame.Rect(int(w * 0.33), horizon + 2, int(w * 0.34), h - horizon - 4)
+            self.draw_mode_thumb_gradient(surf, pool, (122, 198, 236), (72, 136, 188))
+            pygame.draw.rect(surf, (42, 84, 132), pool, 2, border_radius=5)
+            for yy in range(pool.y + 4, pool.bottom - 3, 8):
+                pygame.draw.line(surf, (172, 232, 246), (pool.x + 4, yy), (pool.right - 4, yy), 1)
+        if theme in {"survival_roof"}:
+            roof = [(0, h - 2), (w, horizon + 8), (w, h - 2)]
+            pygame.draw.polygon(surf, (182, 124, 92), roof)
+            pygame.draw.polygon(surf, (104, 66, 44), roof, 2)
+            for x in range(8, w, 18):
+                y0 = h - 8 - int((x / max(1, w - 1)) * (h - horizon - 16))
+                pygame.draw.line(surf, (126, 86, 58), (x, y0), (x + 12, y0 - 3), 1)
+        if theme in {"survival_fog"}:
+            fog = pygame.Surface((w, h), pygame.SRCALPHA)
+            for i in range(6):
+                fx = int((i / 6) * w) + int(rng.randint(-8, 8))
+                fr = int(h * (0.35 + 0.08 * (i % 2)))
+                pygame.draw.circle(fog, (226, 228, 228, 44), (fx, h - int(fr * 0.4)), fr)
+            surf.blit(fog, (0, 0))
+
+        if theme in {"vasebreaker"}:
+            rows = 3
+            cols = 5
+            ox = int(w * 0.14)
+            oy = int(h * 0.52)
+            sx = max(14, int((w * 0.74) / max(1, cols - 1)))
+            sy = max(12, int((h * 0.38) / max(1, rows - 1)))
+            for r in range(rows):
+                for c in range(cols):
+                    vx = ox + c * sx + rng.randint(-2, 2)
+                    vy = oy + r * sy + rng.randint(-1, 2)
+                    cracked = (r * cols + c + int(variant)) % 5 == 0
+                    self.draw_mode_thumb_vase(surf, vx, vy, scale=0.8, cracked=cracked)
+            if int(variant) % 3 == 0:
+                self.draw_mode_thumb_plant(surf, int(w * 0.84), int(h * 0.86), kind="pea", scale=0.72)
+        elif theme == "i_zombie":
+            for lane in range(5):
+                y = horizon + int((lane + 0.55) * (ground.h / 5.0))
+                self.draw_mode_thumb_brain(surf, int(w * 0.11), y, scale=0.62)
+            for lane in range(5):
+                y = horizon + int((lane + 0.62) * (ground.h / 5.0))
+                if lane % 2 == 0:
+                    self.draw_mode_thumb_plant(surf, int(w * 0.36), y, kind="sunflower", scale=0.66)
+                else:
+                    self.draw_mode_thumb_plant(surf, int(w * 0.43), y, kind="pea", scale=0.66)
+            kinds = ["normal", "conehead", "buckethead", "newspaper", "football", "imp", "ladder", "pogo", "dancer", "gargantuar"]
+            for lane in range(5):
+                y = horizon + int((lane + 0.70) * (ground.h / 5.0))
+                k = kinds[(lane + int(variant)) % len(kinds)]
+                x = int(w * (0.74 + 0.05 * (lane % 2)))
+                sc = 0.68 if k != "gargantuar" else 0.82
+                self.draw_mode_thumb_zombie(surf, x, y, kind=k, scale=sc)
+        elif theme in {"wallnut_bowling", "wallnut_bowling_2"}:
+            launch_x = int(w * 0.18)
+            pygame.draw.line(surf, (190, 42, 46), (launch_x, horizon + 2), (launch_x, h - 2), 2)
+            for lane in range(5):
+                y = horizon + int((lane + 0.62) * (ground.h / 5.0))
+                rolling_x = int(w * 0.26) + lane * 3
+                pygame.draw.ellipse(surf, (46, 52, 30, 90), (rolling_x - 10, y + 7, 22, 6))
+                self.draw_mode_thumb_wallnut(surf, rolling_x, y, scale=0.86, angry=(lane % 2 == 1))
+                if theme == "wallnut_bowling_2" and lane in (1, 3):
+                    ex = int(w * 0.40)
+                    self.draw_mode_thumb_wallnut(surf, ex, y - 2, scale=0.78, angry=True)
+                    pygame.draw.circle(surf, (242, 112, 66), (ex + 7, y - 10), 3)
+                    pygame.draw.circle(surf, (248, 214, 88), (ex + 8, y - 11), 1)
+                zx = int(w * (0.78 + 0.05 * (lane % 2)))
+                self.draw_mode_thumb_zombie(surf, zx, y + 1, kind="normal", scale=0.68)
+                if lane in (1, 3):
+                    hit = [(zx - 14, y - 4), (zx - 9, y - 12), (zx - 4, y - 4), (zx - 11, y), (zx - 6, y + 8), (zx - 14, y + 3), (zx - 20, y + 8), (zx - 16, y)]
+                    pygame.draw.polygon(surf, (252, 232, 142), hit)
+                    pygame.draw.polygon(surf, (158, 114, 54), hit, 1)
+                pygame.draw.line(surf, (238, 216, 138), (int(w * 0.30), y), (int(w * 0.50), y), 1)
+                pygame.draw.line(surf, (188, 148, 84), (int(w * 0.31), y + 2), (int(w * 0.51), y + 2), 1)
+        elif theme in {"survival_day", "survival_night", "survival_pool", "survival_fog", "survival_roof", "survival_endless"}:
+            for lane in range(5):
+                y = horizon + int((lane + 0.66) * (ground.h / 5.0))
+                if lane % 2 == 0:
+                    pk = "pea" if lane % 4 else "sunflower"
+                    self.draw_mode_thumb_plant(surf, int(w * 0.32), y, kind=pk, scale=0.68)
+                self.draw_mode_thumb_zombie(surf, int(w * 0.78), y + 1, kind="normal", scale=0.68 if variant != "hard" else 0.75)
+            if variant == "hard" or theme == "survival_endless":
+                self.draw_mode_thumb_zombie(surf, int(w * 0.70), int(h * 0.74), kind="conehead", scale=0.75)
+            if theme == "survival_endless":
+                self.draw_mode_thumb_zombie(surf, int(w * 0.88), int(h * 0.72), kind="buckethead", scale=0.78)
+        elif theme in {"slot_machine"}:
+            cabinet = pygame.Rect(int(w * 0.20), int(h * 0.18), int(w * 0.56), int(h * 0.64))
+            self.draw_mode_thumb_gradient(surf, cabinet, (196, 98, 56), (126, 52, 28))
+            pygame.draw.rect(surf, (78, 34, 16), cabinet, 2, border_radius=8)
+            marquee = pygame.Rect(cabinet.x + 6, cabinet.y + 4, cabinet.w - 12, 12)
+            self.draw_mode_thumb_gradient(surf, marquee, (246, 212, 90), (212, 146, 58))
+            pygame.draw.rect(surf, (128, 78, 24), marquee, 1, border_radius=6)
+            for i in range(6):
+                lx = marquee.x + 8 + i * ((marquee.w - 16) // 5)
+                pygame.draw.circle(surf, (252, 238, 156), (lx, marquee.centery), 1)
+            reel_w = max(12, int(cabinet.w * 0.22))
+            for i in range(3):
+                rx = cabinet.x + 12 + i * (reel_w + 9)
+                reel = pygame.Rect(rx, cabinet.y + 20, reel_w, cabinet.h - 34)
+                self.draw_mode_thumb_gradient(surf, reel, (248, 242, 220), (216, 198, 164))
+                pygame.draw.rect(surf, (118, 86, 52), reel, 1, border_radius=4)
+                if i == 0:
+                    self.draw_mode_thumb_seed_packet(surf, reel.centerx, reel.centery + 2, kind="sunflower", scale=0.9)
+                elif i == 1:
+                    pygame.draw.circle(surf, (246, 208, 82), (reel.centerx, reel.centery + 1), 6)
+                    pygame.draw.circle(surf, (148, 102, 36), (reel.centerx, reel.centery + 1), 1)
+                else:
+                    self.draw_mode_thumb_zombie(surf, reel.centerx, reel.centery + 9, kind="normal", scale=0.36)
+            pygame.draw.line(surf, (214, 180, 108), (cabinet.right + 6, cabinet.y + 20), (cabinet.right + 6, cabinet.y + 42), 3)
+            pygame.draw.circle(surf, (246, 214, 96), (cabinet.right + 6, cabinet.y + 44), 5)
+            for i in range(3):
+                cx = cabinet.x + 16 + i * 12
+                cy = cabinet.bottom + 2
+                pygame.draw.circle(surf, (244, 208, 88), (cx, cy), 3)
+                pygame.draw.circle(surf, (142, 98, 32), (cx, cy), 1)
+            jackpot = [(cabinet.x - 10, cabinet.y + 18), (cabinet.x - 4, cabinet.y + 10), (cabinet.x + 2, cabinet.y + 18), (cabinet.x - 2, cabinet.y + 20)]
+            pygame.draw.polygon(surf, (250, 224, 110), jackpot)
+        elif theme in {"beghouled", "beghouled_twist"}:
+            board = pygame.Rect(int(w * 0.14), int(h * 0.20), int(w * 0.72), int(h * 0.66))
+            self.draw_mode_thumb_gradient(surf, board, (108, 112, 140), (62, 70, 96))
+            pygame.draw.rect(surf, (44, 48, 68), board, 2, border_radius=6)
+            pygame.draw.rect(surf, (174, 138, 86), board.inflate(4, 4), 1, border_radius=7)
+            colors = [(230, 86, 88), (92, 204, 122), (88, 168, 242), (244, 210, 92), (202, 112, 222)]
+            size_g = max(10, min(18, board.w // 6))
+            for rr in range(3):
+                for cc in range(5):
+                    gx = board.x + 8 + cc * (size_g + 4)
+                    gy = board.y + 8 + rr * (size_g + 4)
+                    col = colors[(rr * 5 + cc + seed) % len(colors)]
+                    pygame.draw.rect(surf, col, (gx, gy, size_g, size_g), border_radius=4)
+                    pygame.draw.rect(surf, (42, 34, 28), (gx, gy, size_g, size_g), 1, border_radius=4)
+                    if (rr + cc) % 4 == 0:
+                        pygame.draw.circle(surf, (255, 246, 198), (gx + size_g // 2, gy + size_g // 2), 2)
+            self.draw_mode_thumb_plant(surf, board.x + 10, board.bottom - 10, kind="pea", scale=0.40)
+            self.draw_mode_thumb_plant(surf, board.right - 12, board.y + 18, kind="sunflower", scale=0.34)
+            if theme == "beghouled_twist":
+                cx, cy = board.center
+                pygame.draw.circle(surf, (244, 236, 190), (cx, cy), 7)
+                pygame.draw.circle(surf, (88, 76, 56), (cx, cy), 1)
+                pygame.draw.arc(surf, (96, 76, 48), (cx - 12, cy - 12, 24, 24), 0.3, 2.4, 2)
+                pygame.draw.arc(surf, (96, 76, 48), (cx - 12, cy - 12, 24, 24), 3.3, 5.6, 2)
+        elif theme in {"invisi_ghoul"}:
+            moon = (int(w * 0.80), int(h * 0.18))
+            pygame.draw.circle(surf, (234, 236, 194), moon, int(h * 0.08))
+            pygame.draw.circle(surf, self.shift_color(sky, -20), (moon[0] + 4, moon[1] - 2), int(h * 0.07))
+            for i in range(3):
+                gx = int(w * (0.20 + i * 0.26))
+                gy = int(h * 0.66)
+                self.draw_mode_thumb_grave(surf, gx, gy + int(h * 0.18), scale=0.9)
+            for lane in range(5):
+                y = horizon + int((lane + 0.72) * (ground.h / 5.0))
+                alpha_layer = pygame.Surface((w, h), pygame.SRCALPHA)
+                self.draw_mode_thumb_zombie(alpha_layer, int(w * (0.64 + 0.06 * (lane % 2))), y, kind="normal", scale=0.66)
+                alpha_layer.fill((255, 255, 255, 82), special_flags=pygame.BLEND_RGBA_MULT)
+                surf.blit(alpha_layer, (0, 0))
+            self.draw_mode_thumb_plant(surf, int(w * 0.24), int(h * 0.76), kind="pea", scale=0.56)
+        elif theme in {"raining_seeds"}:
+            for i in range(7):
+                kind = "sunflower" if i % 3 == 0 else ("wallnut" if i % 4 == 0 else "pea")
+                px = int(w * (0.04 + i * 0.13)) + 12
+                py = int(h * (0.06 + (i % 3) * 0.08)) + 17
+                self.draw_mode_thumb_seed_packet(surf, px, py, kind=kind, scale=1.0, falling=True)
+        elif theme in {"seeing_stars"}:
+            star_pos = [
+                (int(w * 0.22), int(h * 0.56)),
+                (int(w * 0.34), int(h * 0.50)),
+                (int(w * 0.46), int(h * 0.44)),
+                (int(w * 0.34), int(h * 0.64)),
+                (int(w * 0.46), int(h * 0.64)),
+            ]
+            for sx, sy in star_pos:
+                self.draw_mode_thumb_plant(surf, sx, sy + 10, kind="star", scale=0.52)
+                pygame.draw.circle(surf, (250, 236, 156), (sx, sy), 3)
+            for lane in range(5):
+                y = horizon + int((lane + 0.62) * (ground.h / 5.0))
+                if lane % 2 == 0:
+                    self.draw_mode_thumb_plant(surf, int(w * 0.20), y, kind="pea", scale=0.52)
+                self.draw_mode_thumb_zombie(surf, int(w * 0.80), y, kind="normal", scale=0.68)
+        elif theme in {"whack_a_zombie"}:
+            for i in range(5):
+                x = int(w * (0.16 + i * 0.16))
+                hole = pygame.Rect(x - 11, int(h * 0.68), 22, 12)
+                pygame.draw.ellipse(surf, (70, 52, 34), hole)
+                pygame.draw.ellipse(surf, (42, 32, 22), hole, 1)
+                if i % 2 == 0:
+                    self.draw_mode_thumb_zombie(surf, x, int(h * 0.70), kind="normal", scale=0.54)
+            hammer = [(int(w * 0.72), int(h * 0.26)), (int(w * 0.86), int(h * 0.44))]
+            pygame.draw.line(surf, (146, 102, 62), hammer[0], hammer[1], 4)
+            pygame.draw.rect(surf, (104, 112, 128), (int(w * 0.66), int(h * 0.18), int(w * 0.14), int(h * 0.08)), border_radius=3)
+            self.draw_mode_thumb_action_burst(surf, int(w * 0.62), int(h * 0.55), scale=0.9)
+        elif theme in {"portal_combat"}:
+            p1 = pygame.Rect(int(w * 0.18), int(h * 0.42), int(w * 0.16), int(h * 0.32))
+            p2 = pygame.Rect(int(w * 0.64), int(h * 0.28), int(w * 0.16), int(h * 0.32))
+            self.draw_mode_thumb_portal_ring(surf, p1, (108, 182, 236), (178, 228, 252))
+            self.draw_mode_thumb_portal_ring(surf, p2, (214, 138, 228), (244, 196, 252))
+            self.draw_mode_thumb_plant(surf, int(w * 0.12), int(h * 0.72), kind="pea", scale=0.52)
+            pygame.draw.circle(surf, (100, 206, 112), (p1.centerx + 8, p1.centery - 2), 4)
+            mid = (int(w * 0.48), int(h * 0.48))
+            pygame.draw.circle(surf, (114, 220, 126), mid, 3)
+            pygame.draw.arc(surf, (236, 248, 198), (p1.right - 2, p1.y + 8, int(w * 0.26), int(h * 0.24)), 4.9, 0.9, 1)
+            pygame.draw.arc(surf, (236, 208, 248), (int(w * 0.44), p2.bottom - int(h * 0.12), int(w * 0.30), int(h * 0.22)), 3.5, 5.8, 1)
+            self.draw_mode_thumb_zombie(surf, int(w * 0.82), int(h * 0.72), kind="conehead", scale=0.66)
+        elif theme in {"column_like_you_see_em"}:
+            for c in range(4):
+                x = int(w * (0.18 + c * 0.18))
+                pygame.draw.rect(surf, (92, 150, 88), (x - 15, horizon + 4, 30, h - horizon - 8), border_radius=4)
+                self.draw_mode_thumb_plant(surf, x, int(h * 0.70), kind="pea", scale=0.56 + c * 0.04)
+                pygame.draw.line(surf, (56, 102, 60), (x - 15, horizon + 8), (x + 15, horizon + 8), 1)
+            for c in range(3):
+                cx = int(w * (0.27 + c * 0.18))
+                pygame.draw.polygon(surf, (246, 224, 136), [(cx - 5, int(h * 0.45)), (cx + 5, int(h * 0.45)), (cx, int(h * 0.39))])
+            self.draw_mode_thumb_zombie(surf, int(w * 0.82), int(h * 0.72), kind="buckethead", scale=0.70)
+        elif theme in {"zombotany", "zombotany_2"}:
+            for lane in range(4):
+                y = horizon + int((lane + 0.72) * (ground.h / 5.0))
+                kind = "conehead" if lane % 2 else "normal"
+                zx = int(w * (0.70 + 0.04 * (lane % 2)))
+                self.draw_mode_thumb_zombie(surf, zx, y, kind=kind, scale=0.68)
+                self.draw_mode_thumb_plant(surf, zx, y - 18, kind="pea" if lane % 2 == 0 else "sunflower", scale=0.40)
+                pygame.draw.line(surf, (96, 166, 92), (zx - 2, y - 14), (zx - 2, y - 6), 1)
+            if theme == "zombotany_2":
+                self.draw_mode_thumb_zombie(surf, int(w * 0.83), int(h * 0.74), kind="buckethead", scale=0.72)
+                self.draw_mode_thumb_plant(surf, int(w * 0.83), int(h * 0.52), kind="pea", scale=0.42)
+        elif theme in {"big_trouble_little_zombie"}:
+            self.draw_mode_thumb_plant(surf, int(w * 0.26), int(h * 0.78), kind="wallnut", scale=1.04)
+            self.draw_mode_thumb_zombie(surf, int(w * 0.74), int(h * 0.74), kind="imp", scale=0.66)
+            self.draw_mode_thumb_zombie(surf, int(w * 0.84), int(h * 0.70), kind="imp", scale=0.58)
+            pygame.draw.line(surf, (240, 214, 126), (int(w * 0.63), int(h * 0.69)), (int(w * 0.70), int(h * 0.69)), 1)
+            pygame.draw.line(surf, (240, 214, 126), (int(w * 0.73), int(h * 0.65)), (int(w * 0.79), int(h * 0.65)), 1)
+        elif theme in {"bobsled_bonanza"}:
+            ice = pygame.Rect(int(w * 0.10), int(h * 0.58), int(w * 0.80), int(h * 0.26))
+            self.draw_mode_thumb_gradient(surf, ice, (176, 224, 248), (120, 178, 224))
+            pygame.draw.rect(surf, (78, 122, 170), ice, 2, border_radius=6)
+            self.draw_mode_thumb_zombie(surf, int(w * 0.68), int(h * 0.72), kind="bobsled", scale=0.86)
+            self.draw_mode_thumb_zombie(surf, int(w * 0.54), int(h * 0.72), kind="normal", scale=0.58)
+            self.draw_mode_thumb_zombie(surf, int(w * 0.60), int(h * 0.70), kind="normal", scale=0.56)
+            self.draw_mode_thumb_zombie(surf, int(w * 0.75), int(h * 0.70), kind="normal", scale=0.56)
+            for i in range(4):
+                yy = ice.y + 5 + i * 5
+                pygame.draw.line(surf, (206, 238, 252), (ice.x + 6, yy), (ice.right - 8, yy), 1)
+        elif theme in {"zombie_nimble_zombie_quick"}:
+            for lane in range(4):
+                y = horizon + int((lane + 0.74) * (ground.h / 5.0))
+                self.draw_mode_thumb_zombie(surf, int(w * 0.70), y, kind="normal", scale=0.70)
+                pygame.draw.line(surf, (238, 210, 126), (int(w * 0.50), y), (int(w * 0.64), y), 1)
+                pygame.draw.line(surf, (238, 210, 126), (int(w * 0.44), y - 3), (int(w * 0.58), y - 3), 1)
+            clock = pygame.Rect(int(w * 0.10), int(h * 0.24), 18, 18)
+            pygame.draw.ellipse(surf, (244, 232, 188), clock)
+            pygame.draw.ellipse(surf, (128, 94, 52), clock, 1)
+            pygame.draw.line(surf, (128, 94, 52), clock.center, (clock.centerx + 4, clock.centery - 3), 1)
+            pygame.draw.line(surf, (128, 94, 52), clock.center, (clock.centerx, clock.centery - 5), 1)
+        elif theme in {"pogo_party"}:
+            for lane in range(5):
+                y = horizon + int((lane + 0.70) * (ground.h / 5.0))
+                self.draw_mode_thumb_zombie(surf, int(w * 0.74), y, kind="pogo", scale=0.72)
+                pygame.draw.arc(surf, (238, 216, 148), (int(w * 0.66), y - 18, 18, 14), 4.0, 0.5, 1)
+        elif theme in {"last_stand"}:
+            for lane in range(5):
+                y = horizon + int((lane + 0.70) * (ground.h / 5.0))
+                self.draw_mode_thumb_plant(surf, int(w * 0.22), y, kind="pea", scale=0.58)
+                self.draw_mode_thumb_plant(surf, int(w * 0.36), y, kind="wallnut", scale=0.56)
+                if lane % 2 == 0:
+                    self.draw_mode_thumb_plant(surf, int(w * 0.48), y, kind="sunflower", scale=0.52)
+                self.draw_mode_thumb_zombie(surf, int(w * 0.82), y, kind="conehead", scale=0.72)
+            flag = [(int(w * 0.52), int(h * 0.22)), (int(w * 0.52), int(h * 0.48)), (int(w * 0.62), int(h * 0.38))]
+            pygame.draw.lines(surf, (92, 72, 42), False, flag[:2], 2)
+            pygame.draw.polygon(surf, (208, 64, 62), [flag[1], flag[2], (int(w * 0.52), int(h * 0.30))])
+        elif theme in {"dr_zomboss_revenge"}:
+            mech = pygame.Rect(int(w * 0.48), int(h * 0.22), int(w * 0.40), int(h * 0.52))
+            self.draw_mode_thumb_gradient(surf, mech, (166, 170, 180), (112, 116, 126))
+            pygame.draw.rect(surf, (68, 70, 78), mech, 2, border_radius=8)
+            glass = pygame.Rect(mech.x + 8, mech.y + 8, mech.w - 16, int(mech.h * 0.36))
+            self.draw_mode_thumb_gradient(surf, glass, (214, 230, 238), (146, 170, 188))
+            pygame.draw.rect(surf, (88, 104, 128), glass, 1, border_radius=4)
+            self.draw_mode_thumb_zombie(surf, mech.centerx, glass.bottom + 18, kind="gargantuar", scale=0.78)
+            self.draw_mode_thumb_plant(surf, int(w * 0.20), int(h * 0.76), kind="pea", scale=0.60)
+            pygame.draw.circle(surf, (244, 138, 78), (mech.x - 10, mech.y + 18), 5)
+            pygame.draw.circle(surf, (250, 220, 112), (mech.x - 9, mech.y + 17), 2)
+            pygame.draw.circle(surf, (244, 138, 78), (mech.x - 20, mech.y + 30), 4)
+        elif theme in {"zombiquarium"}:
+            tank = pygame.Rect(int(w * 0.08), int(h * 0.20), int(w * 0.84), int(h * 0.62))
+            self.draw_mode_thumb_gradient(surf, tank, (94, 170, 218), (38, 98, 154))
+            pygame.draw.rect(surf, (42, 74, 118), tank, 2, border_radius=8)
+            for i in range(5):
+                bx = tank.x + 10 + i * int(tank.w / 5)
+                by = tank.bottom - 8 - (i % 3) * 12
+                pygame.draw.circle(surf, (208, 238, 246), (bx, by), 2)
+            for i in range(4):
+                zx = int(w * (0.24 + i * 0.16))
+                zy = int(h * (0.52 + (i % 2) * 0.14))
+                self.draw_mode_thumb_zombie(surf, zx, zy, kind="snorkel", scale=0.52)
+            pygame.draw.circle(surf, (246, 210, 86), (int(w * 0.82), int(h * 0.32)), 7)
+            pygame.draw.circle(surf, (154, 104, 32), (int(w * 0.82), int(h * 0.32)), 1)
+            snail = pygame.Rect(int(w * 0.14), int(h * 0.72), 18, 10)
+            pygame.draw.ellipse(surf, (178, 122, 72), snail)
+            pygame.draw.ellipse(surf, (102, 64, 34), snail, 1)
+        else:
+            for lane in range(4):
+                y = horizon + int((lane + 0.75) * (ground.h / 5.0))
+                self.draw_mode_thumb_plant(surf, int(w * 0.28), y, kind="pea", scale=0.58)
+                self.draw_mode_thumb_zombie(surf, int(w * 0.76), y, kind="normal", scale=0.66)
+
+        vignette = pygame.Surface((w, h), pygame.SRCALPHA)
+        pygame.draw.rect(vignette, (26, 20, 14, 40), (0, 0, w, h), border_radius=10)
+        surf.blit(vignette, (0, 0))
+        pygame.draw.rect(surf, (54, 40, 26), (0, 0, w, h), 2, border_radius=10)
+        pygame.draw.rect(surf, (214, 178, 116), (2, 2, w - 4, h - 4), 1, border_radius=9)
+        return surf
+
+    def load_mode_thumbnail(self, mode_id: str, size: Tuple[int, int]) -> pygame.Surface:
+        target = (max(32, int(size[0])), max(24, int(size[1])))
+        cache_key = (mode_id, target)
+        if cache_key in self.mode_thumb_cache:
+            return self.mode_thumb_cache[cache_key]
+        path = MODE_THUMBNAILS.get(mode_id, f"assets/ui/modes/{mode_id}.png")
+        img = self.load_image(path, size=None)
+        if img is not None:
+            thumb = self.scale_surface_cover(img, target)
+        else:
+            thumb = self.draw_mode_thumbnail_fallback(mode_id, target)
+        self.mode_thumb_cache[cache_key] = thumb
+        return thumb
+
     def level_display_name(self, level: LevelConfig) -> str:
         if self.lang == "zh":
             return f"\u5173\u5361 {level.idx}"
@@ -8162,6 +8844,28 @@ class Game:
             offset=(1, 1),
         )
 
+    def draw_mode_page_arrow_button(self, rect: pygame.Rect, direction: int, hover: bool = False, enabled: bool = True) -> None:
+        if enabled:
+            fill = (236, 218, 160) if not hover else (248, 232, 176)
+            border = (124, 90, 44)
+            txt = (56, 38, 18)
+        else:
+            fill = (176, 168, 148)
+            border = (108, 96, 74)
+            txt = (92, 84, 72)
+        self.draw_panel_shadow(rect, radius=10, alpha=44, offset=(0, 2))
+        pygame.draw.ellipse(self.screen, fill, rect)
+        pygame.draw.ellipse(self.screen, border, rect, 2)
+        pygame.draw.arc(self.screen, self.shift_color(fill, -20), rect.inflate(-8, -8), 3.2, 6.0, 1)
+        cx, cy = rect.center
+        half = max(5, rect.w // 6)
+        if direction < 0:
+            pts = [(cx + half, cy - half), (cx - half, cy), (cx + half, cy + half)]
+        else:
+            pts = [(cx - half, cy - half), (cx + half, cy), (cx - half, cy + half)]
+        pygame.draw.polygon(self.screen, txt, pts)
+        pygame.draw.polygon(self.screen, self.shift_color(txt, 24), pts, 1)
+
     def draw_book_button(self, rect: pygame.Rect, title: str, subtitle: str = "", hover: bool = False) -> None:
         cover = (232, 194, 88) if not hover else (243, 205, 96)
         self.draw_panel_shadow(rect, radius=14, alpha=72, offset=(0, 4))
@@ -8321,12 +9025,12 @@ class Game:
         }
         return mapping.get(scene, ("mode_hub", "mode_select"))
 
-    def mode_scene_entries(self, scene: str) -> List[Tuple[str, str, str, str]]:
+    def mode_scene_entries(self, scene: str) -> List[Tuple[str, str, str, str, str]]:
         unlocked = int(self.save_data.get("unlocked", 1))
         if scene == "mini_select":
             entries = CLASSIC_MINI_GAME_LIST
             unlocked_count = int(clamp(float(unlocked), 1.0, float(len(entries))))
-            out: List[Tuple[str, str, str, str]] = []
+            out: List[Tuple[str, str, str, str, str]] = []
             for i, (entry_id, title, zh_title) in enumerate(entries):
                 if i >= unlocked_count:
                     status = "locked"
@@ -8334,23 +9038,21 @@ class Game:
                     status = "playable"
                 else:
                     status = "prototype"
-                out.append((entry_id, title, zh_title, status))
+                out.append((entry_id, title, zh_title, status, entry_id))
             return out
         if scene == "puzzle_select":
             entries = CLASSIC_PUZZLE_VASEBREAKER_LIST + CLASSIC_PUZZLE_IZOMBIE_LIST
             unlocked_count = int(clamp(float(unlocked), 1.0, float(len(entries))))
-            return [(entry_id, title, zh_title, "playable" if i < unlocked_count else "locked") for i, (entry_id, title, zh_title) in enumerate(entries)]
+            return [(entry_id, title, zh_title, "playable" if i < unlocked_count else "locked", entry_id) for i, (entry_id, title, zh_title) in enumerate(entries)]
         if scene == "survival_select":
             entries = CLASSIC_SURVIVAL_LIST
             unlocked_count = int(clamp(float(max(1, unlocked - 4)), 1.0, float(len(entries))))
-            return [(entry_id, title, zh_title, "playable" if i < unlocked_count else "locked") for i, (entry_id, title, zh_title) in enumerate(entries)]
+            return [(entry_id, title, zh_title, "playable" if i < unlocked_count else "locked", entry_id) for i, (entry_id, title, zh_title) in enumerate(entries)]
         return []
 
     def mode_scene_page_size(self, scene: str) -> int:
-        if scene == "mini_select":
+        if scene in {"mini_select", "puzzle_select"}:
             return 8
-        if scene == "puzzle_select":
-            return 10
         return 6
 
     def mode_scene_total_pages(self, scene: str) -> int:
@@ -8358,7 +9060,7 @@ class Game:
         size = max(1, self.mode_scene_page_size(scene))
         return max(1, math.ceil(len(entries) / size))
 
-    def mode_scene_visible_entries(self, scene: str) -> Tuple[List[Tuple[str, str, str, str]], int, int]:
+    def mode_scene_visible_entries(self, scene: str) -> Tuple[List[Tuple[str, str, str, str, str]], int, int]:
         entries = self.mode_scene_entries(scene)
         total = self.mode_scene_total_pages(scene)
         page = int(clamp(float(self.mode_scene_page.get(scene, 0)), 0.0, float(total - 1)))
@@ -8368,13 +9070,14 @@ class Game:
         return entries[start:start + size], page, total
 
     def mode_scene_layout(self) -> Dict[str, pygame.Rect]:
-        frame = pygame.Rect(58, 46, SCREEN_WIDTH - 116, SCREEN_HEIGHT - 100)
-        title = pygame.Rect(frame.x + 218, frame.y + 18, frame.w - 436, 78)
-        cards_area = pygame.Rect(frame.x + 44, frame.y + 122, frame.w - 88, frame.h - 232)
-        page_prev = pygame.Rect(cards_area.x + 8, cards_area.bottom + 12, 56, 34)
-        page_next = pygame.Rect(cards_area.right - 64, cards_area.bottom + 12, 56, 34)
-        page_badge = pygame.Rect(page_prev.right + 10, cards_area.bottom + 12, cards_area.w - 132, 34)
-        back_btn = pygame.Rect(frame.x + 16, frame.bottom - 62, 186, 46)
+        frame = pygame.Rect(54, 38, SCREEN_WIDTH - 108, SCREEN_HEIGHT - 86)
+        title = pygame.Rect(frame.x + 238, frame.y + 12, frame.w - 476, 68)
+        cards_area = pygame.Rect(frame.x + 28, frame.y + 102, frame.w - 56, frame.h - 188)
+        pager_y = cards_area.bottom + 10
+        page_prev = pygame.Rect(frame.centerx - 118, pager_y, 46, 30)
+        page_badge = pygame.Rect(frame.centerx - 54, pager_y, 108, 28)
+        page_next = pygame.Rect(frame.centerx + 72, pager_y, 46, 30)
+        back_btn = pygame.Rect(frame.x + 22, frame.bottom - 46, 112, 32)
         return {
             "frame": frame,
             "title": title,
@@ -8391,18 +9094,13 @@ class Game:
             return []
         layout = self.mode_scene_layout()
         area = layout["cards_area"]
-        if scene == "mini_select":
-            cols = 2
-        elif scene == "puzzle_select":
-            cols = 4
-        else:
-            cols = 3
-        gap = 14
+        cols = 4 if len(entries) > 6 else 3
+        gap = 14 if cols == 4 else 18
         card_w = (area.w - gap * (cols + 1)) // cols
         rows = max(1, math.ceil(len(entries) / cols))
-        card_h = max(92, min(146, (area.h - gap * (rows + 1)) // rows))
+        card_h = max(158 if cols == 4 else 188, min(220, (area.h - gap * (rows + 1)) // rows))
         out: List[Tuple[str, pygame.Rect]] = []
-        for i, (entry_id, _, _, _) in enumerate(entries):
+        for i, (entry_id, _, _, _, _) in enumerate(entries):
             r = i // cols
             c = i % cols
             x = area.x + gap + c * (card_w + gap)
@@ -8410,32 +9108,91 @@ class Game:
             out.append((entry_id, pygame.Rect(x, y, card_w, card_h)))
         return out
 
-    def draw_mode_card(self, rect: pygame.Rect, title: str, zh_title: str, status: str, hover: bool, selected: bool) -> None:
-        fill = (246, 236, 206) if not hover else (252, 244, 216)
-        border = (142, 104, 54)
+    def draw_mode_card(self, mode_id: str, rect: pygame.Rect, title: str, zh_title: str, status: str, thumb_key: str, hover: bool, selected: bool) -> None:
+        fill = (236, 208, 152) if not hover else (244, 220, 166)
+        inner = (250, 239, 206) if not hover else (255, 246, 220)
+        border = (128, 84, 40) if not selected else (228, 154, 48)
+        self.draw_panel_shadow(rect, radius=14, alpha=52, offset=(0, 3))
+        self.draw_mode_thumb_gradient(self.screen, rect, self.shift_color(fill, 12), self.shift_color(fill, -10))
+        pygame.draw.rect(self.screen, border, rect, 2, border_radius=14)
+        inner_rect = rect.inflate(-6, -6)
+        self.draw_mode_thumb_gradient(self.screen, inner_rect, self.shift_color(inner, 10), self.shift_color(inner, -8))
+        pygame.draw.rect(self.screen, self.shift_color(border, 16), inner_rect, 1, border_radius=10)
+
+        title_area = pygame.Rect(rect.x + 14, rect.y + 7, rect.w - 28, 34)
+        title_bar = pygame.Rect(title_area.x + 4, title_area.y + 2, title_area.w - 8, 20)
+        thumb_area = pygame.Rect(rect.x + 12, title_area.bottom + 3, rect.w - 24, rect.h - 68)
+        badge_area = pygame.Rect(rect.x + 22, rect.bottom - 18, rect.w - 44, 10)
+
+        primary_title = zh_title if self.lang == "zh" and zh_title else title
+        secondary_title = title if self.lang == "zh" else zh_title
+        self.draw_framed_panel(title_bar, fill=(170, 120, 66), border=(102, 64, 28), radius=8, inner=(194, 144, 84))
+        pygame.draw.circle(self.screen, (80, 52, 24), (title_bar.x + 10, title_bar.centery), 2)
+        pygame.draw.circle(self.screen, (80, 52, 24), (title_bar.right - 10, title_bar.centery), 2)
+        title_main = self.fonts["small"].render(primary_title, True, (52, 34, 18))
+        self.screen.blit(title_main, title_main.get_rect(center=(title_area.centerx, title_bar.centery)))
+        if secondary_title:
+            title_sub = self.fonts["tiny"].render(secondary_title, True, (96, 70, 42))
+            self.screen.blit(title_sub, title_sub.get_rect(center=(title_area.centerx, title_area.bottom - 3)))
+
+        frame_col = (156, 108, 58) if not selected else (236, 156, 52)
+        pygame.draw.rect(self.screen, (246, 234, 198), thumb_area, border_radius=9)
+        pygame.draw.rect(self.screen, frame_col, thumb_area, 2, border_radius=10)
+        inner_thumb = thumb_area.inflate(-4, -4)
+        thumb = self.load_mode_thumbnail(thumb_key or mode_id, (inner_thumb.w, inner_thumb.h))
         if selected:
-            border = (234, 146, 36)
-            fill = (252, 240, 210)
-        self.draw_framed_panel(rect, fill=fill, border=border, radius=14, inner=(252, 247, 230))
-        display_title = zh_title if self.lang == "zh" else title
-        title_font = self.fonts["small"] if rect.h >= 108 else self.fonts["tiny"]
-        max_title_lines = 2 if rect.h >= 120 else 1
-        title_lines = self.wrap_text_lines(title_font, display_title, rect.w - 28)[:max_title_lines]
-        ty = rect.y + 10
-        for line in title_lines:
-            title_surf = title_font.render(line, True, (40, 32, 24))
-            self.screen.blit(title_surf, (rect.x + 14, ty))
-            ty += 16 if rect.h < 108 else 18
-        badge = pygame.Rect(rect.right - 110, rect.bottom - 30, 100, 22)
-        if status == "playable":
-            self.draw_framed_panel(badge, fill=(162, 202, 138), border=(72, 114, 60), radius=8, inner=(188, 224, 162))
-            self.draw_text_center_shadow(self.fonts["tiny"], self.tr("playable_now"), (24, 52, 22), badge.center, shadow=(222, 244, 214), offset=(1, 1))
-        elif status == "prototype":
-            self.draw_framed_panel(badge, fill=(234, 198, 138), border=(146, 98, 40), radius=8, inner=(246, 216, 166))
-            self.draw_text_center_shadow(self.fonts["tiny"], self.tr("prototype"), (66, 42, 20), badge.center, shadow=(252, 234, 198), offset=(1, 1))
+            zoom = pygame.transform.smoothscale(thumb, (max(8, int(inner_thumb.w * 1.03)), max(8, int(inner_thumb.h * 1.03))))
+            zx = inner_thumb.x - (zoom.get_width() - inner_thumb.w) // 2
+            zy = inner_thumb.y - (zoom.get_height() - inner_thumb.h) // 2
+            clip_prev = self.screen.get_clip()
+            self.screen.set_clip(inner_thumb)
+            self.screen.blit(zoom, (zx, zy))
+            self.screen.set_clip(clip_prev)
+            glow = pygame.Surface((inner_thumb.w, inner_thumb.h), pygame.SRCALPHA)
+            glow.fill((255, 240, 190, 22))
+            self.screen.blit(glow, inner_thumb.topleft)
         else:
-            self.draw_framed_panel(badge, fill=(214, 198, 172), border=(120, 104, 78), radius=8, inner=(228, 214, 188))
-            self.draw_text_center_shadow(self.fonts["tiny"], self.tr("locked"), (52, 38, 22), badge.center, shadow=(242, 232, 212), offset=(1, 1))
+            self.screen.blit(thumb, inner_thumb.topleft)
+
+        if hover:
+            hover_fx = pygame.Surface((inner_thumb.w, inner_thumb.h), pygame.SRCALPHA)
+            hover_fx.fill((255, 248, 220, 34))
+            self.screen.blit(hover_fx, inner_thumb.topleft)
+
+        if status == "locked":
+            shade = pygame.Surface((inner_thumb.w, inner_thumb.h), pygame.SRCALPHA)
+            shade.fill((24, 24, 30, 136))
+            self.screen.blit(shade, inner_thumb.topleft)
+            lock = pygame.Rect(inner_thumb.centerx - 13, inner_thumb.centery - 9, 26, 19)
+            pygame.draw.rect(self.screen, (214, 196, 142), lock, border_radius=5)
+            pygame.draw.rect(self.screen, (96, 80, 54), lock, 2, border_radius=5)
+            pygame.draw.arc(self.screen, (214, 196, 142), (lock.x + 4, lock.y - 11, 18, 15), 0.12, 3.02, 3)
+            pygame.draw.arc(self.screen, (96, 80, 54), (lock.x + 4, lock.y - 11, 18, 15), 0.12, 3.02, 2)
+
+        if status == "prototype":
+            ribbon = [(thumb_area.right - 58, thumb_area.y + 2), (thumb_area.right - 2, thumb_area.y + 2), (thumb_area.right - 2, thumb_area.y + 19)]
+            pygame.draw.polygon(self.screen, (224, 150, 68), ribbon)
+            pygame.draw.polygon(self.screen, (132, 84, 30), ribbon, 1)
+            tag = self.fonts["tiny"].render(self.tr("prototype"), True, (60, 36, 14))
+            self.screen.blit(tag, (thumb_area.right - tag.get_width() - 6, thumb_area.y + 4))
+        elif status == "playable":
+            medal = (thumb_area.right - 12, thumb_area.y + 12)
+            pygame.draw.circle(self.screen, (246, 214, 96), medal, 5)
+            pygame.draw.circle(self.screen, (148, 104, 36), medal, 1)
+            pygame.draw.circle(self.screen, (252, 238, 168), medal, 2)
+
+        if status == "playable":
+            bfill, bborder, btxt = (154, 198, 134), (72, 112, 60), self.tr("playable_now")
+            txt_col = (22, 48, 20)
+        elif status == "prototype":
+            bfill, bborder, btxt = (234, 196, 134), (144, 96, 42), self.tr("prototype")
+            txt_col = (62, 40, 18)
+        else:
+            bfill, bborder, btxt = (210, 194, 170), (116, 102, 78), self.tr("locked")
+            txt_col = (48, 36, 22)
+        self.draw_mode_thumb_gradient(self.screen, badge_area, self.shift_color(bfill, 12), self.shift_color(bfill, -8))
+        pygame.draw.rect(self.screen, bborder, badge_area, 1, border_radius=5)
+        self.draw_text_center_shadow(self.fonts["tiny"], btxt, txt_col, badge_area.center, shadow=(236, 226, 206), offset=(1, 1))
 
     def show_mode_notice(self, text_key: str) -> None:
         self.mode_notice = self.tr(text_key)
@@ -8558,11 +9315,11 @@ class Game:
     def trigger_mode_entry(self, scene: str, entry_id: str) -> None:
         self.mode_notice = ""
         self.mode_notice_until_ms = 0
-        entries = {eid: (title, zh_title, status) for eid, title, zh_title, status in self.mode_scene_entries(scene)}
+        entries = {eid: (title, zh_title, status, thumb_key) for eid, title, zh_title, status, thumb_key in self.mode_scene_entries(scene)}
         row = entries.get(entry_id)
         if row is None:
             return
-        _title, _zh, status = row
+        _title, _zh, status, _thumb = row
         if status == "prototype":
             self.show_mode_notice("mode_not_available")
             return
@@ -9015,22 +9772,32 @@ class Game:
     def draw_mode_scene(self, scene: str) -> None:
         mouse = pygame.mouse.get_pos()
         self.draw_scene_backdrop()
+        pygame.draw.ellipse(self.screen, (92, 152, 86), (-80, SCREEN_HEIGHT - 190, 360, 240))
+        pygame.draw.ellipse(self.screen, (86, 142, 80), (SCREEN_WIDTH - 260, SCREEN_HEIGHT - 188, 360, 240))
         layout = self.mode_scene_layout()
         self.draw_parchment_panel(layout["frame"], radius=24)
         title_key, subtitle_key = self.mode_scene_header(scene)
         self.draw_wood_sign(layout["title"], self.tr(title_key), self.tr(subtitle_key))
+        cards_shell = layout["cards_area"].inflate(12, 12)
+        self.draw_framed_panel(cards_shell, fill=(186, 132, 78), border=(102, 68, 34), radius=16, inner=(214, 166, 108))
+        self.draw_framed_panel(layout["cards_area"], fill=(236, 214, 174), border=(134, 94, 48), radius=14, inner=(246, 232, 200))
+        shelf = pygame.Rect(layout["cards_area"].x + 12, layout["cards_area"].bottom + 4, layout["cards_area"].w - 24, 8)
+        self.draw_mode_thumb_gradient(self.screen, shelf, (156, 110, 62), (108, 72, 38))
+        pygame.draw.rect(self.screen, (92, 58, 28), shelf, 1, border_radius=4)
 
         entries, page, total_pages = self.mode_scene_visible_entries(scene)
         selected = self.mode_card_selected.get(scene, "")
         buttons = self.mode_scene_card_buttons(scene)
-        entry_map = {entry_id: (title, zh_title, status) for entry_id, title, zh_title, status in entries}
+        entry_map = {entry_id: (title, zh_title, status, thumb_key) for entry_id, title, zh_title, status, thumb_key in entries}
         for entry_id, rect in buttons:
-            title, zh_title, status = entry_map[entry_id]
+            title, zh_title, status, thumb_key = entry_map[entry_id]
             self.draw_mode_card(
+                entry_id,
                 rect,
                 title,
                 zh_title,
                 status,
+                thumb_key,
                 hover=rect.collidepoint(mouse),
                 selected=(entry_id == selected),
             )
@@ -9044,16 +9811,20 @@ class Game:
         self.mode_prev_btn = layout["page_prev"] if total_pages > 1 else pygame.Rect(0, 0, 0, 0)
         self.mode_next_btn = layout["page_next"] if total_pages > 1 else pygame.Rect(0, 0, 0, 0)
         if total_pages > 1:
-            self.draw_secondary_button(self.mode_prev_btn, "<", hover=self.mode_prev_btn.collidepoint(mouse))
-            self.draw_secondary_button(self.mode_next_btn, ">", hover=self.mode_next_btn.collidepoint(mouse))
+            self.draw_mode_page_arrow_button(self.mode_prev_btn, -1, hover=self.mode_prev_btn.collidepoint(mouse))
+            self.draw_mode_page_arrow_button(self.mode_next_btn, 1, hover=self.mode_next_btn.collidepoint(mouse))
             badge = layout["page_badge"]
-            self.draw_framed_panel(badge, fill=(238, 220, 178), border=(128, 92, 44), radius=10, inner=(248, 236, 204))
-            page_text = f"Page {page + 1}/{total_pages}" if self.lang == "en" else f"\u7b2c {page + 1}/{total_pages} \u9875"
+            self.draw_framed_panel(badge, fill=(244, 232, 198), border=(134, 98, 52), radius=9, inner=(250, 242, 216))
+            page_word = self.tr("page")
+            if self.lang == "zh":
+                page_text = f"\u7b2c {page + 1}/{total_pages} {page_word}"
+            else:
+                page_text = f"{page_word} {page + 1}/{total_pages}"
             surf = self.fonts["small"].render(page_text, True, (56, 44, 28))
             self.screen.blit(surf, surf.get_rect(center=badge.center))
 
         self.back_btn = layout["back_btn"]
-        self.draw_secondary_button(self.back_btn, self.tr("back_to_start"), hover=self.back_btn.collidepoint(mouse))
+        self.draw_leaf_button(self.back_btn, self.tr("back"), hover=self.back_btn.collidepoint(mouse))
 
     def zen_garden_layout(self) -> Dict[str, pygame.Rect]:
         frame = pygame.Rect(52, 40, SCREEN_WIDTH - 104, SCREEN_HEIGHT - 92)
