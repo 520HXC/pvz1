@@ -251,6 +251,7 @@ ADVENTURE_CHAPTERS: List[Dict[str, object]] = [
         "field": "day",
         "title_key": "chapter_1_title",
         "subtitle_key": "chapter_1_subtitle",
+        "focus_key": "chapter_1_focus",
         "theme": "chapter_day",
     },
     {
@@ -259,6 +260,7 @@ ADVENTURE_CHAPTERS: List[Dict[str, object]] = [
         "field": "night",
         "title_key": "chapter_2_title",
         "subtitle_key": "chapter_2_subtitle",
+        "focus_key": "chapter_2_focus",
         "theme": "chapter_night",
     },
     {
@@ -267,6 +269,7 @@ ADVENTURE_CHAPTERS: List[Dict[str, object]] = [
         "field": "pool",
         "title_key": "chapter_3_title",
         "subtitle_key": "chapter_3_subtitle",
+        "focus_key": "chapter_3_focus",
         "theme": "chapter_pool",
     },
     {
@@ -275,6 +278,7 @@ ADVENTURE_CHAPTERS: List[Dict[str, object]] = [
         "field": "fog",
         "title_key": "chapter_4_title",
         "subtitle_key": "chapter_4_subtitle",
+        "focus_key": "chapter_4_focus",
         "theme": "chapter_fog",
     },
     {
@@ -283,6 +287,7 @@ ADVENTURE_CHAPTERS: List[Dict[str, object]] = [
         "field": "roof",
         "title_key": "chapter_5_title",
         "subtitle_key": "chapter_5_subtitle",
+        "focus_key": "chapter_5_focus",
         "theme": "chapter_roof",
     },
 ]
@@ -740,16 +745,23 @@ I18N = {
         "adventure_levels_title": "Adventure Levels",
         "adventure_levels_subtitle": "Choose a stage from this chapter.",
         "back_to_chapters": "Back To Chapters",
+        "chapter_range": "Stages {range}",
+        "chapter_focus": "Focus: {focus}",
         "chapter_1_title": "Front Yard Alert",
         "chapter_1_subtitle": "Day Lawn Basics",
+        "chapter_1_focus": "Sun economy and basic walkers",
         "chapter_2_title": "Nightfall",
         "chapter_2_subtitle": "Mushrooms And Graves",
+        "chapter_2_focus": "Night economy and grave pressure",
         "chapter_3_title": "Pool Trouble",
         "chapter_3_subtitle": "Water Lanes Open",
+        "chapter_3_focus": "Water lanes and split defenses",
         "chapter_4_title": "Fog Rising",
         "chapter_4_subtitle": "Vision Under Pressure",
+        "chapter_4_focus": "Fog control and air threats",
         "chapter_5_title": "Roof Showdown",
         "chapter_5_subtitle": "Lobbers And Final Boss",
+        "chapter_5_focus": "Roof arc shots and boss pressure",
         "shop": "Shop",
         "daves_shop": "Dave's Shop",
         "back": "Back",
@@ -997,16 +1009,23 @@ I18N = {
         "adventure_levels_title": "冒险关卡",
         "adventure_levels_subtitle": "从当前章节中选择一关开始战斗。",
         "back_to_chapters": "返回章节选择",
+        "chapter_range": "关卡范围：{range}",
+        "chapter_focus": "章节重点：{focus}",
         "chapter_1_title": "前院告急",
         "chapter_1_subtitle": "白天草坪入门",
+        "chapter_1_focus": "阳光经营与基础僵尸",
         "chapter_2_title": "夜幕降临",
         "chapter_2_subtitle": "蘑菇与墓碑",
+        "chapter_2_focus": "夜间经济与墓碑压力",
         "chapter_3_title": "泳池危机",
         "chapter_3_subtitle": "水陆双线开启",
+        "chapter_3_focus": "泳池双线与水路威胁",
         "chapter_4_title": "迷雾笼罩",
         "chapter_4_subtitle": "视野与空袭压力",
+        "chapter_4_focus": "迷雾视野与空袭威胁",
         "chapter_5_title": "屋顶决战",
         "chapter_5_subtitle": "抛射防线与最终首领",
+        "chapter_5_focus": "屋顶抛射与首领决战",
         "shop": "商店",
         "daves_shop": "疯狂戴夫商店",
         "back": "返回",
@@ -7410,6 +7429,14 @@ class Game:
     def tr(self, key: str) -> str:
         return I18N.get(self.lang, I18N["en"]).get(key, I18N["en"].get(key, key))
 
+    def fit_label(self, text: str, font: pygame.font.Font, max_width: int) -> str:
+        clipped = text
+        while clipped and font.size(clipped)[0] > max_width:
+            clipped = clipped[:-1]
+        if clipped != text and len(clipped) >= 2:
+            clipped = clipped[:-1] + "…"
+        return clipped
+
     def plant_display_name(self, kind: str) -> str:
         cfg = self.plants.get(kind)
         if not cfg:
@@ -8317,6 +8344,22 @@ class Game:
     def adventure_chapter_subtitle(self, world: int) -> str:
         chapter = self.adventure_chapter_def(world)
         return self.tr(str(chapter.get("subtitle_key", "chapter_1_subtitle")))
+
+    def adventure_chapter_focus(self, world: int) -> str:
+        chapter = self.adventure_chapter_def(world)
+        return self.tr(str(chapter.get("focus_key", "chapter_1_focus")))
+
+    def adventure_chapter_code_range(self, world: int) -> str:
+        levels = self.adventure_levels_for_world(world)
+        if not levels:
+            return f"{world}-1 ~ {world}-10"
+        return f"{levels[0].display_code} ~ {levels[-1].display_code}"
+
+    def adventure_chapter_range_label(self, world: int) -> str:
+        return self.tr("chapter_range").format(range=self.adventure_chapter_code_range(world))
+
+    def adventure_chapter_focus_label(self, world: int) -> str:
+        return self.tr("chapter_focus").format(focus=self.adventure_chapter_focus(world))
 
     def adventure_levels_for_world(self, world: int) -> List[LevelConfig]:
         return [lv for lv in self.levels if lv.world == world]
@@ -11702,7 +11745,8 @@ class Game:
             "grid": grid,
             "cards": cards,
             "back_btn": pygame.Rect(42, SCREEN_HEIGHT - 58, 156, 40),
-            "chapter_badge": pygame.Rect(SCREEN_WIDTH - 306, SCREEN_HEIGHT - 60, 252, 42),
+            "chapter_range_badge": pygame.Rect(SCREEN_WIDTH - 432, SCREEN_HEIGHT - 60, 190, 42),
+            "chapter_focus_badge": pygame.Rect(SCREEN_WIDTH - 232, SCREEN_HEIGHT - 60, 178, 42),
         }
 
     def draw_adventure_lock_icon(self, rect: pygame.Rect) -> None:
@@ -11724,10 +11768,19 @@ class Game:
         if hover and unlocked:
             fill = (252, 236, 206)
         self.draw_framed_panel(card, fill=fill, border=(126, 88, 46), radius=18, inner=(250, 240, 214))
-        preview_rect = pygame.Rect(card.x + 14, card.y + 30, card.w - 28, card.h - 78)
+        preview_rect = pygame.Rect(card.x + 14, card.y + 30, card.w - 28, card.h - 92)
         preview = self.load_adventure_chapter_preview(world, preview_rect.size)
         self.screen.blit(preview, preview_rect)
         pygame.draw.rect(self.screen, (92, 62, 34), preview_rect, 2, border_radius=10)
+        range_badge = pygame.Rect(card.x + 18, preview_rect.bottom + 6, 100, 16)
+        focus_badge = pygame.Rect(range_badge.right + 6, preview_rect.bottom + 6, card.right - range_badge.right - 24, 16)
+        self.draw_framed_panel(range_badge, fill=(226, 208, 162), border=(130, 96, 52), radius=6, inner=(240, 228, 188))
+        self.draw_framed_panel(focus_badge, fill=(236, 220, 184), border=(134, 102, 58), radius=6, inner=(246, 236, 206))
+        range_txt = self.fonts["tiny"].render(self.adventure_chapter_code_range(world), True, (62, 42, 22))
+        self.screen.blit(range_txt, range_txt.get_rect(center=range_badge.center))
+        focus_txt = self.fit_label(self.adventure_chapter_focus(world), self.fonts["tiny"], focus_badge.w - 10)
+        focus_surf = self.fonts["tiny"].render(focus_txt, True, (70, 48, 24))
+        self.screen.blit(focus_surf, focus_surf.get_rect(center=focus_badge.center))
         if hover and unlocked:
             glow = pygame.Surface(preview_rect.size, pygame.SRCALPHA)
             glow.fill((255, 255, 255, 26))
@@ -11741,7 +11794,7 @@ class Game:
         tx = card.centerx - title_main.get_width() // 2
         self.screen.blit(title_shadow, (tx + 2, card.y + 6))
         self.screen.blit(title_main, (tx, card.y + 4))
-        nameplate = pygame.Rect(card.x + 22, card.bottom - 34, card.w - 44, 24)
+        nameplate = pygame.Rect(card.x + 22, card.bottom - 32, card.w - 44, 22)
         self.draw_framed_panel(nameplate, fill=(132, 88, 44), border=(76, 44, 20), radius=10, inner=(166, 114, 60))
         sub = self.fonts["small"].render(self.adventure_chapter_subtitle(world), True, (246, 232, 198))
         self.screen.blit(sub, sub.get_rect(center=nameplate.center))
@@ -11849,10 +11902,16 @@ class Game:
         self.draw_wood_sign(layout["sign"], self.tr("adventure_levels_title"), subtitle)
         for level, rect in zip(levels, layout["cards"]):
             self.draw_adventure_level_card(level, rect, rect.collidepoint(mouse))
-        badge = layout["chapter_badge"]
-        self.draw_framed_panel(badge, fill=(136, 98, 54), border=(74, 46, 24), radius=12, inner=(170, 124, 72))
-        badge_txt = self.fonts["small"].render(self.tr("adventure_levels_subtitle"), True, (248, 238, 214))
-        self.screen.blit(badge_txt, badge_txt.get_rect(center=badge.center))
+        range_badge = layout["chapter_range_badge"]
+        focus_badge = layout["chapter_focus_badge"]
+        self.draw_framed_panel(range_badge, fill=(136, 98, 54), border=(74, 46, 24), radius=12, inner=(170, 124, 72))
+        self.draw_framed_panel(focus_badge, fill=(118, 86, 48), border=(68, 42, 24), radius=12, inner=(154, 112, 68))
+        range_text = self.fit_label(self.adventure_chapter_range_label(world), self.fonts["small"], range_badge.w - 14)
+        range_surf = self.fonts["small"].render(range_text, True, (248, 238, 214))
+        self.screen.blit(range_surf, range_surf.get_rect(center=range_badge.center))
+        focus_text = self.fit_label(self.adventure_chapter_focus_label(world), self.fonts["tiny"], focus_badge.w - 12)
+        focus_surf = self.fonts["tiny"].render(focus_text, True, (248, 236, 210))
+        self.screen.blit(focus_surf, focus_surf.get_rect(center=focus_badge.center))
         self.back_btn = layout["back_btn"]
         self.draw_secondary_button(self.back_btn, self.tr("back_to_chapters"), hover=self.back_btn.collidepoint(mouse))
 
