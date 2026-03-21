@@ -198,7 +198,7 @@ Current ongoing work includes:
 
 这是一个使用 `pygame` 开发的《植物大战僵尸》风格项目，目前正在持续朝 **原版 PvZ PC / GOTY 版的结构、节奏和界面体验** 收口，但仍坚持使用原创重绘和程序化回退，而不是直接使用官方素材文件。
 
-这个仓库已经不只是早期原型。当前主分支已经完成了大量 Adventure、特殊关、小游戏规则和菜单/UI 重构，后续重点是继续把模式规则、单位行为和视觉细节做得更接近原版。
+这个仓库已经不只是早期原型。当前主分支已经完成了大量冒险模式（Adventure）、特殊关、小游戏规则和菜单 / 界面（UI）重构，后续重点是继续把模式规则、单位行为和视觉细节做得更接近原版。
 
 ## 项目概述
 
@@ -212,64 +212,64 @@ Current ongoing work includes:
 
 ### 主流程已经打通
 
-- `开始 -> Adventure / Mini-games / Puzzle / Survival -> 选卡或直接进入特殊关 -> 战斗 -> 结算`
-- Adventure 已重构为 **50 关**：`1-1` 到 `5-10`
-- Adventure 采用 **五个世界** 的结构：
+- `开始 -> 冒险模式（Adventure）/ 小游戏（Mini-games）/ 解谜（Puzzle）/ 生存模式（Survival） -> 选卡或直接进入特殊关 -> 战斗 -> 结算`
+- 冒险模式（Adventure）已重构为 **50 关**：`1-1` 到 `5-10`
+- 冒险模式采用 **五个世界** 的结构：
   - 白天
   - 夜晚
   - 泳池
   - 迷雾
   - 屋顶
 
-### Adventure 当前进度
+### 冒险模式（Adventure）当前进度
 
-- Adventure 选关已经改成：
+- 冒险模式选关已经改成：
   - 五章入口页
   - 每章 10 关的图片关卡页
-- Adventure 刷怪和难度已经改成更接近原版的：
+- 冒险模式的刷怪和难度已经改成更接近原版的：
   - 旗帜波结构
   - 按世界推进的僵尸引入顺序
   - 基于波次预算的刷怪队列
-- Adventure 关卡不再一律先进选卡，而是按 **关卡类型** 分流：
-  - `normal_select`
-  - `conveyor`
-  - `bonus_special`
-  - `boss_conveyor`
+- 冒险模式关卡不再一律先进选卡，而是按 **关卡类型** 分流：
+  - 普通选卡关（`normal_select`）
+  - 传送带关（`conveyor`）
+  - 特殊奖励关（`bonus_special`）
+  - Boss 传送带关（`boss_conveyor`）
 
 ### 已经完成的重要特殊关纠偏
 
-- `5-10` 已经改成 **Boss 传送带关**，不再先进选卡
-- `mini_dr_zomboss_revenge` 也已经改成直接进入 **Boss conveyor**
-- `4-5 Vasebreaker` 已按砸罐子规则运行，而不是普通 Adventure 波次
-- `5-5 Bungee Blitz` 已改成特殊屋顶 conveyor 关
-- `Last Stand` 已做成 **准备阶段 -> 防守阶段**
-- `Zombiquarium` 已不再是普通守家换皮，而是以养鱼僵尸经济循环为主
+- `5-10` 已经改成 **Boss 传送带关（Boss conveyor）**，不再先进选卡
+- `mini_dr_zomboss_revenge` 也已经改成直接进入 **Boss 传送带关（Boss conveyor）**
+- `4-5` 砸罐子（`Vasebreaker`）已经按砸罐子规则运行，而不是普通冒险模式波次
+- `5-5` 蹦极闪击（`Bungee Blitz`）已经改成特殊屋顶传送带关（conveyor）
+- 坚守阵地（`Last Stand`）已经做成 **准备阶段 -> 防守阶段**
+- 僵尸水族馆（`Zombiquarium`）已经不再是普通守家换皮，而是以养鱼僵尸经济循环为主
 
-## Mini-games / Puzzle / Survival 现状
+## 小游戏（Mini-games）/ 解谜（Puzzle）/ 生存模式（Survival）现状
 
 ### 已经有独立规则改造的小游戏
 
-- `Wall-nut Bowling`
-- `Whack a Zombie`
-- `Dr. Zomboss's Revenge`
-- `Zombiquarium`
-- `Last Stand`
-- `Beghouled`
-- `Beghouled Twist`
-- `Seeing Stars`
+- 坚果保龄球（`Wall-nut Bowling`）
+- 打僵尸（`Whack a Zombie`）
+- 僵王博士的复仇（`Dr. Zomboss's Revenge`）
+- 僵尸水族馆（`Zombiquarium`）
+- 坚守阵地（`Last Stand`）
+- 宝石迷阵（`Beghouled`）
+- 宝石旋风（`Beghouled Twist`）
+- 观星（`Seeing Stars`）
 
-### Puzzle 模式
+### 解谜模式（Puzzle）
 
-- `Vasebreaker`
+- 砸罐子（`Vasebreaker`）
   - 砸出植物后会进入临时库存
   - 不会再自动种到原地
-- `I, Zombie`
+- 我是僵尸（`I, Zombie`）
   - 使用固定谜题式布局
   - 保留“僵尸方阳光经济”逻辑
 
-### Survival
+### 生存模式（Survival）
 
-- Survival 页面和基础流程已经接上
+- 生存模式页面和基础流程已经接上
 - 目前正在继续向原版那种“多轮、保留草坪、轮间重选卡”的结构推进
 - 轮次之间的衔接和压力曲线还在继续收口
 
@@ -284,20 +284,20 @@ Current ongoing work includes:
 
 这意味着：
 
-- Adventure 特殊关不再都走同一条普通流程
-- Conveyor / Boss conveyor 关会跳过正常 `plant_select`
-- 越来越多小游戏会使用自己的规则预设和专用 HUD，而不是继续套普通 battle 数值
+- 冒险模式（Adventure）里的特殊关不再都走同一条普通流程
+- 传送带关 / Boss 传送带关会跳过正常的选卡页（`plant_select`）
+- 越来越多小游戏会使用自己的规则预设和专用界面提示（HUD），而不是继续套普通战斗（battle）数值
 
 ## UI 还原方向
 
 最近这一批改动，重点是把项目的整体前端结构继续往原版 PvZ PC / GOTY 靠：
 
 - 开始页改成以**主墓碑**为核心的布局
-- Adventure 五章入口页改成更像**章节册页**
-- Adventure 每章关卡页改成更像**图片关卡册页**
-- `Mini / Puzzle / Survival` 改成更像**挑战菜单册页**
-- 战斗 HUD 改成更像**顶部种子栏**
-- 选卡页改成更像**原版 seed chooser**
+- 冒险模式（Adventure）五章入口页改成更像**章节册页**
+- 冒险模式（Adventure）每章关卡页改成更像**图片关卡册页**
+- 小游戏（Mini-games）/ 解谜（Puzzle）/ 生存模式（Survival）改成更像**挑战菜单册页**
+- 战斗顶部信息条（HUD）改成更像**顶部种子栏（seed bank）**
+- 选卡页改成更像**原版种子选择页（seed chooser）**
 
 这里采用的是 **宽屏适配下尽量还原原版结构** 的方向，不是硬做 4:3 黑边复刻。
 
@@ -336,7 +336,7 @@ Current ongoing work includes:
 最简单的做法是：
 
 1. 先进入这个项目文件夹
-2. 在 `python_pvz` 文件夹里打开 PowerShell
+2. 在 `python_pvz` 文件夹里打开 PowerShell 终端
 3. 再直接输入下面这两行：
 
 ```powershell
@@ -375,7 +375,7 @@ python game.py
 
 - 仓库内不直接使用官方 PvZ 美术文件
 - 视觉方向是“强烈受 PvZ1 启发的原创重绘”
-- 如果外部美术缺失，程序化 / 自绘 fallback 仍会保证可玩
+- 如果外部美术缺失，程序化 / 自绘回退（fallback）仍会保证可玩
 
 ## 当前仍在继续补齐的部分
 
@@ -385,6 +385,6 @@ python game.py
 
 - 继续把剩下的小游戏规则体感往原版靠
 - 继续收紧特殊关、世界后段和特殊模式的难度节奏
-- 继续补单位状态机和行为反馈，让植物/僵尸更像原版
-- 继续把 UI 比例、菜单语法和战斗界面往原版 PC / GOTY 压
-- 继续提升原创重绘 / 程序化 fallback 的完成度，减少占位感
+- 继续补单位状态机和行为反馈，让植物 / 僵尸更像原版
+- 继续把 UI 比例、菜单语法和战斗界面往原版 PvZ PC / GOTY 压
+- 继续提升原创重绘 / 程序化回退（fallback）的完成度，减少占位感
