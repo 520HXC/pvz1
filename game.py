@@ -10135,6 +10135,21 @@ class Game:
             offset=(1, 1),
         )
 
+    def draw_coin_plaque(self, rect: pygame.Rect, value: int, label: Optional[str] = None, compact: bool = False) -> None:
+        self.draw_framed_panel(rect, fill=(244, 220, 146), border=(126, 86, 32), radius=12, inner=(252, 234, 178))
+        coin_center = (rect.x + (20 if compact else 24), rect.centery)
+        pygame.draw.circle(self.screen, (246, 208, 82), coin_center, 10 if compact else 11)
+        pygame.draw.circle(self.screen, (168, 118, 32), coin_center, 10 if compact else 11, 2)
+        pygame.draw.circle(self.screen, (255, 240, 182), (coin_center[0] - 2, coin_center[1] - 2), 3 if compact else 4)
+        pygame.draw.circle(self.screen, (232, 188, 76), (coin_center[0] + 8, coin_center[1] + 3), 6 if compact else 7)
+        pygame.draw.circle(self.screen, (156, 108, 30), (coin_center[0] + 8, coin_center[1] + 3), 6 if compact else 7, 1)
+        text_label = label or self.tr("coins")
+        text = f"{text_label}: {int(value)}"
+        font = self.fonts["small"] if compact else self.fonts["mid"]
+        tx = rect.x + (40 if compact else 46)
+        ty = rect.y + (9 if compact else 10)
+        self.draw_text_shadow(font, text, (56, 40, 18), (tx, ty), shadow=(252, 240, 202), offset=(1, 1))
+
     def draw_mode_page_arrow_button(self, rect: pygame.Rect, direction: int, hover: bool = False, enabled: bool = True) -> None:
         if enabled:
             fill = (236, 218, 160) if not hover else (248, 232, 176)
@@ -11142,15 +11157,19 @@ class Game:
     def zen_garden_layout(self) -> Dict[str, pygame.Rect]:
         frame = pygame.Rect(52, 40, SCREEN_WIDTH - 104, SCREEN_HEIGHT - 92)
         title = pygame.Rect(frame.x + 220, frame.y + 16, frame.w - 440, 78)
-        pots = pygame.Rect(frame.x + 34, frame.y + 118, frame.w - 68, frame.h - 202)
-        info = pygame.Rect(frame.x + 34, frame.bottom - 78, frame.w - 300, 56)
-        water_btn = pygame.Rect(frame.right - 248, frame.bottom - 74, 112, 46)
-        back_btn = pygame.Rect(frame.right - 126, frame.bottom - 74, 108, 46)
+        pots = pygame.Rect(frame.x + 30, frame.y + 118, frame.w - 382, frame.h - 212)
+        showcase = pygame.Rect(pots.right + 18, pots.y, frame.right - pots.right - 48, 234)
+        info = pygame.Rect(showcase.x, showcase.bottom + 14, showcase.w, frame.bottom - showcase.bottom - 110)
+        footer = pygame.Rect(frame.x + 28, frame.bottom - 76, frame.w - 56, 54)
+        water_btn = pygame.Rect(footer.right - 234, footer.y + 4, 112, 46)
+        back_btn = pygame.Rect(footer.right - 114, footer.y + 4, 108, 46)
         return {
             "frame": frame,
             "title": title,
             "pots": pots,
+            "showcase": showcase,
             "info": info,
+            "footer": footer,
             "water_btn": water_btn,
             "back_btn": back_btn,
         }
@@ -11185,12 +11204,27 @@ class Game:
         pygame.draw.ellipse(self.screen, (122, 188, 118), (-80, 420, 860, 320))
         pygame.draw.ellipse(self.screen, (94, 160, 102), (540, 446, 820, 300))
         layout = self.zen_garden_layout()
-        self.draw_parchment_panel(layout["frame"], radius=24)
+        self.draw_book_panel(layout["frame"])
         self.draw_wood_sign(layout["title"], self.tr("zen_garden_title"), self.tr("zen_garden_subtitle"))
 
         keys = self.zen_garden_keys()
         if self.zen_selected_key not in keys and keys:
             self.zen_selected_key = keys[0]
+
+        pots_shell = layout["pots"].inflate(14, 14)
+        self.draw_framed_panel(pots_shell, fill=(154, 118, 76), border=(84, 56, 28), radius=20, inner=(186, 144, 90))
+        self.draw_framed_panel(layout["pots"], fill=(234, 220, 186), border=(138, 98, 52), radius=16, inner=(246, 236, 212))
+        self.draw_panel_grain(layout["pots"], (120, 88, 50), alpha=18, spacing=12)
+        owned_chip = pygame.Rect(layout["pots"].x + 12, layout["pots"].y - 30, 188, 24)
+        selected_name = self.plant_display_name(self.zen_selected_key) if self.zen_selected_key in self.plants else "-"
+        selected_growth = int((self.save_data.get("zen_growth") or {}).get(self.zen_selected_key, 0))
+        focus_chip = pygame.Rect(owned_chip.right + 10, owned_chip.y, layout["pots"].w - owned_chip.w - 22, 24)
+        self.draw_framed_panel(owned_chip, fill=(238, 220, 176), border=(126, 92, 46), radius=10, inner=(248, 236, 202))
+        self.draw_framed_panel(focus_chip, fill=(238, 220, 176), border=(126, 92, 46), radius=10, inner=(248, 236, 202))
+        owned_text = self.fit_label(f"{self.tr('owned_plants')}: {len(keys)}", self.fonts["small"], owned_chip.w - 14)
+        focus_text = self.fit_label(f"{self.tr('plants')}: {selected_name}  Lv.{selected_growth}", self.fonts["small"], focus_chip.w - 14)
+        self.screen.blit(self.fonts["small"].render(owned_text, True, (56, 40, 24)), (owned_chip.x + 8, owned_chip.y + 3))
+        self.screen.blit(self.fonts["small"].render(focus_text, True, (56, 40, 24)), (focus_chip.x + 8, focus_chip.y + 3))
 
         for key, rect in self.zen_pot_buttons():
             selected = key == self.zen_selected_key
@@ -11198,33 +11232,77 @@ class Game:
             fill = (244, 232, 204) if hover else (236, 222, 192)
             border = (228, 146, 40) if selected else (136, 98, 54)
             self.draw_framed_panel(rect, fill=fill, border=border, radius=12, inner=(252, 242, 220))
-            pot = pygame.Rect(rect.x + 18, rect.bottom - 42, rect.w - 36, 28)
+            soil = pygame.Rect(rect.x + 16, rect.bottom - 48, rect.w - 32, 18)
+            pygame.draw.ellipse(self.screen, (116, 82, 46), soil)
+            pygame.draw.ellipse(self.screen, (78, 54, 28), soil, 2)
+            pot = pygame.Rect(rect.x + 22, rect.bottom - 42, rect.w - 44, 26)
             pygame.draw.rect(self.screen, (168, 112, 68), pot, border_radius=8)
             pygame.draw.rect(self.screen, (102, 68, 40), pot, 2, border_radius=8)
-            growth = int((self.save_data.get("zen_growth") or {}).get(key, 0))
-            icon_size = 56 + growth * 2
+            pot_growth = int((self.save_data.get("zen_growth") or {}).get(key, 0))
+            icon_size = 56 + pot_growth * 2
             icon = self.get_plant_sprite(key, (icon_size, icon_size))
             if icon is not None:
-                self.screen.blit(icon, icon.get_rect(center=(rect.centerx, rect.y + 44)))
+                self.screen.blit(icon, icon.get_rect(center=(rect.centerx, rect.y + 42)))
             else:
-                pygame.draw.circle(self.screen, (94, 176, 102), (rect.centerx, rect.y + 44), 24)
-            self.screen.blit(self.fonts["small"].render(self.plant_display_name(key), True, (48, 36, 24)), (rect.x + 10, rect.bottom - 20))
+                pygame.draw.circle(self.screen, (94, 176, 102), (rect.centerx, rect.y + 42), 24)
+            name_plate = pygame.Rect(rect.x + 8, rect.bottom - 22, rect.w - 16, 16)
+            self.draw_framed_panel(name_plate, fill=(244, 230, 188), border=(138, 98, 54), radius=6, inner=(252, 240, 212))
+            plant_label = self.fit_label(self.plant_display_name(key), self.fonts["tiny"], name_plate.w - 10)
+            self.draw_text_center_shadow(self.fonts["tiny"], plant_label, (48, 36, 24), name_plate.center, shadow=(250, 242, 220), offset=(1, 1))
             growth_bar = pygame.Rect(rect.x + 10, rect.y + 10, rect.w - 20, 7)
             pygame.draw.rect(self.screen, (86, 66, 42), growth_bar, border_radius=4)
-            fill_w = int(growth_bar.w * clamp(growth / 5.0, 0.0, 1.0))
+            fill_w = int(growth_bar.w * clamp(pot_growth / 5.0, 0.0, 1.0))
             pygame.draw.rect(self.screen, (90, 198, 116), (growth_bar.x, growth_bar.y, fill_w, growth_bar.h), border_radius=4)
+            level_chip = pygame.Rect(rect.right - 48, rect.y + 16, 36, 18)
+            self.draw_framed_panel(level_chip, fill=(236, 214, 156), border=(128, 92, 42), radius=8, inner=(248, 234, 188))
+            self.draw_text_center_shadow(self.fonts["tiny"], str(pot_growth), (60, 44, 22), level_chip.center, shadow=(250, 240, 210), offset=(1, 1))
+
+        showcase = layout["showcase"]
+        self.draw_framed_panel(showcase, fill=(232, 220, 186), border=(132, 96, 52), radius=16, inner=(244, 236, 212))
+        stage = pygame.Rect(showcase.x + 16, showcase.bottom - 44, showcase.w - 32, 22)
+        pygame.draw.ellipse(self.screen, (96, 76, 42), stage)
+        pygame.draw.ellipse(self.screen, (64, 46, 24), stage, 2)
+        showcase_name = pygame.Rect(showcase.x + 18, showcase.y + 14, showcase.w - 36, 30)
+        self.draw_framed_panel(showcase_name, fill=(240, 224, 186), border=(126, 92, 44), radius=10, inner=(250, 238, 208))
+        show_name = self.fit_label(selected_name, self.fonts["mid"], showcase_name.w - 14)
+        self.draw_text_center_shadow(self.fonts["mid"], show_name, (58, 42, 24), showcase_name.center, shadow=(250, 240, 214), offset=(1, 1))
+        big_icon = self.get_plant_sprite(self.zen_selected_key, (168, 168)) if self.zen_selected_key in self.plants else None
+        if big_icon is not None:
+            self.screen.blit(big_icon, big_icon.get_rect(center=(showcase.centerx, showcase.y + 136)))
+        else:
+            pygame.draw.circle(self.screen, (94, 176, 102), (showcase.centerx, showcase.y + 140), 48)
 
         info = layout["info"]
-        self.draw_framed_panel(info, fill=(240, 228, 198), border=(132, 96, 52), radius=12, inner=(248, 238, 216))
-        selected_name = self.plant_display_name(self.zen_selected_key) if self.zen_selected_key in self.plants else "-"
-        growth = int((self.save_data.get("zen_growth") or {}).get(self.zen_selected_key, 0))
-        info_text = f"{self.tr('owned_plants')}: {len(keys)}    {self.tr('plants')}: {selected_name}  Lv.{growth}"
-        self.screen.blit(self.fonts["mid"].render(info_text, True, (52, 40, 26)), (info.x + 14, info.y + 16))
+        self.draw_framed_panel(info, fill=(240, 228, 198), border=(132, 96, 52), radius=14, inner=(248, 238, 216))
+        info_header = pygame.Rect(info.x + 14, info.y + 12, info.w - 28, 28)
+        self.draw_framed_panel(info_header, fill=(232, 214, 176), border=(126, 92, 46), radius=10, inner=(246, 236, 206))
+        header_text = self.fit_label(f"{self.tr('water')}  •  {self.tr('owned_plants')}: {len(keys)}", self.fonts["small"], info_header.w - 12)
+        self.draw_text_center_shadow(self.fonts["small"], header_text, (58, 42, 22), info_header.center, shadow=(248, 238, 208), offset=(1, 1))
+        detail_lines = [
+            f"{self.tr('plants')}: {selected_name}",
+            f"{self.tr('owned_plants')}: {len(keys)}",
+            f"Lv.{selected_growth} / 5",
+        ]
+        y = info.y + 52
+        for line in detail_lines:
+            surf = self.fonts["small"].render(line, True, (52, 40, 26))
+            self.screen.blit(surf, (info.x + 16, y))
+            y += 24
+        hint_box = pygame.Rect(info.x + 14, info.bottom - 52, info.w - 28, 38)
+        self.draw_parchment_panel(hint_box, radius=10)
+        hint_text = self.fit_label(f"{self.tr('watered')}: {selected_name}  Lv.{selected_growth}", self.fonts["tiny"], hint_box.w - 12)
+        self.screen.blit(self.fonts["tiny"].render(hint_text, True, (70, 54, 30)), (hint_box.x + 8, hint_box.y + 10))
 
         if self.zen_notice and pygame.time.get_ticks() < self.zen_notice_until_ms:
-            note = self.fonts["small"].render(self.zen_notice, True, (54, 128, 68))
-            self.screen.blit(note, (info.right - note.get_width() - 12, info.y + 18))
+            note_box = pygame.Rect(info.x + 14, info.bottom - 96, info.w - 28, 34)
+            self.draw_framed_panel(note_box, fill=(214, 236, 194), border=(92, 146, 86), radius=10, inner=(230, 244, 216))
+            notice_text = self.fit_label(self.zen_notice, self.fonts["small"], note_box.w - 12)
+            self.draw_text_center_shadow(self.fonts["small"], notice_text, (54, 128, 68), note_box.center, shadow=(244, 250, 236), offset=(1, 1))
 
+        footer = layout["footer"]
+        self.draw_framed_panel(footer, fill=(128, 98, 62), border=(76, 50, 26), radius=18, inner=(156, 122, 82))
+        footer_text = self.fit_label(f"{self.tr('zen_garden_title')}  •  {self.tr('plants')}: {selected_name}", self.fonts["small"], footer.w - 246)
+        self.screen.blit(self.fonts["small"].render(footer_text, True, (248, 236, 204)), (footer.x + 14, footer.y + 16))
         self.draw_primary_button(layout["water_btn"], self.tr("water"), enabled=bool(self.zen_selected_key), hover=layout["water_btn"].collidepoint(mouse))
         self.draw_secondary_button(layout["back_btn"], self.tr("back_to_start"), hover=layout["back_btn"].collidepoint(mouse))
         self.back_btn = layout["back_btn"]
@@ -11245,6 +11323,10 @@ class Game:
         self.draw_wood_sign(ui["title"], self.tr("options_title"), self.tr("mode_hub"))
         m_label = f"Music: {'ON' if self.options_music_on else 'OFF'}" if self.lang == "en" else f"音乐：{'开' if self.options_music_on else '关'}"
         s_label = f"SFX: {'ON' if self.options_sfx_on else 'OFF'}" if self.lang == "en" else f"音效：{'开' if self.options_sfx_on else '关'}"
+        music_row = ui["music_btn"].inflate(24, 18)
+        sfx_row = ui["sfx_btn"].inflate(24, 18)
+        self.draw_framed_panel(music_row, fill=(236, 220, 188), border=(130, 94, 50), radius=16, inner=(246, 236, 212))
+        self.draw_framed_panel(sfx_row, fill=(236, 220, 188), border=(130, 94, 50), radius=16, inner=(246, 236, 212))
         self.draw_secondary_button(ui["music_btn"], m_label, hover=ui["music_btn"].collidepoint(mouse))
         self.draw_secondary_button(ui["sfx_btn"], s_label, hover=ui["sfx_btn"].collidepoint(mouse))
         self.draw_primary_button(ui["back_btn"], self.tr("back_to_start"), enabled=True, hover=ui["back_btn"].collidepoint(mouse))
@@ -11254,8 +11336,10 @@ class Game:
         mouse = pygame.mouse.get_pos()
         self.draw_scene_backdrop()
         panel = pygame.Rect(124, 70, SCREEN_WIDTH - 248, SCREEN_HEIGHT - 140)
-        self.draw_parchment_panel(panel, radius=22)
+        self.draw_book_panel(panel)
         self.draw_wood_sign(pygame.Rect(panel.x + 140, panel.y + 18, panel.w - 280, 74), self.tr("help_title"), self.tr("mode_hub"))
+        body = pygame.Rect(panel.x + 28, panel.y + 112, panel.w - 56, panel.h - 202)
+        self.draw_parchment_panel(body, radius=18)
         lines = [
             self.tr("help_line_1"),
             self.tr("help_line_2"),
@@ -11263,9 +11347,9 @@ class Game:
             self.tr("help_line_4"),
             self.tr("help_line_5"),
         ]
-        y = panel.y + 128
+        y = body.y + 20
         for line in lines:
-            self.screen.blit(self.fonts["mid"].render(line, True, (54, 40, 26)), (panel.x + 44, y))
+            self.screen.blit(self.fonts["mid"].render(line, True, (54, 40, 26)), (body.x + 18, y))
             y += 44
         self.back_btn = pygame.Rect(panel.centerx - 100, panel.bottom - 70, 200, 50)
         self.draw_primary_button(self.back_btn, self.tr("back_to_start"), enabled=True, hover=self.back_btn.collidepoint(mouse))
@@ -11813,6 +11897,9 @@ class Game:
         self.draw_tombstone_button(self.start_puzzle_btn, self.tr("puzzle"), hover=self.start_puzzle_btn.collidepoint(mouse), enabled=True)
         self.draw_tombstone_button(self.start_survival_btn, self.tr("survival"), hover=self.start_survival_btn.collidepoint(mouse), enabled=True)
 
+        prop_shelf = pygame.Rect(layout["tombstone"].x + 30, layout["tombstone"].bottom - 94, layout["tombstone"].w - 60, 98)
+        self.draw_framed_panel(prop_shelf, fill=(126, 96, 62), border=(72, 48, 26), radius=18, inner=(154, 120, 80))
+        self.draw_panel_grain(prop_shelf.inflate(-10, -8), (82, 58, 32), alpha=26, spacing=10)
         self.draw_book_button(
             self.start_book_btn,
             self.tr("encyclopedia"),
@@ -11825,8 +11912,7 @@ class Game:
         self.draw_leaf_button(self.start_quit_btn, self.tr("quit"), hover=self.start_quit_btn.collidepoint(mouse))
 
         coin_badge = pygame.Rect(54, 632, 252, 48)
-        self.draw_framed_panel(coin_badge, fill=(244, 220, 146), border=(126, 86, 32), radius=12, inner=(252, 234, 178))
-        self.screen.blit(self.fonts["mid"].render(f"{self.tr('coins')}: {int(self.save_data.get('coins', 0))}", True, (62, 44, 20)), (coin_badge.x + 14, coin_badge.y + 10))
+        self.draw_coin_plaque(coin_badge, int(self.save_data.get("coins", 0)))
 
     def draw_mini_select(self) -> None:
         self.draw_mode_scene("mini_select")
@@ -12315,8 +12401,24 @@ class Game:
             hover = rect.collidepoint(mouse)
             fill = (250, 236, 204) if is_sel else ((244, 228, 194) if hover else (238, 222, 186))
             self.draw_framed_panel(rect, fill=fill, border=(220, 144, 38) if is_sel else (142, 104, 54), radius=8, inner=(252, 244, 226))
+            if self.encyclopedia_tab == "plants":
+                cfg_icon = self.plants[key]
+                icon = self.load_image(cfg_icon.sprite_path, size=(24, 24))
+                if icon is not None:
+                    self.screen.blit(icon, icon.get_rect(center=(rect.x + 18, rect.centery)))
+                else:
+                    pygame.draw.circle(self.screen, (84, 170, 98), (rect.x + 18, rect.centery), 10)
+                label_x = rect.x + 34
+            else:
+                cfg_icon = self.zombies[key]
+                icon = self.load_image(cfg_icon.sprite_path, size=(22, 28))
+                if icon is not None:
+                    self.screen.blit(icon, icon.get_rect(center=(rect.x + 18, rect.centery)))
+                else:
+                    pygame.draw.rect(self.screen, (126, 142, 106), (rect.x + 10, rect.y + 6, 16, 20), border_radius=4)
+                label_x = rect.x + 36
             label = self.plant_display_name(key) if self.encyclopedia_tab == "plants" else self.zombie_display_name(key)
-            self.screen.blit(self.fonts["small"].render(label, True, (40, 34, 26)), (rect.x + 10, rect.y + 12))
+            self.screen.blit(self.fonts["small"].render(label, True, (40, 34, 26)), (label_x, rect.y + 12))
         self.screen.set_clip(old_clip)
         scroll_max = self.encyclopedia_scroll_max()
         if scroll_max > 0:
@@ -12572,11 +12674,10 @@ class Game:
         mouse = pygame.mouse.get_pos()
         self.draw_scene_backdrop()
         panel = pygame.Rect(54, 40, SCREEN_WIDTH - 108, SCREEN_HEIGHT - 96)
-        self.draw_parchment_panel(panel, radius=20)
+        self.draw_book_panel(panel)
         self.draw_wood_sign(pygame.Rect(304, 54, 672, 80), self.tr("shop"), self.tr("daves_shop"))
         coin_bar = pygame.Rect(84, 142, 300, 56)
-        self.draw_framed_panel(coin_bar, fill=(244, 220, 146), border=(126, 86, 32), radius=12, inner=(252, 234, 178))
-        self.screen.blit(self.fonts["mid"].render(f"{self.tr('coins')}: {int(self.save_data.get('coins', 0))}", True, (44, 38, 26)), (coin_bar.x + 14, coin_bar.y + 16))
+        self.draw_coin_plaque(coin_bar, int(self.save_data.get("coins", 0)))
         upgrades = [("twin_sunflower", 500), ("gloom_shroom", 750), ("winter_melon", 1000), ("spikerock", 800), ("cob_cannon", 1200)]
         for i, (name, cost) in enumerate(upgrades):
             y = 214 + i * 86
@@ -12585,11 +12686,19 @@ class Game:
             fill = (246, 236, 208) if hover else (240, 231, 199)
             self.draw_framed_panel(rect, fill=fill, border=(130, 96, 42), radius=12, inner=(252, 246, 228))
             owned = bool(self.save_data.get("upgrades", {}).get(name))
+            icon = self.get_plant_sprite(name, (48, 48))
+            if icon is not None:
+                self.screen.blit(icon, icon.get_rect(center=(rect.x + 44, rect.centery)))
             status = self.tr("owned") if owned else f"{self.tr('buy')} {cost}"
             key_col = (36, 36, 36)
             status_col = (44, 90, 46) if owned else (96, 58, 26)
-            self.screen.blit(self.fonts["mid"].render(self.plant_display_name(name), True, key_col), (120, y + 21))
-            self.screen.blit(self.fonts["mid"].render(status, True, status_col), (920, y + 21))
+            self.screen.blit(self.fonts["mid"].render(self.plant_display_name(name), True, key_col), (136, y + 21))
+            buy_chip = pygame.Rect(rect.right - 176, rect.y + 17, 144, 34)
+            chip_fill = (196, 222, 164) if owned else (234, 206, 146)
+            chip_border = (94, 140, 74) if owned else (134, 96, 42)
+            chip_inner = (216, 238, 186) if owned else (246, 224, 170)
+            self.draw_framed_panel(buy_chip, fill=chip_fill, border=chip_border, radius=10, inner=chip_inner)
+            self.draw_text_center_shadow(self.fonts["small"], status, status_col, buy_chip.center, shadow=(248, 238, 210), offset=(1, 1))
         back_label = self.tr("back_to_start") if self.shop_return_scene == "start" else self.tr("back")
         self.draw_secondary_button(self.back_btn, back_label, hover=self.back_btn.collidepoint(mouse))
         return
@@ -12680,11 +12789,12 @@ class Game:
             else:
                 line3 += f"  |  {self.tr('survival_round')} {s_round}/{max(1, s_total)}"
         info_x = cluster.x + 12
-        info_y = cluster.y + 14
         info_w = cluster.w - 126
-        for line in self.wrap_text_lines(self.fonts["tiny"], line1, info_w)[:2]:
-            self.screen.blit(self.fonts["tiny"].render(line, True, (46, 38, 26)), (info_x, info_y))
-            info_y += 15
+        header_chip = pygame.Rect(info_x, cluster.y + 10, info_w, 18)
+        self.draw_framed_panel(header_chip, fill=(214, 194, 158), border=(128, 96, 52), radius=7, inner=(236, 224, 194))
+        header_text = self.fit_label(line1, self.fonts["tiny"], header_chip.w - 10)
+        self.screen.blit(self.fonts["tiny"].render(header_text, True, (46, 38, 26)), (header_chip.x + 6, header_chip.y + 2))
+        info_y = header_chip.bottom + 6
         for line in self.wrap_text_lines(self.fonts["tiny"], line2, info_w)[:2]:
             self.screen.blit(self.fonts["tiny"].render(line, True, (46, 38, 26)), (info_x, info_y))
             info_y += 14
@@ -12695,11 +12805,7 @@ class Game:
             self.draw_wave_progress_bar(pygame.Rect(cluster.x + 10, cluster.bottom - 32, cluster.w - 20, 20))
 
         coin_box = layout["coin_box"]
-        self.draw_framed_panel(coin_box, fill=(246, 224, 154), border=(126, 86, 32), radius=11, inner=(252, 236, 184))
-        pygame.draw.circle(self.screen, (245, 201, 70), (coin_box.x + 22, coin_box.centery), 9)
-        pygame.draw.circle(self.screen, (185, 127, 24), (coin_box.x + 22, coin_box.centery), 9, 2)
-        coin_txt = self.fonts["mid"].render(f"{self.tr('coins')}: {int(self.save_data.get('coins', 0))}", True, (50, 34, 20))
-        self.screen.blit(coin_txt, (coin_box.x + 38, coin_box.y + 8))
+        self.draw_coin_plaque(coin_box, int(self.save_data.get("coins", 0)), compact=True)
 
         if self.battle_notice and pygame.time.get_ticks() < self.battle_notice_until_ms:
             note = self.fonts["small"].render(self.battle_notice, True, self.battle_notice_color)
@@ -12749,11 +12855,9 @@ class Game:
     def draw_result(self) -> None:
         panel = pygame.Rect(0, 0, 720, 260)
         panel.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
-        self.draw_parchment_panel(panel, radius=20)
+        self.draw_book_panel(panel)
         win = self.battle.result == "win"
-        title_col = (54, 136, 62) if win else (176, 62, 52)
-        title = self.fonts["title"].render(self.tr("win") if win else self.tr("lose"), True, title_col)
-        self.screen.blit(title, title.get_rect(center=(panel.centerx, panel.y + 66)))
+        self.draw_wood_sign(pygame.Rect(panel.x + 140, panel.y + 20, panel.w - 280, 74), self.tr("win") if win else self.tr("lose"), self.level_display_name(self.levels[self.level_idx]))
         destination = str(self.battle.mode_rules.get("return_scene", "select"))
         if destination == "mini_select":
             subtitle = self.tr("mini_games")
@@ -12769,7 +12873,10 @@ class Game:
             subtitle = self.tr("level_select")
         else:
             subtitle = self.tr("start")
-        self.screen.blit(self.fonts["mid"].render(subtitle, True, (78, 58, 32)), (panel.x + 30, panel.y + 128))
+        subtitle_chip = pygame.Rect(panel.x + 92, panel.y + 126, panel.w - 184, 34)
+        self.draw_framed_panel(subtitle_chip, fill=(240, 224, 186), border=(132, 96, 46), radius=12, inner=(248, 236, 208))
+        subtitle_surf = self.fonts["mid"].render(subtitle, True, (78, 58, 32))
+        self.screen.blit(subtitle_surf, subtitle_surf.get_rect(center=subtitle_chip.center))
         self.draw_primary_button(self.result_btn, subtitle, enabled=True, hover=self.result_btn.collidepoint(pygame.mouse.get_pos()))
         return
 
@@ -13078,19 +13185,20 @@ class Game:
         self.draw_parchment_panel(panel, radius=18)
         self.draw_framed_panel(left, fill=(234, 216, 176), border=(130, 92, 46), radius=14, inner=(244, 229, 196))
         self.draw_framed_panel(right, fill=(244, 230, 194), border=(130, 92, 46), radius=14, inner=(250, 241, 214))
-
-        title = self.fonts["ui"].render(self.tr("encyclopedia"), True, (60, 42, 22))
-        self.screen.blit(title, (ui["header"].x + 8, ui["header"].y + 4))
         p_sel = self.encyclopedia_tab == "plants"
         z_sel = self.encyclopedia_tab == "zombies"
+        active_label = self.tr("plants_tab") if p_sel else self.tr("zombies_tab")
+        self.draw_wood_sign(pygame.Rect(panel.x + 214, panel.y + 14, panel.w - 428, 72), self.tr("encyclopedia"), active_label)
         self.draw_secondary_button(ui["tab_plants"], self.tr("plants_tab"), hover=ui["tab_plants"].collidepoint(mouse))
         self.draw_secondary_button(ui["tab_zombies"], self.tr("zombies_tab"), hover=ui["tab_zombies"].collidepoint(mouse))
         if p_sel:
             pygame.draw.rect(self.screen, (236, 156, 40), ui["tab_plants"], 3, border_radius=10)
         if z_sel:
             pygame.draw.rect(self.screen, (236, 156, 40), ui["tab_zombies"], 3, border_radius=10)
-
-        self.screen.blit(self.fonts["mid"].render(self.tr("plants_tab") if p_sel else self.tr("zombies_tab"), True, (66, 46, 24)), (left.x + 14, left.y + 12))
+        left_chip = pygame.Rect(left.x + 12, left.y + 10, left.w - 24, 28)
+        self.draw_framed_panel(left_chip, fill=(236, 220, 184), border=(130, 92, 46), radius=10, inner=(246, 236, 210))
+        left_text = self.fit_label(f"{active_label}  •  {len(self.get_encyclopedia_keys(self.encyclopedia_tab))}", self.fonts["small"], left_chip.w - 10)
+        self.draw_text_center_shadow(self.fonts["small"], left_text, (66, 46, 24), left_chip.center, shadow=(250, 240, 214), offset=(1, 1))
         old_clip = self.screen.get_clip()
         self.screen.set_clip(list_view)
         selected_key = self.encyclopedia_selected_key.get(self.encyclopedia_tab, "")
@@ -13116,12 +13224,18 @@ class Game:
         if keys and selected_key not in keys:
             selected_key = keys[0]
             self.encyclopedia_selected_key[self.encyclopedia_tab] = selected_key
-        sprite_box = pygame.Rect(right.x + 20, right.y + 60, 252, 250)
+        self.encyclopedia_back_btn = pygame.Rect(outer.x + 22, outer.bottom - 52, 142, 40)
+        header_plate = pygame.Rect(right.x + 20, right.y + 16, right.w - 40, 38)
+        sprite_box = pygame.Rect(right.x + 20, right.y + 68, 252, 254)
+        stats_box = pygame.Rect(right.x + 290, right.y + 68, right.w - 310, 152)
+        text_box = pygame.Rect(right.x + 20, right.y + 338, right.w - 40, right.h - 358)
+        self.draw_framed_panel(header_plate, fill=(238, 220, 182), border=(130, 92, 46), radius=12, inner=(248, 238, 210))
         self.draw_parchment_panel(sprite_box, radius=12)
+        self.draw_framed_panel(stats_box, fill=(240, 226, 192), border=(132, 96, 46), radius=12, inner=(248, 238, 214))
+        self.draw_parchment_panel(text_box, radius=10)
 
         use_zh = self.lang == "zh"
         if keys:
-            title_y = right.y + 20
             if self.encyclopedia_tab == "plants":
                 cfg = self.plants[selected_key]
                 spr = self.load_image(cfg.sprite_path, size=(182, 182))
@@ -13131,7 +13245,8 @@ class Game:
                     self.draw_fallback_almanac_sprite("plants", selected_key, sprite_box)
                 info = self.get_plant_almanac_text(selected_key, cfg)
                 name = (cfg.display_name_zh or self.plant_display_name(selected_key)) if use_zh else (cfg.display_name_en or cfg.name)
-                self.screen.blit(self.fonts["ui"].render(name, True, (58, 40, 22)), (right.x + 292, title_y))
+                title_text = self.fit_label(name, self.fonts["ui"], header_plate.w - 16)
+                self.draw_text_center_shadow(self.fonts["ui"], title_text, (58, 40, 22), header_plate.center, shadow=(252, 244, 222), offset=(1, 1))
                 behavior = info["behavior_zh"] if use_zh else info["behavior_en"]
                 stat_lines = [
                     f"{self.tr('cost')}: {cfg.cost}",
@@ -13139,12 +13254,13 @@ class Game:
                     f"{self.tr('cooldown')}: {cfg.cooldown:.1f}s",
                     f"{self.tr('behavior')}: {behavior}",
                 ]
-                sy = right.y + 90
+                stats_header = pygame.Rect(stats_box.x + 12, stats_box.y + 10, stats_box.w - 24, 24)
+                self.draw_framed_panel(stats_header, fill=(232, 214, 176), border=(126, 92, 44), radius=9, inner=(244, 234, 204))
+                self.draw_text_center_shadow(self.fonts["small"], self.tr("description"), (68, 48, 26), stats_header.center, shadow=(248, 240, 216), offset=(1, 1))
+                sy = stats_box.y + 46
                 for line in stat_lines:
-                    self.screen.blit(self.fonts["small"].render(line, True, (52, 40, 28)), (right.x + 292, sy))
+                    self.screen.blit(self.fonts["small"].render(line, True, (52, 40, 28)), (stats_box.x + 14, sy))
                     sy += 27
-                text_box = pygame.Rect(right.x + 20, right.y + 322, right.w - 40, right.h - 342)
-                self.draw_parchment_panel(text_box, radius=10)
                 y = text_box.y + 10
                 body_pairs = [
                     (self.tr("intro"), info["short_zh"] if use_zh else info["short_en"]),
@@ -13165,7 +13281,8 @@ class Game:
                     self.draw_fallback_almanac_sprite("zombies", selected_key, sprite_box)
                 info = self.get_zombie_almanac_text(selected_key, cfg)
                 name = (cfg.display_name_zh or self.zombie_display_name(selected_key)) if use_zh else (cfg.display_name_en or cfg.name)
-                self.screen.blit(self.fonts["ui"].render(name, True, (58, 40, 22)), (right.x + 292, title_y))
+                title_text = self.fit_label(name, self.fonts["ui"], header_plate.w - 16)
+                self.draw_text_center_shadow(self.fonts["ui"], title_text, (58, 40, 22), header_plate.center, shadow=(252, 244, 222), offset=(1, 1))
                 movement = info["movement_zh"] if use_zh else info["movement_en"]
                 beh_en, beh_zh = self.almanac_behavior_label(cfg.behavior, False)
                 behavior = beh_zh if use_zh else beh_en
@@ -13174,12 +13291,13 @@ class Game:
                     f"{self.tr('movement')}: {movement}",
                     f"{self.tr('behavior')}: {behavior}",
                 ]
-                sy = right.y + 90
+                stats_header = pygame.Rect(stats_box.x + 12, stats_box.y + 10, stats_box.w - 24, 24)
+                self.draw_framed_panel(stats_header, fill=(232, 214, 176), border=(126, 92, 44), radius=9, inner=(244, 234, 204))
+                self.draw_text_center_shadow(self.fonts["small"], self.tr("description"), (68, 48, 26), stats_header.center, shadow=(248, 240, 216), offset=(1, 1))
+                sy = stats_box.y + 46
                 for line in stat_lines:
-                    self.screen.blit(self.fonts["small"].render(line, True, (52, 40, 28)), (right.x + 292, sy))
+                    self.screen.blit(self.fonts["small"].render(line, True, (52, 40, 28)), (stats_box.x + 14, sy))
                     sy += 27
-                text_box = pygame.Rect(right.x + 20, right.y + 322, right.w - 40, right.h - 342)
-                self.draw_parchment_panel(text_box, radius=10)
                 y = text_box.y + 10
                 body_pairs = [
                     (self.tr("intro"), info["short_zh"] if use_zh else info["short_en"]),
