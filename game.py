@@ -148,6 +148,13 @@ CLASSIC_MODE_TITLE_BY_ID: Dict[str, str] = {
     **{entry_id: title for entry_id, title, _ in CLASSIC_PUZZLE_VASEBREAKER_LIST},
     **{entry_id: title for entry_id, title, _ in CLASSIC_PUZZLE_IZOMBIE_LIST},
     **{entry_id: title for entry_id, title, _ in CLASSIC_SURVIVAL_LIST},
+    "adventure_vasebreaker": "Vasebreaker",
+    "adventure_bungee_blitz": "Bungee Blitz",
+    "adventure_conveyor_day": "Conveyor Day",
+    "adventure_conveyor_night": "Conveyor Night",
+    "adventure_conveyor_pool": "Pool Conveyor",
+    "adventure_conveyor_fog": "Fog Conveyor",
+    "adventure_zomboss_boss": "Dr. Zomboss",
 }
 
 CLASSIC_MODE_SUBTITLE_BY_ID: Dict[str, str] = {
@@ -155,6 +162,13 @@ CLASSIC_MODE_SUBTITLE_BY_ID: Dict[str, str] = {
     **{entry_id: zh for entry_id, _, zh in CLASSIC_PUZZLE_VASEBREAKER_LIST},
     **{entry_id: zh for entry_id, _, zh in CLASSIC_PUZZLE_IZOMBIE_LIST},
     **{entry_id: zh for entry_id, _, zh in CLASSIC_SURVIVAL_LIST},
+    "adventure_vasebreaker": "砸罐子",
+    "adventure_bungee_blitz": "蹦极闪击",
+    "adventure_conveyor_day": "白天传送带",
+    "adventure_conveyor_night": "夜晚传送带",
+    "adventure_conveyor_pool": "泳池传送带",
+    "adventure_conveyor_fog": "迷雾传送带",
+    "adventure_zomboss_boss": "僵王博士",
 }
 
 ALL_CLASSIC_MODE_IDS: List[str] = [
@@ -916,7 +930,18 @@ I18N = {
         "column_like_hint": "Planting one tile clones the whole column.",
         "zombiquarium_hint": "Keep your zombie fish fed; hungry fish stop making sun.",
         "zombiquarium_feed_cost": "Feed Cost",
+        "zombiquarium_buy_fish": "Buy Fish",
+        "zombiquarium_buy_trophy": "Buy Trophy",
+        "zombiquarium_trophy_cost": "Trophy",
+        "zombiquarium_need_more_sun": "Need more sun.",
+        "zombiquarium_tank_full": "Tank is full.",
+        "zombiquarium_trophy_bought": "Trophy bought!",
         "fish_count": "Fish",
+        "last_stand_prepare": "Prep Phase",
+        "last_stand_fight": "Defense Phase",
+        "last_stand_hint": "Spend your big budget, then start the waves when ready.",
+        "last_stand_begin": "Start Assault",
+        "last_stand_started": "The zombies are coming!",
         "whack_hint": "Smash pop-up zombies before they disappear.",
         "whack_score": "Smash",
         "whack_miss": "Miss",
@@ -1185,7 +1210,18 @@ I18N = {
         "column_like_hint": "任意落点会复制到整列。",
         "zombiquarium_hint": "喂养僵尸鱼，饥饿时会停止产阳光。",
         "zombiquarium_feed_cost": "喂食花费",
+        "zombiquarium_buy_fish": "购买僵尸鱼",
+        "zombiquarium_buy_trophy": "购买奖杯",
+        "zombiquarium_trophy_cost": "奖杯花费",
+        "zombiquarium_need_more_sun": "阳光不足。",
+        "zombiquarium_tank_full": "鱼缸满了。",
+        "zombiquarium_trophy_bought": "奖杯到手！",
         "fish_count": "鱼数量",
+        "last_stand_prepare": "准备阶段",
+        "last_stand_fight": "防守阶段",
+        "last_stand_hint": "先用大笔阳光布阵，准备好后再正式开战。",
+        "last_stand_begin": "开始防守",
+        "last_stand_started": "僵尸开始进攻！",
         "whack_hint": "在僵尸缩回前点击敲掉它们。",
         "whack_score": "击中",
         "whack_miss": "漏掉",
@@ -1505,6 +1541,7 @@ MODE_ENTRY_STYLES: Dict[str, str] = {
     "mini_big_trouble_little_zombie": "conveyor",
     "mini_column_like_you_see_em": "conveyor",
     "mini_whack_a_zombie": "bonus_special",
+    "mini_zombiquarium": "bonus_special",
     "mini_dr_zomboss_revenge": "boss_conveyor",
 }
 
@@ -2527,6 +2564,15 @@ class BattleState:
     def is_zombiquarium_mode(self) -> bool:
         return self.is_mode("mini_zombiquarium")
 
+    def is_last_stand_mode(self) -> bool:
+        return self.is_mode("mini_last_stand")
+
+    def is_bungee_blitz_mode(self) -> bool:
+        return self.is_mode("adventure_bungee_blitz")
+
+    def last_stand_in_prep(self) -> bool:
+        return self.is_last_stand_mode() and self.mode_bool("last_stand_prepare", False)
+
     def is_whack_mode(self) -> bool:
         return self.is_mode("mini_whack_a_zombie")
 
@@ -2699,6 +2745,7 @@ class BattleState:
             or self.is_beghouled_mode()
             or self.is_beghouled_twist_mode()
             or self.is_zombiquarium_mode()
+            or self.is_bungee_blitz_mode()
             or self.is_whack_mode()
         )
 
@@ -3160,6 +3207,13 @@ class BattleState:
                 (r0, 7, "zombie", "conehead"), (r1, 7, "zombie", "football"), (r2, 7, "sun", 50), (r3, 7, "zombie", "screen_door"), (r4, 7, "zombie", "ladder"),
                 (r0, 8, "plant", "repeater"), (r1, 8, "sun", 25), (r2, 8, "zombie", "pogo"), (r3, 8, "plant", "threepeater"), (r4, 8, "zombie", "digger"),
             ],
+            "adventure_vasebreaker": [
+                (r0, 4, "plant", "sun_shroom"), (r1, 4, "plant", "puff_shroom"), (r2, 4, "plant", "wallnut"), (r3, 4, "plant", "puff_shroom"), (r4, 4, "plant", "potato_mine"),
+                (r0, 5, "zombie", "normal"), (r1, 5, "plant", "fume_shroom"), (r2, 5, "sun", 25), (r3, 5, "plant", "sun_shroom"), (r4, 5, "zombie", "conehead"),
+                (r0, 6, "plant", "puff_shroom"), (r1, 6, "zombie", "normal"), (r2, 6, "plant", "fume_shroom"), (r3, 6, "sun", 25), (r4, 6, "plant", "wallnut"),
+                (r0, 7, "zombie", "conehead"), (r1, 7, "plant", "potato_mine"), (r2, 7, "zombie", "buckethead"), (r3, 7, "plant", "puff_shroom"), (r4, 7, "sun", 50),
+                (r0, 8, "plant", "sun_shroom"), (r1, 8, "zombie", "normal"), (r2, 8, "plant", "wallnut"), (r3, 8, "zombie", "conehead"), (r4, 8, "plant", "fume_shroom"),
+            ],
         }
 
     def vasebreaker_stage_balance(self) -> Dict[str, Dict[str, float]]:
@@ -3174,6 +3228,7 @@ class BattleState:
             "puzzle_hokey_pokey": {"zombie_hp_scale": 1.00, "zombie_dps_scale": 1.00},
             "puzzle_another_chain_reaction": {"zombie_hp_scale": 1.02, "zombie_dps_scale": 1.02},
             "puzzle_ace_of_vase": {"zombie_hp_scale": 1.05, "zombie_dps_scale": 1.04},
+            "adventure_vasebreaker": {"zombie_hp_scale": 0.88, "zombie_dps_scale": 0.90},
             "puzzle_vasebreaker_endless": {"zombie_hp_scale": 1.00, "zombie_dps_scale": 1.00},
         }
 
@@ -3871,29 +3926,76 @@ class BattleState:
         else:
             self.mode_event_t = 0.0
 
+    def spawn_zombiquarium_fish(self, row: Optional[int] = None) -> bool:
+        water_rows = list(self.field.water_rows) if self.field.water_rows else [min(self.rows() - 1, 1), min(self.rows() - 1, 3)]
+        if not water_rows:
+            return False
+        if row is None or row not in water_rows:
+            used_rows = [int(f.get("row", 0.0)) for f in self.zombiquarium_fish]
+            free_rows = [rr for rr in water_rows if rr not in used_rows]
+            row = random.choice(free_rows or water_rows)
+        self.zombiquarium_fish.append(
+            {
+                "row": float(row),
+                "x": float(random.randint(LAWN_X + 90, self.lawn_right() - 90)),
+                "dir": float(random.choice([-1, 1])),
+                "sun_t": random.uniform(3.2, 4.4),
+                "hunger_t": random.uniform(16.0, 20.0),
+                "hungry": 0.0,
+                "starve_t": 7.5,
+            }
+        )
+        return True
+
+    def zombiquarium_fish_cap(self) -> int:
+        return max(1, int(self.mode_float("zombiquarium_fish_cap", 4.0)))
+
     def setup_zombiquarium(self) -> None:
+        self.cards = []
+        self.card_timer = {}
+        self.selected = ""
+        self.main.clear()
+        self.support.clear()
+        self.armor.clear()
+        self.zombies.clear()
+        self.tokens.clear()
+        self.cleaners = [False for _ in range(self.rows())]
         self.zombiquarium_fish.clear()
+        self.mode_spawn_t = 0.0
         self.mode_event_t = 0.0
         self.mode_score = 0
         self.mode_goal = max(300, int(self.mode_float("zombiquarium_goal", 1000.0)))
-        water_rows = list(self.field.water_rows) if self.field.water_rows else [min(self.rows() - 1, 1), min(self.rows() - 1, 3)]
-        for row in water_rows[: max(1, min(3, len(water_rows)))]:
-            self.zombiquarium_fish.append(
-                {
-                    "row": float(row),
-                    "x": float(random.randint(LAWN_X + 90, self.lawn_right() - 90)),
-                    "dir": float(random.choice([-1, 1])),
-                    "sun_t": random.uniform(2.8, 4.2),
-                    "hunger_t": random.uniform(15.0, 19.0),
-                    "hungry": 0.0,
-                    "starve_t": 7.0,
-                }
-            )
+        start_fish = max(1, min(self.zombiquarium_fish_cap(), int(self.mode_float("zombiquarium_start_fish", 1.0))))
+        for _ in range(start_fish):
+            self.spawn_zombiquarium_fish()
+
+    def buy_zombiquarium_fish(self) -> bool:
+        if not self.is_zombiquarium_mode():
+            return False
+        fish_cost = max(25, int(self.mode_float("zombiquarium_fish_cost", 100.0)))
+        if len(self.zombiquarium_fish) >= self.zombiquarium_fish_cap():
+            return False
+        if (not self.mode_bool("infinite_sun", False)) and self.sun < fish_cost:
+            return False
+        if not self.mode_bool("infinite_sun", False):
+            self.sun -= fish_cost
+        return self.spawn_zombiquarium_fish()
+
+    def buy_zombiquarium_trophy(self) -> bool:
+        if not self.is_zombiquarium_mode():
+            return False
+        trophy_cost = max(300, int(self.mode_float("zombiquarium_goal", 1000.0)))
+        if (not self.mode_bool("infinite_sun", False)) and self.sun < trophy_cost:
+            return False
+        if not self.mode_bool("infinite_sun", False):
+            self.sun -= trophy_cost
+        self.result = "win"
+        return True
 
     def feed_zombiquarium_fish(self, px: int, py: int) -> bool:
         if not self.is_zombiquarium_mode():
             return False
-        feed_cost = max(10, int(self.mode_float("zombiquarium_feed_cost", 25.0)))
+        feed_cost = max(1, int(self.mode_float("zombiquarium_feed_cost", 25.0)))
         for fish in self.zombiquarium_fish:
             fx = float(fish.get("x", 0.0))
             fy = float(self.row_y(int(fish.get("row", 0.0))))
@@ -3913,9 +4015,6 @@ class BattleState:
         return False
 
     def update_zombiquarium_mode(self, dt: float) -> None:
-        if self.mode_score >= max(1, self.mode_goal):
-            self.result = "win"
-            return
         if not self.zombiquarium_fish:
             self.result = "lose"
             return
@@ -3947,6 +4046,48 @@ class BattleState:
                 fish["sun_t"] = random.uniform(4.6, 6.2)
         if not self.zombiquarium_fish:
             self.result = "lose"
+
+    def begin_last_stand_assault(self) -> None:
+        if not self.last_stand_in_prep():
+            return
+        self.mode_rules["last_stand_prepare"] = False
+        self.current_wave = 0
+        self.next_wave = 1.0
+        self.wave_pause_t = 1.1
+        self.spawn_t = 0.0
+
+    def update_bungee_blitz_mode(self, dt: float) -> None:
+        if self.target_duration > 0 and self.elapsed >= self.target_duration:
+            return
+        active_alive = [z for z in self.zombies if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0]
+        plant_positions = list(self.main.keys()) + list(self.support.keys()) + list(self.armor.keys())
+        self.mode_event_t += dt
+        self.mode_spawn_t += dt
+        bungee_interval = max(4.4, self.mode_float("bungee_blitz_raid_interval", 7.4) - self.elapsed * 0.014)
+        if plant_positions:
+            while self.mode_event_t >= bungee_interval:
+                self.mode_event_t -= bungee_interval
+                raid_count = 1 + (1 if self.elapsed >= self.target_duration * 0.45 else 0)
+                raid_count = min(2, max(1, raid_count))
+                for _ in range(raid_count):
+                    target_rows = sorted({r for r, _ in plant_positions}) or list(range(self.rows()))
+                    row = random.choice(target_rows)
+                    x = self.lawn_right() + random.randint(24, 72)
+                    z = self.spawn_zombie_instance("bungee", row, float(x), wave_idx=1, hp_scale=0.92, speed_scale=1.0, dps_scale=1.0)
+                    z.state["steal_t"] = random.uniform(1.35, 1.7)
+                    self.zombies.append(z)
+        ground_interval = max(5.8, self.mode_float("bungee_blitz_ground_interval", 8.8) - self.elapsed * 0.018)
+        ground_cap = max(2, int(self.mode_float("bungee_blitz_ground_cap", 5.0)))
+        while self.mode_spawn_t >= ground_interval and len(active_alive) < ground_cap:
+            self.mode_spawn_t -= ground_interval
+            ground_pool = [kind for kind in self.mode_list("bungee_blitz_ground_pool") if kind in self.zombie_types]
+            if not ground_pool:
+                ground_pool = ["normal", "conehead", "buckethead"]
+            kind = random.choice(ground_pool)
+            row = self.choose_spawn_row(kind)
+            spawn_x = self.lawn_right() + random.randint(38, 96)
+            self.zombies.append(self.spawn_zombie_instance(kind, row, float(spawn_x), wave_idx=1, hp_scale=0.90, speed_scale=0.96, dps_scale=0.92))
+            active_alive = [z for z in self.zombies if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0]
 
     def setup_whack_mode(self) -> None:
         self.cards = []
@@ -4043,6 +4184,8 @@ class BattleState:
             self.update_seeing_stars_mode(dt)
         if self.is_zombiquarium_mode():
             self.update_zombiquarium_mode(dt)
+        if self.is_bungee_blitz_mode():
+            self.update_bungee_blitz_mode(dt)
         if self.is_whack_mode():
             self.update_whack_mode(dt)
 
@@ -4332,6 +4475,21 @@ class BattleState:
                 self.setup_seeing_stars_targets()
             if self.is_zombiquarium_mode():
                 self.setup_zombiquarium()
+                self.initial_selected_cards = []
+            if self.is_last_stand_mode():
+                self.mode_rules["last_stand_prepare"] = bool(self.mode_rules.get("last_stand_prepare", True))
+                self.wave_pause_t = 0.0
+                self.current_wave = 0
+                self.next_wave = 1.0
+            if self.is_bungee_blitz_mode():
+                self.total_waves = 0
+                self.large_wave_indices = ()
+                self.final_wave_index = 0
+                self.wave_budgets = []
+                self.wave_spawn_queue = []
+                self.wave_spawn_total = 0
+                self.wave_spawn_remaining = 0
+                self.cleaners = [False for _ in range(self.rows())]
         if self.mode_bool("survival_resume", False):
             state_payload = self.mode_rules.get("survival_resume_state")
             if isinstance(state_payload, dict):
@@ -4346,8 +4504,23 @@ class BattleState:
         if forced_kind and forced_kind in self.zombie_types:
             kind = forced_kind
         else:
-            kinds = list(self.level.z_weights.keys())
-            kind = random.choices(kinds, weights=list(self.level.z_weights.values()), k=1)[0]
+            override_weights = self.mode_rules.get("zombie_weights_override")
+            if isinstance(override_weights, dict):
+                pairs = [(str(k), float(v)) for k, v in override_weights.items() if str(k) in self.zombie_types and float(v) > 0.0]
+                if pairs:
+                    kinds = [k for k, _ in pairs]
+                    weights = [v for _, v in pairs]
+                    kind = random.choices(kinds, weights=weights, k=1)[0]
+                else:
+                    kinds = list(self.level.z_weights.keys())
+                    kind = random.choices(kinds, weights=list(self.level.z_weights.values()), k=1)[0]
+            else:
+                forced_pool = [k for k in self.mode_list("forced_zombie_pool") if k in self.zombie_types]
+                if forced_pool:
+                    kind = random.choice(forced_pool)
+                else:
+                    kinds = list(self.level.z_weights.keys())
+                    kind = random.choices(kinds, weights=list(self.level.z_weights.values()), k=1)[0]
         row = self.choose_spawn_row(kind)
         row_load = sum(1 for z in self.zombies if z.row == row and z.hp > 0 and float(z.state.get("dying_t", 0.0)) <= 0.0)
         spawn_x = self.lawn_right() + random.randint(26, 108) + row_load * 12
@@ -4444,7 +4617,10 @@ class BattleState:
             self.sun -= runtime_cost
         if (kind in self.card_timer) and (not vasebreaker_mode):
             cd_mul = self.mode_float("cooldown_scale", 1.0)
-            self.card_timer[kind] = 0.0 if self.mode_bool("no_cooldown", False) else max(0.1, self.card_runtime_cooldown(kind) * cd_mul)
+            if self.last_stand_in_prep():
+                self.card_timer[kind] = 0.0
+            else:
+                self.card_timer[kind] = 0.0 if self.mode_bool("no_cooldown", False) else max(0.1, self.card_runtime_cooldown(kind) * cd_mul)
         pos = (row, col)
         if place_kind == "coffee_bean":
             self.main[pos].awake_override = True
@@ -4535,6 +4711,13 @@ class BattleState:
 
     def update(self, dt: float) -> None:
         if not self.level or self.result or self.paused or self.almanac_open:
+            return
+        if self.last_stand_in_prep():
+            for k in list(self.card_timer.keys()):
+                self.card_timer[k] = 0.0
+            self.spawn_t = 0.0
+            self.wave_pause_t = 0.0
+            self.next_wave = 1.0
             return
         self.elapsed += dt
         self.spawn_t += dt
@@ -4627,8 +4810,6 @@ class BattleState:
             t.update(dt)
             if t.kind == "sun" and self.mode_bool("auto_collect_sun", False):
                 self.sun += t.value
-                if self.is_zombiquarium_mode():
-                    self.mode_score += int(t.value)
                 self.tokens.remove(t)
                 continue
             if t.kind == "coin" and self.mode_bool("auto_collect_coins", False):
@@ -9431,6 +9612,8 @@ class Game:
                 "start_sun_override": 0.0,
                 "no_sky_sun": True,
                 "vasebreaker_tier": 0.0,
+                "zombie_hp_scale": 0.88,
+                "zombie_dps_scale": 0.90,
             }
         if preset_id == "mini_big_trouble_little_zombie":
             return {
@@ -9456,14 +9639,18 @@ class Game:
                 "return_scene": "adventure_level_select",
                 "conveyor": True,
                 "conveyor_pool": self.adventure_conveyor_pool(level),
-                "conveyor_interval": 1.34,
-                "conveyor_cap": 10,
+                "conveyor_interval": 1.28,
+                "conveyor_cap": 9,
                 "no_sun_cost": True,
                 "no_sky_sun": True,
-                "spawn_rate_mult": 1.02,
-                "zombie_hp_scale": 0.94,
-                "zombie_dps_scale": 0.94,
-                "wave_interval": 19.0,
+                "duration_override": 118.0,
+                "spawn_rate_mult": 0.82,
+                "zombie_hp_scale": 0.88,
+                "zombie_dps_scale": 0.88,
+                "bungee_blitz_raid_interval": 7.6,
+                "bungee_blitz_ground_interval": 9.0,
+                "bungee_blitz_ground_cap": 4.0,
+                "bungee_blitz_ground_pool": ["normal", "conehead", "buckethead"],
             }
         if style == "conveyor":
             interval = max(1.18, 1.44 - (level.world - 1) * 0.05)
@@ -9611,14 +9798,26 @@ class Game:
         return btns
 
     def battle_hud_layout(self) -> Dict[str, pygame.Rect]:
-        hud = pygame.Rect(12, 10, SCREEN_WIDTH - 24, 108)
-        sun_box = pygame.Rect(hud.x + 8, hud.y + 10, 112, 56)
-        shovel_btn = pygame.Rect(hud.x + 10, hud.bottom - 24, 48, 20)
-        slot_btn = pygame.Rect(shovel_btn.right + 6, shovel_btn.y, 54, 20)
-        settings_btn = pygame.Rect(hud.right - 88, hud.y + 10, 76, 28)
-        seed_bank = pygame.Rect(sun_box.right + 10, hud.y + 8, settings_btn.x - sun_box.right - 20, 64)
-        utility_info = pygame.Rect(seed_bank.x, seed_bank.bottom + 8, seed_bank.w - 168, 20)
-        wave_meter = pygame.Rect(utility_info.right + 8, seed_bank.bottom + 7, 160, 22)
+        special_mode = (
+            self.scene == "battle"
+            and (
+                self.battle.mode_bool("conveyor", False)
+                or self.battle.is_zombiquarium_mode()
+                or self.battle.is_last_stand_mode()
+                or self.battle.is_vasebreaker_mode()
+                or self.battle.is_bungee_blitz_mode()
+            )
+        )
+        hud_h = 102 if special_mode else 108
+        bank_h = 60 if special_mode else 64
+        hud = pygame.Rect(12, 10, SCREEN_WIDTH - 24, hud_h)
+        sun_box = pygame.Rect(hud.x + 8, hud.y + 10, 104 if special_mode else 112, 54)
+        shovel_btn = pygame.Rect(hud.x + 10, hud.bottom - 22, 76 if special_mode else 46, 18)
+        slot_btn = pygame.Rect(shovel_btn.right + 6, shovel_btn.y, 96 if special_mode else 54, 18)
+        settings_btn = pygame.Rect(hud.right - 82, hud.y + 10, 70, 26)
+        seed_bank = pygame.Rect(sun_box.right + 10, hud.y + 8, settings_btn.x - sun_box.right - 18, bank_h)
+        utility_info = pygame.Rect(seed_bank.x, seed_bank.bottom + 6, seed_bank.w - 160, 18)
+        wave_meter = pygame.Rect(utility_info.right + 8, seed_bank.bottom + 5, 152, 20)
         left_tools = pygame.Rect(sun_box.x - 2, hud.y + 2, sun_box.w + 8, hud.h - 6)
         right_cluster = pygame.Rect(utility_info.x, utility_info.y, utility_info.w, utility_info.h)
         pause_btn = pygame.Rect(0, 0, 0, 0)
@@ -10128,9 +10327,10 @@ class Game:
             self.screen.blit(line, (bank.x + 12, bank.y + 8))
         if self.battle.is_zombiquarium_mode():
             fish_n = len(self.battle.zombiquarium_fish)
-            feed_cost = max(10, int(self.battle.mode_float("zombiquarium_feed_cost", 25.0)))
+            feed_cost = max(5, int(self.battle.mode_float("zombiquarium_feed_cost", 5.0)))
+            fish_cost = max(25, int(self.battle.mode_float("zombiquarium_fish_cost", 100.0)))
             line = self.fonts["tiny"].render(
-                f"{self.tr('zombiquarium_hint')}  {self.tr('zombiquarium_feed_cost')}: {feed_cost}  |  {self.tr('fish_count')}: {fish_n}  |  {self.tr('sun')}: {self.battle.mode_score}/{max(1, self.battle.mode_goal)}",
+                f"{self.tr('zombiquarium_hint')}  {self.tr('zombiquarium_feed_cost')}: {feed_cost}  |  {self.tr('zombiquarium_buy_fish')}: {fish_cost}  |  {self.tr('fish_count')}: {fish_n}",
                 True,
                 (76, 56, 34),
             )
@@ -10140,17 +10340,17 @@ class Game:
             self.screen.blit(line, (bank.x + 12, bank.y + 8))
     def plant_select_layout(self) -> Dict[str, pygame.Rect]:
         frame = pygame.Rect(16, 12, SCREEN_WIDTH - 32, SCREEN_HEIGHT - 24)
-        title_sign = pygame.Rect(frame.x + 330, frame.y + 10, frame.w - 660, 48)
+        title_sign = pygame.Rect(frame.x + 344, frame.y + 10, frame.w - 688, 44)
         content_gap = 14
-        side_w = 270
+        side_w = 252
         main_w = frame.w - 68 - side_w - content_gap
-        tray_panel = pygame.Rect(frame.x + 34, title_sign.bottom + 8, main_w, 86)
-        zombie_panel = pygame.Rect(tray_panel.right + content_gap, title_sign.bottom + 6, side_w, frame.h - 132)
-        available_panel = pygame.Rect(frame.x + 34, tray_panel.bottom + 10, main_w, frame.bottom - tray_panel.bottom - 74)
+        tray_panel = pygame.Rect(frame.x + 34, title_sign.bottom + 8, main_w, 84)
+        zombie_panel = pygame.Rect(tray_panel.right + content_gap, title_sign.bottom + 6, side_w, frame.h - 126)
+        available_panel = pygame.Rect(frame.x + 34, tray_panel.bottom + 8, main_w, frame.bottom - tray_panel.bottom - 70)
         available_viewport = pygame.Rect(available_panel.x + 12, available_panel.y + 30, available_panel.w - 24, available_panel.h - 40)
-        action_panel = pygame.Rect(frame.x + 34, frame.bottom - 54, frame.w - 68, 38)
-        back_btn = pygame.Rect(action_panel.x + 2, action_panel.y - 1, 146, 40)
-        start_btn = pygame.Rect(action_panel.right - 212, action_panel.y - 4, 212, 44)
+        action_panel = pygame.Rect(frame.x + 34, frame.bottom - 50, frame.w - 68, 34)
+        back_btn = pygame.Rect(action_panel.x + 2, action_panel.y - 2, 138, 38)
+        start_btn = pygame.Rect(action_panel.right - 204, action_panel.y - 4, 204, 42)
         return {
             "frame": frame,
             "title_sign": title_sign,
@@ -10165,10 +10365,10 @@ class Game:
 
     def plant_select_grid_metrics(self) -> Dict[str, int]:
         return {
-            "card_w": 98,
-            "card_h": 108,
-            "gap_x": 5,
-            "gap_y": 6,
+            "card_w": 96,
+            "card_h": 106,
+            "gap_x": 4,
+            "gap_y": 5,
             "pad_x": 2,
             "pad_y": 4,
         }
@@ -10680,9 +10880,10 @@ class Game:
         pygame.draw.line(self.screen, crack_col, (rect.x + 22, rect.y + 18), (rect.x + 44, rect.y + 30), 2)
         pygame.draw.line(self.screen, crack_col, (rect.right - 56, rect.y + 20), (rect.right - 34, rect.y + 34), 2)
         font = self.fonts["small"] if rect.h <= 28 or rect.w <= 74 else self.fonts["mid"]
+        render_text = self.fit_label(text, font, max(18, rect.w - 12))
         self.draw_text_center_shadow(
             font,
-            text,
+            render_text,
             txt,
             rect.center,
             shadow=(228, 230, 236) if enabled else (174, 176, 184),
@@ -11570,32 +11771,19 @@ class Game:
                 return
             if entry_id == "mini_zombiquarium":
                 idx = self.find_level_by_field("pool")
-                pool = [
-                    "lily_pad",
-                    "sea_shroom",
-                    "tangle_kelp",
-                    "cattail",
-                    "split_pea",
-                    "threepeater",
-                    "torchwood",
-                    "wallnut",
-                    "tall_nut",
-                    "pumpkin",
-                    "jalapeno",
-                ]
                 rules = {
                     "mode_name": entry_id,
                     "mode_family": "mini_zombiquarium",
                     "return_scene": scene,
-                    "start_sun_override": 350.0,
-                    "zombiquarium_feed_cost": 25.0,
+                    "start_sun_override": 150.0,
+                    "no_sky_sun": True,
+                    "zombiquarium_start_fish": 1.0,
+                    "zombiquarium_feed_cost": 5.0,
+                    "zombiquarium_fish_cost": 100.0,
+                    "zombiquarium_fish_cap": 4.0,
                     "zombiquarium_goal": 1000.0,
-                    "spawn_rate_mult": 1.04,
-                    "zombie_hp_scale": 0.92,
-                    "zombie_dps_scale": 0.92,
-                    "wave_interval": 21.0,
                 }
-                self.open_plant_select(idx, forced_pool=pool, pick_limit=8, mode_rules=rules, return_scene=scene)
+                self.start_level(idx, selected_cards=[], mode_rules=rules)
                 return
             if entry_id == "mini_column_like_you_see_em":
                 idx = self.find_level_by_field("day")
@@ -11726,20 +11914,34 @@ class Game:
             if entry_id == "mini_last_stand":
                 idx = self.find_level_by_field("roof")
                 pool = [
-                    "sunflower", "peashooter", "wallnut", "tall_nut", "repeater", "snowpea", "melon_pult",
-                    "kernel_pult", "cabbage_pult", "cherrybomb", "jalapeno", "pumpkin", "spikeweed", "torchwood",
+                    "flower_pot", "peashooter", "wallnut", "tall_nut", "repeater", "snowpea", "melon_pult",
+                    "kernel_pult", "cabbage_pult", "cherrybomb", "jalapeno", "pumpkin", "spikeweed", "umbrella_leaf",
                 ]
                 rules = {
                     "mode_name": "mini_last_stand",
+                    "mode_family": "mini_last_stand",
                     "return_scene": scene,
-                    "start_sun_override": 1700.0,
+                    "start_sun_override": 5000.0,
                     "no_sky_sun": True,
-                    "spawn_rate_mult": 1.08,
-                    "zombie_hp_scale": 0.94,
-                    "zombie_dps_scale": 0.95,
-                    "duration_mult": 1.12,
-                    "wave_interval": 22.0,
-                    "rhythm_cycle": 24.0,
+                    "last_stand_prepare": True,
+                    "spawn_rate_mult": 0.96,
+                    "zombie_hp_scale": 0.90,
+                    "zombie_dps_scale": 0.92,
+                    "duration_override": 165.0,
+                    "wave_interval": 23.0,
+                    "total_waves_override": 5.0,
+                    "large_wave_indices": [3, 5],
+                    "final_wave_index": 5.0,
+                    "wave_budgets": [8, 10, 12, 14, 17],
+                    "zombie_weights_override": {
+                        "normal": 0.22,
+                        "conehead": 0.18,
+                        "buckethead": 0.18,
+                        "screen_door": 0.12,
+                        "ladder": 0.12,
+                        "catapult": 0.10,
+                        "bungee": 0.08,
+                    },
                 }
                 self.open_plant_select(idx, forced_pool=pool, pick_limit=8, mode_rules=rules, return_scene=scene)
                 return
@@ -12544,6 +12746,26 @@ class Game:
             if self.battle_settings_btn.collidepoint(p):
                 self.open_battle_menu()
                 return
+            if self.battle.is_zombiquarium_mode():
+                if self.shovel_btn.collidepoint(p):
+                    if len(self.battle.zombiquarium_fish) >= self.battle.zombiquarium_fish_cap():
+                        self.show_battle_notice(self.tr("zombiquarium_tank_full"), color=(96, 72, 36))
+                        return
+                    if self.battle.buy_zombiquarium_fish():
+                        self.show_battle_notice(self.tr("zombiquarium_buy_fish"), color=(54, 116, 72))
+                    else:
+                        self.show_battle_notice(self.tr("zombiquarium_need_more_sun"), color=(156, 56, 44))
+                    return
+                if self.slot_spin_btn.collidepoint(p):
+                    if self.battle.buy_zombiquarium_trophy():
+                        self.show_battle_notice(self.tr("zombiquarium_trophy_bought"), color=(210, 144, 30))
+                    else:
+                        self.show_battle_notice(self.tr("zombiquarium_need_more_sun"), color=(156, 56, 44))
+                    return
+            if self.battle.is_last_stand_mode() and self.battle.last_stand_in_prep() and self.slot_spin_btn.collidepoint(p):
+                self.battle.begin_last_stand_assault()
+                self.show_battle_notice(self.tr("last_stand_started"), color=(210, 138, 34))
+                return
             if self.pause_btn.collidepoint(p):
                 self.battle.paused = not self.battle.paused
                 return
@@ -12575,8 +12797,6 @@ class Game:
                         return
                     if t.kind == "sun":
                         self.battle.sun += t.value
-                        if self.battle.is_zombiquarium_mode():
-                            self.battle.mode_score += int(t.value)
                     else:
                         self.save_data["coins"] = int(self.save_data.get("coins", 0)) + t.value
                     self.battle.tokens.remove(t)
@@ -13548,15 +13768,30 @@ class Game:
         pygame.draw.rect(self.screen, (244, 228, 188), top_gloss, border_radius=6)
         sun_box = layout["sun_box"]
         self.draw_sun_counter_panel(sun_box, int(self.battle.sun))
+        mode_name = str(self.battle.mode_rules.get("mode_name", ""))
+        if mode_name in CLASSIC_MODE_TITLE_BY_ID:
+            mode_text = CLASSIC_MODE_SUBTITLE_BY_ID.get(mode_name, CLASSIC_MODE_TITLE_BY_ID[mode_name]) if self.lang == "zh" else CLASSIC_MODE_TITLE_BY_ID[mode_name]
+        else:
+            mode_text = self.tr("adventure")
 
         self.battle_settings_btn = layout["settings_btn"]
         settings_hover = self.battle_settings_btn.collidepoint(mouse)
         self.shovel_btn = layout["shovel_btn"]
-        self.draw_stone_button(self.shovel_btn, self.tr("shovel"), hover=self.shovel_btn.collidepoint(mouse), enabled=True)
-        if self.battle.shovel_mode:
-            pygame.draw.rect(self.screen, (255, 214, 108), self.shovel_btn.inflate(4, 4), 2, border_radius=18)
         self.slot_spin_btn = layout["slot_btn"]
-        if self.battle.is_slot_machine_mode():
+        if self.battle.is_zombiquarium_mode():
+            fish_cost = max(25, int(self.battle.mode_float("zombiquarium_fish_cost", 100.0)))
+            trophy_cost = max(300, int(self.battle.mode_float("zombiquarium_goal", 1000.0)))
+            fish_enabled = self.battle.mode_bool("infinite_sun", False) or (self.battle.sun >= fish_cost and len(self.battle.zombiquarium_fish) < self.battle.zombiquarium_fish_cap())
+            trophy_enabled = self.battle.mode_bool("infinite_sun", False) or self.battle.sun >= trophy_cost
+            self.draw_stone_button(self.shovel_btn, self.tr("zombiquarium_buy_fish"), hover=self.shovel_btn.collidepoint(mouse), enabled=fish_enabled)
+            self.draw_stone_button(self.slot_spin_btn, self.tr("zombiquarium_buy_trophy"), hover=self.slot_spin_btn.collidepoint(mouse), enabled=trophy_enabled)
+        else:
+            self.draw_stone_button(self.shovel_btn, self.tr("shovel"), hover=self.shovel_btn.collidepoint(mouse), enabled=True)
+            if self.battle.shovel_mode:
+                pygame.draw.rect(self.screen, (255, 214, 108), self.shovel_btn.inflate(4, 4), 2, border_radius=18)
+        if self.battle.is_last_stand_mode() and self.battle.last_stand_in_prep():
+            self.draw_stone_button(self.slot_spin_btn, self.tr("last_stand_begin"), hover=self.slot_spin_btn.collidepoint(mouse), enabled=True)
+        elif self.battle.is_slot_machine_mode():
             spin_cost = max(1, int(self.battle.mode_float("slot_spin_cost", 25.0)))
             spin_label = self.tr("slot_spin")
             self.draw_stone_button(self.slot_spin_btn, spin_label, hover=self.slot_spin_btn.collidepoint(mouse), enabled=True)
@@ -13577,11 +13812,6 @@ class Game:
 
         level_code = self.battle.level.display_code if self.battle.level else ""
         level_text = f"{self.tr('level_label')} {level_code}" if level_code else ""
-        mode_name = str(self.battle.mode_rules.get("mode_name", ""))
-        if mode_name in CLASSIC_MODE_TITLE_BY_ID:
-            mode_text = CLASSIC_MODE_SUBTITLE_BY_ID.get(mode_name, CLASSIC_MODE_TITLE_BY_ID[mode_name]) if self.lang == "zh" else CLASSIC_MODE_TITLE_BY_ID[mode_name]
-        else:
-            mode_text = self.tr("adventure")
         field_text = self.tr("field_" + self.battle.field.key)
         show_wave = self.setting_bool("show_wave_number", True)
         show_next_wave = self.setting_bool("show_next_wave_countdown", True)
@@ -13592,7 +13822,10 @@ class Game:
             utility_parts.append(mode_text)
         else:
             utility_parts.append(field_text)
-        if show_wave and self.battle.uses_wave_system() and self.battle.total_waves > 0:
+        if self.battle.is_last_stand_mode() and self.battle.last_stand_in_prep():
+            meter_text = self.tr("last_stand_prepare")
+            utility_parts.append(self.tr("last_stand_hint"))
+        elif show_wave and self.battle.uses_wave_system() and self.battle.total_waves > 0:
             meter_text = f"{self.tr('wave_label')} {self.battle.current_wave}/{self.battle.total_waves}"
         elif self.battle.is_beghouled_mode() or self.battle.is_beghouled_twist_mode():
             meter_text = f"{self.tr('beghouled_score')}: {self.battle.mode_score}/{self.battle.mode_goal}"
@@ -13601,12 +13834,15 @@ class Game:
             utility_parts.append(f"{self.tr('whack_miss')}: {self.battle.mode_misses}")
         elif self.battle.is_seeing_stars_mode():
             meter_text = f"{self.tr('seeing_stars_done')}: {self.battle.mode_score}/{max(1, len(self.battle.seeing_stars_targets))}"
+        elif self.battle.is_zombiquarium_mode():
+            meter_text = f"{self.tr('zombiquarium_trophy_cost')}: {self.battle.mode_goal}"
+            utility_parts.append(f"{self.tr('fish_count')}: {len(self.battle.zombiquarium_fish)}")
         elif self.battle.is_i_zombie_mode():
             brain_text = f"Brains {len(self.battle.brains)}/{self.battle.brain_goal}" if self.lang == "en" else f"脑子 {len(self.battle.brains)}/{self.battle.brain_goal}"
             meter_text = brain_text
         else:
             meter_text = f"{self.tr('time')}: {remain}{self.tr('sec')}"
-        if show_next_wave and self.battle.uses_wave_system() and self.battle.total_waves > 0 and self.battle.wave_pause_t > 0 and self.battle.current_wave < self.battle.total_waves:
+        if show_next_wave and self.battle.uses_wave_system() and self.battle.total_waves > 0 and self.battle.wave_pause_t > 0 and self.battle.current_wave < self.battle.total_waves and not self.battle.last_stand_in_prep():
             utility_parts.append(f"{self.tr('next_wave_in')}: {self.battle.wave_pause_t:.1f}{self.tr('sec')}")
         utility_parts.append(f"{self.tr('kills')}: {self.battle.kills}")
         if str(self.battle.mode_rules.get("mode_family", "")) == "survival":
@@ -13621,7 +13857,7 @@ class Game:
         utility_text = self.fit_label("  •  ".join(utility_parts), self.fonts["tiny"], info_rect.w - 12)
         utility_surf = self.fonts["tiny"].render(utility_text, True, (46, 38, 26))
         self.screen.blit(utility_surf, utility_surf.get_rect(center=info_rect.center))
-        if show_wave and self.battle.uses_wave_system() and self.battle.total_waves > 0:
+        if show_wave and self.battle.uses_wave_system() and self.battle.total_waves > 0 and not self.battle.last_stand_in_prep():
             self.draw_wave_progress_bar(layout["wave_meter"])
         else:
             meter = layout["wave_meter"]
