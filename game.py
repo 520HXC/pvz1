@@ -834,6 +834,7 @@ I18N = {
         "coming_soon": "Coming Soon",
         "prototype": "Prototype",
         "playable_now": "Playable",
+        "completed": "Completed",
         "mini_games": "Mini-Games",
         "puzzle": "Puzzle",
         "survival": "Survival",
@@ -1098,6 +1099,7 @@ I18N = {
         "coming_soon": "敬请期待",
         "prototype": "原型",
         "playable_now": "可游玩",
+        "completed": "已通关",
         "mini_games": "小游戏",
         "puzzle": "解谜模式",
         "survival": "生存模式",
@@ -2053,7 +2055,7 @@ class SaveManager:
         self.path = path
 
     def load(self) -> Dict[str, object]:
-        default = {"unlocked": 1, "coins": 0, "upgrades": {}}
+        default = {"unlocked": 1, "coins": 0, "upgrades": {}, "cleared_levels": []}
         if not self.path.exists():
             return default
         try:
@@ -5334,6 +5336,10 @@ class Game:
         self.save_data = self.save_mgr.load()
         # User preference: keep all rounds unlocked at all times.
         self.save_data["unlocked"] = max(1, len(self.levels))
+        cleared_levels = self.save_data.get("cleared_levels", [])
+        if not isinstance(cleared_levels, list):
+            cleared_levels = []
+        self.save_data["cleared_levels"] = [str(item) for item in cleared_levels if item]
         self.save_mgr.save(self.save_data)
         self.config_mgr = ConfigManager(Path(__file__).resolve().parent / "config.json")
         self.config_data = self.config_mgr.load()
@@ -8367,6 +8373,30 @@ class Game:
     def adventure_level_unlocked(self, level: LevelConfig) -> bool:
         unlocked = int(self.save_data.get("unlocked", 1))
         return level.idx <= unlocked
+
+    def adventure_level_cleared(self, level: LevelConfig) -> bool:
+        cleared = self.save_data.get("cleared_levels", [])
+        if not isinstance(cleared, list):
+            return False
+        code = str(level.display_code or level.idx)
+        return code in cleared
+
+    def adventure_world_progress(self, world: int) -> Tuple[int, int]:
+        levels = self.adventure_levels_for_world(world)
+        total = len(levels)
+        done = sum(1 for level in levels if self.adventure_level_cleared(level))
+        return done, total
+
+    def mark_adventure_level_cleared(self, level: Optional[LevelConfig]) -> None:
+        if level is None:
+            return
+        code = str(level.display_code or level.idx)
+        cleared = self.save_data.get("cleared_levels", [])
+        if not isinstance(cleared, list):
+            cleared = []
+        if code not in cleared:
+            cleared.append(code)
+            self.save_data["cleared_levels"] = cleared
 
     def adventure_chapter_unlocked(self, world: int) -> bool:
         unlocked = int(self.save_data.get("unlocked", 1))
@@ -11757,8 +11787,28 @@ class Game:
         pygame.draw.rect(self.screen, (108, 82, 44), (cx - 15, cy - 2, 30, 24), 2, border_radius=6)
         pygame.draw.circle(self.screen, (108, 82, 44), (cx, cy + 8), 3)
 
+    def draw_adventure_completion_medal(self, rect: pygame.Rect, text: str = "") -> None:
+        ribbon_left = [(rect.x + 12, rect.y + 6), (rect.x + 22, rect.y + 6), (rect.x + 18, rect.bottom - 8), (rect.x + 10, rect.bottom - 8)]
+        ribbon_right = [(rect.right - 22, rect.y + 6), (rect.right - 12, rect.y + 6), (rect.right - 10, rect.bottom - 8), (rect.right - 18, rect.bottom - 8)]
+        pygame.draw.polygon(self.screen, (198, 42, 44), ribbon_left)
+        pygame.draw.polygon(self.screen, (198, 42, 44), ribbon_right)
+        medal = rect.inflate(-10, -18)
+        pygame.draw.ellipse(self.screen, (248, 216, 96), medal)
+        pygame.draw.ellipse(self.screen, (154, 108, 34), medal, 3)
+        inner = medal.inflate(-10, -10)
+        pygame.draw.ellipse(self.screen, (255, 238, 158), inner)
+        pygame.draw.ellipse(self.screen, (194, 140, 42), inner, 1)
+        if text:
+            txt = self.fonts["tiny"].render(text, True, (84, 54, 24))
+            self.screen.blit(txt, txt.get_rect(center=medal.center))
+        else:
+            check = [(medal.x + 10, medal.centery), (medal.centerx - 2, medal.bottom - 10), (medal.right - 8, medal.y + 8)]
+            pygame.draw.lines(self.screen, (90, 70, 26), False, check, 3)
+
     def draw_adventure_chapter_card(self, world: int, rect: pygame.Rect, hover: bool, unlocked: bool) -> None:
         selected = self.adventure_chapter_selected == world
+        cleared_count, total_count = self.adventure_world_progress(world)
+        chapter_done = total_count > 0 and cleared_count >= total_count
         self.draw_panel_shadow(rect, radius=18, alpha=78, offset=(0, 6))
         outer = rect.inflate(8, 8)
         pygame.draw.rect(self.screen, (86, 54, 30), outer, border_radius=22)
@@ -11781,6 +11831,12 @@ class Game:
         focus_txt = self.fit_label(self.adventure_chapter_focus(world), self.fonts["tiny"], focus_badge.w - 10)
         focus_surf = self.fonts["tiny"].render(focus_txt, True, (70, 48, 24))
         self.screen.blit(focus_surf, focus_surf.get_rect(center=focus_badge.center))
+        progress_badge = pygame.Rect(card.right - 84, card.y + 10, 66, 18)
+        progress_fill = (236, 214, 148) if unlocked else (192, 184, 172)
+        progress_inner = (248, 234, 176) if unlocked else (210, 204, 196)
+        self.draw_framed_panel(progress_badge, fill=progress_fill, border=(132, 96, 46), radius=7, inner=progress_inner)
+        progress_text = self.fonts["tiny"].render(f"{cleared_count}/{max(1, total_count)}", True, (62, 44, 22))
+        self.screen.blit(progress_text, progress_text.get_rect(center=progress_badge.center))
         if hover and unlocked:
             glow = pygame.Surface(preview_rect.size, pygame.SRCALPHA)
             glow.fill((255, 255, 255, 26))
@@ -11810,6 +11866,8 @@ class Game:
         pygame.draw.circle(self.screen, (168, 118, 36), medal.center, 18, 3)
         world_text = self.fonts["small"].render(str(world), True, (84, 54, 24))
         self.screen.blit(world_text, world_text.get_rect(center=medal.center))
+        if chapter_done and unlocked:
+            self.draw_adventure_completion_medal(pygame.Rect(card.right - 52, card.bottom - 70, 42, 56))
         if not unlocked:
             shade = pygame.Surface(card.size, pygame.SRCALPHA)
             shade.fill((18, 18, 18, 118))
@@ -11818,6 +11876,7 @@ class Game:
 
     def draw_adventure_level_card(self, level: LevelConfig, rect: pygame.Rect, hover: bool) -> None:
         unlocked = self.adventure_level_unlocked(level)
+        cleared = self.adventure_level_cleared(level)
         current = self.level_idx == level.idx - 1
         is_boss = level.display_code == "5-10"
         outer = rect.inflate(10, 10)
@@ -11868,6 +11927,13 @@ class Game:
         status_key = "playable_now" if unlocked else "locked"
         status_txt = self.fonts["tiny"].render(self.tr(status_key), True, (244, 240, 214))
         self.screen.blit(status_txt, status_txt.get_rect(center=status_rect.center))
+        if cleared:
+            medal_rect = pygame.Rect(paper.right - 52, paper.y + 68, 40, 52)
+            self.draw_adventure_completion_medal(medal_rect)
+            clear_chip = pygame.Rect(paper.x + 108, paper.bottom - 20, 76, 11)
+            self.draw_framed_panel(clear_chip, fill=(214, 190, 116), border=(132, 96, 42), radius=5, inner=(238, 220, 152))
+            clear_txt = self.fonts["tiny"].render(self.tr("completed"), True, (74, 48, 20))
+            self.screen.blit(clear_txt, clear_txt.get_rect(center=clear_chip.center))
         if current:
             pygame.draw.rect(self.screen, (255, 214, 108), outer, 3, border_radius=20)
         if hover and unlocked:
@@ -11883,13 +11949,28 @@ class Game:
     def draw_adventure_chapter_select(self) -> None:
         mouse = pygame.mouse.get_pos()
         layout = self.adventure_chapter_layout()
+        world = int(clamp(float(self.adventure_chapter_selected), 1.0, 5.0))
         self.draw_scene_backdrop()
         self.draw_parchment_panel(layout["frame"], radius=28)
         self.draw_wood_sign(layout["sign"], self.tr("chapter_select"), self.tr("choose_a_chapter"))
+        grass_band = pygame.Rect(layout["frame"].x + 24, layout["frame"].bottom - 82, layout["frame"].w - 48, 30)
+        pygame.draw.ellipse(self.screen, (92, 152, 82), grass_band)
+        pygame.draw.ellipse(self.screen, (56, 102, 48), grass_band, 2)
+        fence_y = grass_band.y - 10
+        for fx in range(grass_band.x + 10, grass_band.right - 10, 18):
+            pygame.draw.rect(self.screen, (212, 204, 188), (fx, fence_y, 5, 22), border_radius=2)
+            pygame.draw.line(self.screen, (154, 148, 134), (fx, fence_y + 7), (fx + 5, fence_y + 2), 1)
+        pygame.draw.line(self.screen, (232, 224, 206), (grass_band.x + 6, fence_y + 8), (grass_band.right - 6, fence_y + 6), 2)
+        pygame.draw.line(self.screen, (182, 172, 154), (grass_band.x + 6, fence_y + 14), (grass_band.right - 6, fence_y + 12), 2)
         for world, rect in layout["cards"]:
             self.draw_adventure_chapter_card(world, rect, rect.collidepoint(mouse), self.adventure_chapter_unlocked(world))
         self.back_btn = layout["back_btn"]
         self.draw_secondary_button(self.back_btn, self.tr("back"), hover=self.back_btn.collidepoint(mouse))
+        chapter_chip = pygame.Rect(layout["frame"].right - 298, layout["frame"].bottom - 62, 252, 34)
+        self.draw_framed_panel(chapter_chip, fill=(146, 102, 58), border=(82, 50, 26), radius=12, inner=(180, 128, 74))
+        chip_text = self.fit_label(f"{self.adventure_chapter_title(world)}  |  {self.adventure_chapter_code_range(world)}", self.fonts["small"], chapter_chip.w - 18)
+        chip_surf = self.fonts["small"].render(chip_text, True, (248, 238, 212))
+        self.screen.blit(chip_surf, chip_surf.get_rect(center=chapter_chip.center))
 
     def draw_adventure_level_select(self) -> None:
         mouse = pygame.mouse.get_pos()
@@ -13296,6 +13377,7 @@ class Game:
                             self.draw()
                             continue
                     if self.battle.result == "win" and not self.battle.mode_rules.get("mode_name"):
+                        self.mark_adventure_level_cleared(self.battle.level)
                         self.save_data["unlocked"] = max(int(self.save_data.get("unlocked", 1)), self.level_idx + 2)
                     self.save_mgr.save(self.save_data)
                     self.scene = "result"
