@@ -8340,11 +8340,50 @@ class Game:
         cache_key = (world, target)
         if cache_key in self.adventure_chapter_cache:
             return self.adventure_chapter_cache[cache_key]
-        level = self.adventure_chapter_preview_level(world)
-        if level is None:
-            surf = pygame.Surface(target, pygame.SRCALPHA)
-        else:
-            surf = self.load_adventure_level_preview(level, target)
+        chapter_levels = self.adventure_levels_for_world(world)
+        surf = pygame.Surface(target, pygame.SRCALPHA)
+        if not chapter_levels:
+            self.adventure_chapter_cache[cache_key] = surf
+            return surf
+        main_level = chapter_levels[min(4, len(chapter_levels) - 1)]
+        early_level = chapter_levels[0]
+        late_level = chapter_levels[-1]
+        main_rect = pygame.Rect(int(target[0] * 0.14), int(target[1] * 0.12), int(target[0] * 0.68), int(target[1] * 0.68))
+        left_rect = pygame.Rect(int(target[0] * 0.03), int(target[1] * 0.30), int(target[0] * 0.28), int(target[1] * 0.34))
+        right_rect = pygame.Rect(int(target[0] * 0.72), int(target[1] * 0.18), int(target[0] * 0.24), int(target[1] * 0.30))
+        self.draw_mode_thumb_gradient(surf, pygame.Rect(0, 0, target[0], target[1]), (232, 212, 174), (202, 174, 126))
+        for gy in range(8, target[1], 10):
+            wave = 2 + (gy % 4)
+            pygame.draw.line(surf, (142, 104, 62, 26), (8, gy), (target[0] - 8, gy + wave), 1)
+        main_preview = self.load_adventure_level_preview(main_level, main_rect.size)
+        left_preview = self.load_adventure_level_preview(early_level, left_rect.size)
+        right_preview = self.load_adventure_level_preview(late_level, right_rect.size)
+        for frame_rect, inner_col in ((main_rect.inflate(10, 10), (84, 58, 34)), (left_rect.inflate(8, 8), (102, 70, 40)), (right_rect.inflate(8, 8), (102, 70, 40))):
+            pygame.draw.rect(surf, inner_col, frame_rect, border_radius=10)
+            pygame.draw.rect(surf, (244, 238, 220), frame_rect.inflate(-4, -4), 2, border_radius=9)
+        surf.blit(main_preview, main_rect)
+        left_rot = pygame.transform.rotozoom(left_preview, -6, 1.0)
+        right_rot = pygame.transform.rotozoom(right_preview, 7, 1.0)
+        surf.blit(left_rot, left_rot.get_rect(center=left_rect.center))
+        surf.blit(right_rot, right_rot.get_rect(center=right_rect.center))
+        for pin in ((left_rect.x + 10, left_rect.y + 8), (right_rect.right - 10, right_rect.y + 8), (main_rect.centerx, main_rect.y + 6)):
+            pygame.draw.circle(surf, (214, 52, 48), pin, 4)
+            pygame.draw.circle(surf, (96, 20, 18), pin, 4, 1)
+        badge = pygame.Rect(int(target[0] * 0.72), int(target[1] * 0.64), int(target[0] * 0.22), int(target[1] * 0.22))
+        pygame.draw.ellipse(surf, (250, 220, 96), badge)
+        pygame.draw.ellipse(surf, (160, 112, 36), badge, 3)
+        badge_label = self.fonts["small"].render(str(world), True, (84, 54, 24))
+        surf.blit(badge_label, badge_label.get_rect(center=badge.center))
+        accent = pygame.Surface(target, pygame.SRCALPHA)
+        tint = {
+            1: (252, 232, 118, 26),
+            2: (182, 136, 224, 30),
+            3: (116, 198, 244, 28),
+            4: (204, 214, 224, 36),
+            5: (238, 154, 96, 28),
+        }.get(world, (255, 255, 255, 0))
+        pygame.draw.rect(accent, tint, (0, 0, target[0], target[1]), border_radius=12)
+        surf.blit(accent, (0, 0))
         self.adventure_chapter_cache[cache_key] = surf
         return surf
 
@@ -11625,12 +11664,12 @@ class Game:
     def adventure_chapter_layout(self) -> Dict[str, object]:
         frame = pygame.Rect(38, 34, SCREEN_WIDTH - 76, SCREEN_HEIGHT - 84)
         sign = pygame.Rect(54, 52, 366, 86)
-        card_w = 298
-        card_h = 196
-        top_y = 176
-        bottom_y = 408
-        top_x = [112, 490, 868]
-        bottom_x = [300, 678]
+        card_w = 284
+        card_h = 204
+        top_y = 170
+        bottom_y = 406
+        top_x = [104, 498, 892]
+        bottom_x = [300, 694]
         cards = []
         for world, x in zip((1, 2, 3), top_x):
             cards.append((world, pygame.Rect(x, top_y, card_w, card_h)))
@@ -11640,7 +11679,7 @@ class Game:
             "frame": frame,
             "sign": sign,
             "cards": cards,
-            "back_btn": pygame.Rect(42, SCREEN_HEIGHT - 62, 124, 42),
+            "back_btn": pygame.Rect(48, SCREEN_HEIGHT - 60, 112, 38),
         }
 
     def adventure_level_layout(self) -> Dict[str, object]:
@@ -11675,6 +11714,7 @@ class Game:
         pygame.draw.circle(self.screen, (108, 82, 44), (cx, cy + 8), 3)
 
     def draw_adventure_chapter_card(self, world: int, rect: pygame.Rect, hover: bool, unlocked: bool) -> None:
+        selected = self.adventure_chapter_selected == world
         self.draw_panel_shadow(rect, radius=18, alpha=78, offset=(0, 6))
         outer = rect.inflate(8, 8)
         pygame.draw.rect(self.screen, (86, 54, 30), outer, border_radius=22)
@@ -11684,7 +11724,7 @@ class Game:
         if hover and unlocked:
             fill = (252, 236, 206)
         self.draw_framed_panel(card, fill=fill, border=(126, 88, 46), radius=18, inner=(250, 240, 214))
-        preview_rect = pygame.Rect(card.x + 14, card.y + 34, card.w - 28, card.h - 64)
+        preview_rect = pygame.Rect(card.x + 14, card.y + 30, card.w - 28, card.h - 78)
         preview = self.load_adventure_chapter_preview(world, preview_rect.size)
         self.screen.blit(preview, preview_rect)
         pygame.draw.rect(self.screen, (92, 62, 34), preview_rect, 2, border_radius=10)
@@ -11693,24 +11733,30 @@ class Game:
             glow.fill((255, 255, 255, 26))
             self.screen.blit(glow, preview_rect.topleft)
             pygame.draw.rect(self.screen, (255, 220, 126), outer.inflate(6, 6), 2, border_radius=26)
+        if selected and unlocked:
+            pygame.draw.rect(self.screen, (255, 214, 108), outer.inflate(3, 3), 3, border_radius=26)
         title = self.adventure_chapter_title(world)
         title_shadow = self.fonts["ui"].render(title, True, (40, 24, 12))
         title_main = self.fonts["ui"].render(title, True, (246, 244, 214))
         tx = card.centerx - title_main.get_width() // 2
         self.screen.blit(title_shadow, (tx + 2, card.y + 6))
         self.screen.blit(title_main, (tx, card.y + 4))
-        sub = self.fonts["small"].render(self.adventure_chapter_subtitle(world), True, (78, 56, 28))
-        self.screen.blit(sub, sub.get_rect(center=(card.centerx, card.bottom - 16)))
-        medal = pygame.Rect(card.x - 28, card.y + 24, 78, 96)
-        ribbon = [(medal.centerx - 12, medal.y + 14), (medal.centerx + 12, medal.y + 14), (medal.centerx + 6, medal.y + 46), (medal.centerx - 6, medal.y + 46)]
+        nameplate = pygame.Rect(card.x + 22, card.bottom - 34, card.w - 44, 24)
+        self.draw_framed_panel(nameplate, fill=(132, 88, 44), border=(76, 44, 20), radius=10, inner=(166, 114, 60))
+        sub = self.fonts["small"].render(self.adventure_chapter_subtitle(world), True, (246, 232, 198))
+        self.screen.blit(sub, sub.get_rect(center=nameplate.center))
+        medal = pygame.Rect(card.x - 16, card.y + 18, 62, 80)
+        ribbon = [(medal.centerx - 10, medal.y + 12), (medal.centerx + 10, medal.y + 12), (medal.centerx + 5, medal.y + 40), (medal.centerx - 5, medal.y + 40)]
         pygame.draw.polygon(self.screen, (204, 32, 34), ribbon)
         for angle in range(0, 360, 24):
             rad = math.radians(angle)
-            px = int(medal.centerx + math.cos(rad) * 22)
-            py = int(medal.centery + math.sin(rad) * 20)
-            pygame.draw.circle(self.screen, (250, 214, 82), (px, py), 6)
-        pygame.draw.circle(self.screen, (254, 226, 102), medal.center, 22)
-        pygame.draw.circle(self.screen, (168, 118, 36), medal.center, 22, 3)
+            px = int(medal.centerx + math.cos(rad) * 18)
+            py = int(medal.centery + math.sin(rad) * 16)
+            pygame.draw.circle(self.screen, (250, 214, 82), (px, py), 5)
+        pygame.draw.circle(self.screen, (254, 226, 102), medal.center, 18)
+        pygame.draw.circle(self.screen, (168, 118, 36), medal.center, 18, 3)
+        world_text = self.fonts["small"].render(str(world), True, (84, 54, 24))
+        self.screen.blit(world_text, world_text.get_rect(center=medal.center))
         if not unlocked:
             shade = pygame.Surface(card.size, pygame.SRCALPHA)
             shade.fill((18, 18, 18, 118))
