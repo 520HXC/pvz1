@@ -8985,22 +8985,23 @@ class Game:
         return btns
 
     def battle_hud_layout(self) -> Dict[str, pygame.Rect]:
-        top_y = 14
-        left_tools = pygame.Rect(12, top_y, 198, 124)
-        right_cluster = pygame.Rect(SCREEN_WIDTH - 350, top_y, 338, 124)
-        seed_x = left_tools.right + 14
-        seed_w = max(436, right_cluster.x - 14 - seed_x)
-        seed_bank = pygame.Rect(seed_x, top_y + 6, seed_w, 108)
-        sun_box = pygame.Rect(left_tools.x + 10, left_tools.y + 10, left_tools.w - 20, 56)
-        settings_btn = pygame.Rect(right_cluster.right - 108, right_cluster.y + 8, 98, 36)
-        shovel_btn = pygame.Rect(left_tools.x + 10, left_tools.y + 78, 82, 34)
-        slot_btn = pygame.Rect(left_tools.x + 96, left_tools.y + 78, left_tools.w - 106, 34)
+        hud = pygame.Rect(12, 10, SCREEN_WIDTH - 24, 128)
+        sun_box = pygame.Rect(hud.x + 8, hud.y + 10, 132, 68)
+        shovel_btn = pygame.Rect(hud.x + 10, hud.y + 88, 58, 28)
+        slot_btn = pygame.Rect(shovel_btn.right + 8, shovel_btn.y, 62, 28)
+        settings_btn = pygame.Rect(hud.right - 112, hud.y + 12, 100, 36)
+        seed_bank = pygame.Rect(sun_box.right + 12, hud.y + 10, settings_btn.x - sun_box.right - 24, 76)
+        utility_info = pygame.Rect(seed_bank.x, seed_bank.bottom + 8, seed_bank.w - 182, 26)
+        wave_meter = pygame.Rect(utility_info.right + 10, seed_bank.bottom + 6, 172, 30)
+        left_tools = pygame.Rect(sun_box.x - 2, hud.y + 2, sun_box.w + 8, hud.h - 6)
+        right_cluster = pygame.Rect(utility_info.x, utility_info.y, utility_info.w, utility_info.h)
         pause_btn = pygame.Rect(0, 0, 0, 0)
         exit_btn = pygame.Rect(0, 0, 0, 0)
         lang_zh_btn = pygame.Rect(0, 0, 0, 0)
         lang_en_btn = pygame.Rect(0, 0, 0, 0)
         coin_box = pygame.Rect(20, SCREEN_HEIGHT - 62, 250, 42)
         return {
+            "hud": hud,
             "left_tools": left_tools,
             "right_cluster": right_cluster,
             "seed_bank": seed_bank,
@@ -9008,6 +9009,8 @@ class Game:
             "settings_btn": settings_btn,
             "shovel_btn": shovel_btn,
             "slot_btn": slot_btn,
+            "utility_info": utility_info,
+            "wave_meter": wave_meter,
             "pause_btn": pause_btn,
             "exit_btn": exit_btn,
             "lang_zh_btn": lang_zh_btn,
@@ -9019,46 +9022,7 @@ class Game:
         return self.battle_hud_layout()["seed_bank"]
 
     def draw_wave_progress_bar(self, rect: pygame.Rect) -> None:
-        self.draw_framed_panel(rect, fill=(184, 130, 74), border=(104, 66, 30), radius=9, inner=(208, 150, 92))
-        track = rect.inflate(-12, -10)
-        pygame.draw.rect(self.screen, (74, 52, 30), track, border_radius=5)
-        inner = track.inflate(-2, -2)
-        pygame.draw.rect(self.screen, (112, 84, 48), inner, border_radius=4)
-
-        total = max(1, int(self.battle.total_waves))
-        current = int(max(0, self.battle.current_wave))
-        progress = 0.0
-        if self.battle.uses_wave_system() and total > 0:
-            progress = current / total
-            if 0 < current <= len(self.battle.wave_budgets):
-                budget = max(1, int(self.battle.wave_budgets[current - 1]))
-                done = clamp(float(budget - self.battle.wave_spawn_remaining), 0.0, float(budget))
-                progress = ((current - 1) + done / budget) / total
-            if current >= total and self.battle.wave_spawn_remaining <= 0:
-                progress = 1.0 if not self.battle.zombies else max(progress, (total - 0.25) / total)
-        progress = clamp(progress, 0.0, 1.0)
-
-        fill_w = int(inner.w * progress)
-        if fill_w > 0:
-            fill = pygame.Rect(inner.x, inner.y, fill_w, inner.h)
-            pygame.draw.rect(self.screen, (228, 92, 62), fill, border_radius=4)
-            gloss_h = max(2, inner.h // 2)
-            gloss = pygame.Rect(fill.x + 1, fill.y + 1, max(0, fill.w - 2), gloss_h)
-            if gloss.w > 0:
-                pygame.draw.rect(self.screen, (248, 166, 132), gloss, border_radius=3)
-
-        if self.battle.uses_wave_system() and total > 1:
-            marker_h = inner.h + 6
-            for idx in self.battle.large_wave_indices:
-                pos = int(inner.x + inner.w * (idx / total))
-                pygame.draw.line(self.screen, (242, 220, 116), (pos, inner.y - 2), (pos, inner.y + marker_h), 2)
-            final_idx = max(1, int(self.battle.final_wave_index or total))
-            final_x = int(inner.x + inner.w * (final_idx / total))
-            pygame.draw.line(self.screen, (255, 242, 190), (final_x, inner.y - 3), (final_x, inner.y + marker_h + 2), 3)
-
-        text = f"{self.tr('wave_label')} {max(0, current)}/{total}"
-        surf = self.fonts["tiny"].render(text, True, (254, 244, 208))
-        self.screen.blit(surf, surf.get_rect(center=(rect.centerx, rect.centery)))
+        self.draw_wave_flag_meter(rect)
 
     def battle_menu_layout(self) -> Dict[str, pygame.Rect]:
         panel = pygame.Rect(0, 0, 560, 380)
@@ -9406,11 +9370,11 @@ class Game:
         if count <= 0:
             return []
         gap = 6
-        card_w = min(80, max(56, (bank.w - 20 - max(0, count - 1) * gap) // count))
-        card_h = 60
+        card_w = min(76, max(60, (bank.w - 18 - max(0, count - 1) * gap) // count))
+        card_h = 72
         total_w = count * card_w + max(0, count - 1) * gap
-        x = bank.x + max(10, (bank.w - total_w) // 2)
-        y = bank.y + (bank.h - card_h) // 2
+        x = bank.x + max(8, (bank.w - total_w) // 2)
+        y = bank.y + bank.h - card_h - 2
         btns: List[Tuple[str, pygame.Rect]] = []
         for kind in self.battle.cards:
             btns.append((kind, pygame.Rect(x, y, card_w, card_h)))
@@ -9418,9 +9382,12 @@ class Game:
         return btns
 
     def draw_seed_bank(self, bank: pygame.Rect, mouse: Tuple[int, int]) -> None:
-        self.draw_framed_panel(bank, fill=(224, 198, 148), border=(116, 78, 34), radius=10, inner=(236, 216, 176))
         conveyor_mode = self.battle.mode_bool("conveyor", False)
         mode_name = str(self.battle.mode_rules.get("mode_name", ""))
+        bank_label = ""
+        if conveyor_mode:
+            bank_label = CLASSIC_MODE_SUBTITLE_BY_ID.get(mode_name, CLASSIC_MODE_TITLE_BY_ID.get(mode_name, self.tr("mini_games"))) if self.lang == "zh" else CLASSIC_MODE_TITLE_BY_ID.get(mode_name, self.tr("mini_games"))
+        self.draw_seed_bank_top(bank, bank_label)
         if self.battle.is_beghouled_mode() or self.battle.is_beghouled_twist_mode():
             if self.lang == "zh":
                 title_txt = CLASSIC_MODE_SUBTITLE_BY_ID.get(mode_name, CLASSIC_MODE_TITLE_BY_ID.get(mode_name, self.tr("mini_games")))
@@ -9527,12 +9494,12 @@ class Game:
             if self.lang == "zh" and mode_name in CLASSIC_MODE_SUBTITLE_BY_ID:
                 label_text = CLASSIC_MODE_SUBTITLE_BY_ID[mode_name]
             label = self.fonts["tiny"].render(label_text, True, (60, 42, 24))
-            self.screen.blit(label, (bank.x + 10, bank.y + 4))
+            self.screen.blit(label, (bank.x + 12, bank.y + 8))
         if self.battle.is_seeing_stars_mode():
             done = self.battle.mode_score
             goal = max(1, len(self.battle.seeing_stars_targets))
             line = self.fonts["tiny"].render(f"{self.tr('seeing_stars_goal')} ({done}/{goal})", True, (76, 56, 34))
-            self.screen.blit(line, (bank.x + 10, bank.y + 4))
+            self.screen.blit(line, (bank.x + 12, bank.y + 8))
         if self.battle.is_zombiquarium_mode():
             fish_n = len(self.battle.zombiquarium_fish)
             feed_cost = max(10, int(self.battle.mode_float("zombiquarium_feed_cost", 25.0)))
@@ -9541,22 +9508,20 @@ class Game:
                 True,
                 (76, 56, 34),
             )
-            self.screen.blit(line, (bank.x + 10, bank.y + 20))
+            self.screen.blit(line, (bank.x + 12, bank.y + 8))
         if self.battle.is_column_like_mode():
             line = self.fonts["tiny"].render(self.tr("column_like_hint"), True, (76, 56, 34))
-            self.screen.blit(line, (bank.x + 10, bank.y + 20))
+            self.screen.blit(line, (bank.x + 12, bank.y + 8))
     def plant_select_layout(self) -> Dict[str, pygame.Rect]:
-        frame = pygame.Rect(18, 14, SCREEN_WIDTH - 36, SCREEN_HEIGHT - 28)
-        title_sign = pygame.Rect(frame.x + 22, frame.y + 12, frame.w - 44, 50)
-        tray_panel = pygame.Rect(frame.x + 22, title_sign.bottom + 8, frame.w - 44, 104)
-        board_top = tray_panel.bottom + 10
-        board_h = frame.h - (board_top - frame.y) - 92
-        available_panel = pygame.Rect(frame.x + 22, board_top, 806, board_h)
-        available_viewport = pygame.Rect(available_panel.x + 10, available_panel.y + 40, available_panel.w - 22, available_panel.h - 50)
-        zombie_panel = pygame.Rect(available_panel.right + 14, board_top, frame.right - (available_panel.right + 14) - 22, board_h)
-        action_panel = pygame.Rect(frame.x + 22, available_panel.bottom + 10, frame.w - 44, 62)
-        back_btn = pygame.Rect(action_panel.x + 8, action_panel.y + 8, 188, 46)
-        start_btn = pygame.Rect(action_panel.right - 286, action_panel.y + 4, 276, 54)
+        frame = pygame.Rect(16, 12, SCREEN_WIDTH - 32, SCREEN_HEIGHT - 24)
+        title_sign = pygame.Rect(frame.x + 308, frame.y + 10, frame.w - 616, 52)
+        tray_panel = pygame.Rect(frame.x + 34, title_sign.bottom + 8, 834, 96)
+        zombie_panel = pygame.Rect(tray_panel.right + 16, title_sign.bottom + 6, frame.right - tray_panel.right - 34, frame.h - 144)
+        available_panel = pygame.Rect(frame.x + 34, tray_panel.bottom + 12, tray_panel.w, frame.bottom - tray_panel.bottom - 92)
+        available_viewport = pygame.Rect(available_panel.x + 16, available_panel.y + 34, available_panel.w - 32, available_panel.h - 48)
+        action_panel = pygame.Rect(frame.x + 34, frame.bottom - 64, frame.w - 68, 42)
+        back_btn = pygame.Rect(action_panel.x, action_panel.y - 2, 164, 46)
+        start_btn = pygame.Rect(action_panel.right - 250, action_panel.y - 6, 250, 52)
         return {
             "frame": frame,
             "title_sign": title_sign,
@@ -9571,11 +9536,11 @@ class Game:
 
     def plant_select_grid_metrics(self) -> Dict[str, int]:
         return {
-            "card_w": 116,
-            "card_h": 126,
-            "gap_x": 8,
+            "card_w": 104,
+            "card_h": 112,
+            "gap_x": 6,
             "gap_y": 8,
-            "pad_x": 4,
+            "pad_x": 2,
             "pad_y": 4,
         }
 
@@ -9631,12 +9596,12 @@ class Game:
         slots: List[pygame.Rect] = []
         layout = self.plant_select_layout()
         tray = layout["tray_panel"]
-        slot_w = 100
-        slot_h = 66
-        gap = 9
+        slot_w = 92
+        slot_h = 68
+        gap = 8
         total_w = self.plant_select_pick_limit * slot_w + max(0, self.plant_select_pick_limit - 1) * gap
         x0 = tray.x + max(10, (tray.w - total_w) // 2)
-        y0 = tray.y + 30
+        y0 = tray.y + 20
         for i in range(self.plant_select_pick_limit):
             slots.append(pygame.Rect(x0 + i * (slot_w + gap), y0, slot_w, slot_h))
         return slots
@@ -10149,6 +10114,153 @@ class Game:
         tx = rect.x + (40 if compact else 46)
         ty = rect.y + (9 if compact else 10)
         self.draw_text_shadow(font, text, (56, 40, 18), (tx, ty), shadow=(252, 240, 202), offset=(1, 1))
+
+    def draw_sun_counter_panel(self, rect: pygame.Rect, sun_value: int) -> None:
+        self.draw_framed_panel(rect, fill=(236, 190, 74), border=(126, 82, 28), radius=16, inner=(248, 214, 118))
+        inset = rect.inflate(-12, -12)
+        self.draw_mode_thumb_gradient(self.screen, inset, (252, 232, 160), (232, 176, 58))
+        pygame.draw.rect(self.screen, (140, 90, 28), inset, 2, border_radius=12)
+        sun_center = (rect.x + 26, rect.centery - 2)
+        pygame.draw.circle(self.screen, (255, 232, 118), sun_center, 15)
+        pygame.draw.circle(self.screen, (176, 122, 24), sun_center, 15, 2)
+        for angle in range(0, 360, 45):
+            rad = math.radians(angle)
+            outer = (int(sun_center[0] + math.cos(rad) * 22), int(sun_center[1] + math.sin(rad) * 22))
+            inner = (int(sun_center[0] + math.cos(rad) * 17), int(sun_center[1] + math.sin(rad) * 17))
+            pygame.draw.line(self.screen, (250, 226, 92), inner, outer, 3)
+            pygame.draw.line(self.screen, (196, 142, 34), inner, outer, 1)
+        self.draw_text_shadow(self.fonts["tiny"], self.tr("sun"), (92, 54, 18), (rect.x + 50, rect.y + 9), shadow=(252, 242, 198), offset=(1, 1))
+        self.draw_text_shadow(self.fonts["ui"], str(int(sun_value)), (52, 34, 14), (rect.x + 48, rect.y + 28), shadow=(252, 242, 210), offset=(1, 1))
+
+    def draw_seed_bank_top(self, rect: pygame.Rect, label: str = "") -> None:
+        self.draw_framed_panel(rect, fill=(162, 108, 52), border=(84, 50, 20), radius=18, inner=(202, 146, 86))
+        channel = rect.inflate(-14, -10)
+        self.draw_framed_panel(channel, fill=(108, 68, 32), border=(72, 44, 18), radius=12, inner=(146, 98, 54))
+        lip = pygame.Rect(channel.x + 10, channel.y + 8, channel.w - 20, 10)
+        pygame.draw.rect(self.screen, (228, 190, 132), lip, border_radius=5)
+        pygame.draw.rect(self.screen, (120, 76, 38), channel, 1, border_radius=11)
+        if label:
+            ribbon = pygame.Rect(rect.x + 16, rect.y - 10, min(180, rect.w - 32), 22)
+            self.draw_framed_panel(ribbon, fill=(200, 54, 38), border=(108, 28, 20), radius=8, inner=(226, 88, 72))
+            text = self.fit_label(label, self.fonts["tiny"], ribbon.w - 12)
+            self.draw_text_center_shadow(self.fonts["tiny"], text, (248, 236, 214), ribbon.center, shadow=(86, 26, 18), offset=(1, 1))
+
+    def draw_seed_packet_top(
+        self,
+        rect: pygame.Rect,
+        plant_key: str,
+        selected: bool = False,
+        hover: bool = False,
+        disabled: bool = False,
+        display_cost: Optional[int] = None,
+        display_icon_key: Optional[str] = None,
+    ) -> None:
+        cfg = self.plants[plant_key]
+        icon_key = display_icon_key or plant_key
+        icon_cfg = self.plants.get(icon_key, cfg)
+        shown_cost = int(display_cost if display_cost is not None else cfg.cost)
+        base = (248, 236, 196)
+        if selected:
+            base = (255, 242, 202)
+        elif hover and not disabled:
+            base = (252, 242, 208)
+        if disabled:
+            base = (200, 192, 172)
+        border = (232, 154, 48) if selected else (134, 92, 46)
+        self.draw_panel_shadow(rect, radius=12, alpha=42, offset=(0, 3))
+        self.draw_framed_panel(rect, fill=base, border=border, radius=12, inner=(254, 248, 230))
+        top_band = pygame.Rect(rect.x + 4, rect.y + 4, rect.w - 8, 18)
+        self.draw_framed_panel(top_band, fill=(192, 132, 66), border=(102, 62, 26), radius=7, inner=(220, 160, 94))
+        cost_label = self.fonts["tiny"].render(str(shown_cost), True, (252, 240, 214))
+        self.screen.blit(cost_label, cost_label.get_rect(center=top_band.center))
+        icon_box = pygame.Rect(rect.x + 8, top_band.bottom + 4, rect.w - 16, rect.h - 34)
+        self.draw_mode_thumb_gradient(self.screen, icon_box, (250, 244, 222), (228, 218, 184))
+        pygame.draw.rect(self.screen, (156, 118, 64), icon_box, 1, border_radius=8)
+        icon = self.load_image(icon_cfg.sprite_path, size=(38, 38))
+        if icon is not None:
+            self.screen.blit(icon, icon.get_rect(center=(rect.centerx, rect.y + 41)))
+        else:
+            pygame.draw.circle(self.screen, (88, 170, 98), (rect.centerx, rect.y + 41), 16)
+        label = self.fit_label(self.plant_display_name(plant_key), self.fonts["tiny"], rect.w - 10)
+        self.draw_text_center_shadow(self.fonts["tiny"], label, (62, 46, 26), (rect.centerx, rect.bottom - 9), shadow=(250, 242, 214), offset=(1, 1))
+        if selected:
+            pygame.draw.rect(self.screen, (255, 216, 112), rect.inflate(4, 4), 2, border_radius=14)
+        if disabled:
+            shade = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
+            shade.fill((24, 24, 24, 92))
+            self.screen.blit(shade, rect.topleft)
+
+    def draw_wave_flag_meter(self, rect: pygame.Rect) -> None:
+        self.draw_framed_panel(rect, fill=(180, 126, 66), border=(104, 66, 28), radius=12, inner=(206, 150, 88))
+        track = rect.inflate(-12, -9)
+        pygame.draw.rect(self.screen, (80, 58, 30), track, border_radius=6)
+        inner = track.inflate(-2, -2)
+        pygame.draw.rect(self.screen, (120, 86, 46), inner, border_radius=5)
+
+        total = max(1, int(self.battle.total_waves))
+        current = int(max(0, self.battle.current_wave))
+        progress = 0.0
+        if self.battle.uses_wave_system() and total > 0:
+            progress = current / total
+            if 0 < current <= len(self.battle.wave_budgets):
+                budget = max(1, int(self.battle.wave_budgets[current - 1]))
+                done = clamp(float(budget - self.battle.wave_spawn_remaining), 0.0, float(budget))
+                progress = ((current - 1) + done / budget) / total
+            if current >= total and self.battle.wave_spawn_remaining <= 0:
+                progress = 1.0 if not self.battle.zombies else max(progress, (total - 0.2) / total)
+        progress = clamp(progress, 0.0, 1.0)
+        fill_w = int(inner.w * progress)
+        if fill_w > 0:
+            fill = pygame.Rect(inner.x, inner.y, fill_w, inner.h)
+            self.draw_mode_thumb_gradient(self.screen, fill, (226, 78, 60), (176, 40, 30))
+            gloss = pygame.Rect(fill.x + 1, fill.y + 1, max(0, fill.w - 2), max(3, fill.h // 2))
+            if gloss.w > 0:
+                pygame.draw.rect(self.screen, (248, 156, 128), gloss, border_radius=4)
+        if self.battle.uses_wave_system() and total > 1:
+            for idx in self.battle.large_wave_indices:
+                pos = int(inner.x + inner.w * (idx / total))
+                pygame.draw.line(self.screen, (246, 224, 142), (pos, inner.y - 2), (pos, inner.bottom + 2), 2)
+                flag = [(pos + 2, inner.y - 2), (pos + 16, inner.y + 3), (pos + 2, inner.y + 8)]
+                pygame.draw.polygon(self.screen, (214, 44, 42), flag)
+            final_idx = max(1, int(self.battle.final_wave_index or total))
+            final_x = int(inner.x + inner.w * (final_idx / total))
+            pygame.draw.line(self.screen, (255, 246, 198), (final_x, inner.y - 3), (final_x, inner.bottom + 4), 3)
+        label = f"{self.tr('wave_label')} {max(0, current)}/{total}"
+        self.draw_text_center_shadow(self.fonts["tiny"], label, (252, 244, 220), rect.center, shadow=(66, 42, 22), offset=(1, 1))
+
+    def draw_seed_chooser_board(self, rect: pygame.Rect) -> None:
+        shell = rect.inflate(12, 12)
+        self.draw_framed_panel(shell, fill=(154, 102, 52), border=(84, 52, 24), radius=18, inner=(190, 132, 72))
+        self.draw_framed_panel(rect, fill=(216, 172, 104), border=(108, 68, 30), radius=16, inner=(236, 202, 138))
+        board = rect.inflate(-10, -10)
+        self.draw_vertical_gradient(board, (210, 154, 86), (176, 118, 62))
+        self.draw_panel_grain(board, (92, 56, 26), alpha=28, spacing=10)
+        pygame.draw.rect(self.screen, (94, 58, 28), board, 2, border_radius=12)
+
+    def draw_selected_seed_slot(self, rect: pygame.Rect, filled: bool = False, highlight: bool = False) -> None:
+        fill = (248, 238, 210) if filled else (220, 206, 172)
+        border = (232, 152, 42) if highlight else (146, 108, 58)
+        self.draw_framed_panel(rect, fill=fill, border=border, radius=10, inner=(254, 246, 226))
+        inset = rect.inflate(-8, -8)
+        self.draw_mode_thumb_gradient(self.screen, inset, (252, 246, 230), (228, 216, 182))
+        pygame.draw.rect(self.screen, (168, 132, 76), inset, 1, border_radius=8)
+
+    def draw_zombie_preview_badge(self, rect: pygame.Rect, zombie_key: str, hover: bool = False) -> None:
+        fill = (244, 228, 192) if hover else (236, 216, 176)
+        self.draw_framed_panel(rect, fill=fill, border=(130, 94, 52), radius=10, inner=(248, 238, 210))
+        thumb_box = pygame.Rect(rect.x + 10, rect.y + 8, 42, rect.h - 16)
+        self.draw_mode_thumb_gradient(self.screen, thumb_box, (232, 224, 210), (200, 188, 166))
+        pygame.draw.rect(self.screen, (140, 110, 74), thumb_box, 1, border_radius=8)
+        zicon = self.get_zombie_sprite(zombie_key, size=(34, 42))
+        if zicon is not None:
+            self.screen.blit(zicon, zicon.get_rect(center=thumb_box.center))
+        else:
+            pygame.draw.rect(self.screen, (126, 142, 106), (thumb_box.x + 8, thumb_box.y + 6, 26, 30), border_radius=5)
+        label = self.fit_label(self.zombie_display_name(zombie_key), self.fonts["small"], rect.w - 82)
+        self.screen.blit(self.fonts["small"].render(label, True, (44, 38, 30)), (rect.x + 62, rect.y + 12))
+        chip = pygame.Rect(rect.right - 54, rect.y + 10, 42, 18)
+        self.draw_framed_panel(chip, fill=(220, 200, 152), border=(128, 96, 44), radius=8, inner=(238, 226, 184))
+        self.draw_text_center_shadow(self.fonts["tiny"], self.tr("danger"), (70, 52, 28), chip.center, shadow=(246, 238, 214), offset=(1, 1))
 
     def draw_mode_page_arrow_button(self, rect: pygame.Rect, direction: int, hover: bool = False, enabled: bool = True) -> None:
         if enabled:
@@ -11366,6 +11478,19 @@ class Game:
         display_icon_key: Optional[str] = None,
     ) -> None:
         cfg = self.plants[plant_key]
+        icon_key = display_icon_key or plant_key
+        shown_cost = int(display_cost if display_cost is not None else cfg.cost)
+        if small:
+            self.draw_seed_packet_top(
+                rect,
+                plant_key,
+                selected=selected,
+                hover=hover,
+                disabled=disabled,
+                display_cost=shown_cost,
+                display_icon_key=icon_key,
+            )
+            return
         base = (245, 230, 188)
         if selected:
             base = (253, 238, 198)
@@ -11377,31 +11502,19 @@ class Game:
         self.draw_framed_panel(rect, fill=base, border=border, radius=10, inner=(252, 244, 220))
         if selected:
             pygame.draw.rect(self.screen, (255, 214, 108), rect.inflate(4, 4), 2, border_radius=12)
-        icon_key = display_icon_key or plant_key
         icon_cfg = self.plants.get(icon_key, cfg)
-        icon_size = (36, 36) if small else (34, 34)
+        icon_size = (34, 34)
         icon = self.load_image(icon_cfg.sprite_path, size=icon_size)
-        shown_cost = int(display_cost if display_cost is not None else cfg.cost)
-        if small:
-            icon_x = rect.centerx
-            icon_y = rect.y + 22
-        else:
-            icon_x = rect.x + 24
-            icon_y = rect.centery
+        icon_x = rect.x + 24
+        icon_y = rect.centery
         if icon is not None:
             self.screen.blit(icon, icon.get_rect(center=(icon_x, icon_y)))
         else:
-            pygame.draw.circle(self.screen, (88, 170, 98), (icon_x, icon_y), 13 if small else 14)
+            pygame.draw.circle(self.screen, (88, 170, 98), (icon_x, icon_y), 14)
         info_col = (58, 44, 28) if not disabled else (106, 98, 88)
-        if small:
-            tag = pygame.Rect(rect.x + 4, rect.bottom - 18, rect.w - 8, 14)
-            self.draw_framed_panel(tag, fill=(240, 206, 110), border=(138, 98, 38), radius=5, inner=(248, 220, 142))
-            cost_text = self.fonts["tiny"].render(str(shown_cost), True, info_col)
-            self.screen.blit(cost_text, cost_text.get_rect(center=(rect.centerx, rect.bottom - 11)))
-        else:
-            name_font = self.fonts["small"]
-            self.screen.blit(name_font.render(self.plant_display_name(plant_key), True, info_col), (rect.x + 44, rect.y + 8))
-            self.screen.blit(self.fonts["tiny"].render(f"{shown_cost} {self.tr('sun')}", True, info_col), (rect.x + 44, rect.y + rect.h - 18))
+        name_font = self.fonts["small"]
+        self.screen.blit(name_font.render(self.plant_display_name(plant_key), True, info_col), (rect.x + 44, rect.y + 8))
+        self.screen.blit(self.fonts["tiny"].render(f"{shown_cost} {self.tr('sun')}", True, info_col), (rect.x + 44, rect.y + rect.h - 18))
 
     def draw_zombie_packet(
         self,
@@ -11451,36 +11564,43 @@ class Game:
             border = (112, 88, 58)
             inner = (210, 194, 166)
         else:
-            fill = (214, 164, 96) if selected else ((232, 186, 112) if hover else (224, 176, 106))
+            fill = (214, 166, 98) if selected else ((232, 188, 114) if hover else (222, 174, 102))
             border = (232, 148, 40) if selected else (126, 82, 38)
             inner = (248, 228, 182)
-        self.draw_framed_panel(rect, fill=fill, border=border, radius=8, inner=inner)
+        self.draw_panel_shadow(rect, radius=10, alpha=42, offset=(0, 3))
+        self.draw_framed_panel(rect, fill=fill, border=border, radius=10, inner=inner)
         if selected:
-            pygame.draw.rect(self.screen, (255, 216, 112), rect.inflate(4, 4), 2, border_radius=10)
+            pygame.draw.rect(self.screen, (255, 216, 112), rect.inflate(4, 4), 2, border_radius=12)
 
-        top = pygame.Rect(rect.x + 6, rect.y + 6, rect.w - 12, 22)
-        self.draw_framed_panel(top, fill=(202, 122, 58), border=(100, 58, 24), radius=6, inner=(224, 146, 78))
-        self.screen.blit(self.fonts["tiny"].render(str(int(cfg.cost)), True, (255, 245, 210)), (top.x + 8, top.y + 5))
+        top = pygame.Rect(rect.x + 6, rect.y + 6, rect.w - 12, 20)
+        self.draw_framed_panel(top, fill=(202, 122, 58), border=(100, 58, 24), radius=6, inner=(226, 150, 82))
+        cost_chip = pygame.Rect(top.right - 36, top.y + 2, 30, 16)
+        self.draw_framed_panel(cost_chip, fill=(248, 214, 104), border=(144, 102, 34), radius=6, inner=(252, 232, 148))
+        cost_text = self.fonts["tiny"].render(str(int(cfg.cost)), True, (70, 46, 20))
+        self.screen.blit(cost_text, cost_text.get_rect(center=cost_chip.center))
 
-        icon_box = pygame.Rect(rect.x + 10, top.bottom + 6, rect.w - 20, 60)
-        self.draw_framed_panel(icon_box, fill=(246, 236, 206), border=(142, 104, 54), radius=8, inner=(252, 244, 220))
-        icon = self.load_image(cfg.sprite_path, size=(52, 52))
+        icon_box = pygame.Rect(rect.x + 8, top.bottom + 5, rect.w - 16, 56)
+        self.draw_mode_thumb_gradient(self.screen, icon_box, (244, 232, 206), (226, 210, 174))
+        pygame.draw.rect(self.screen, (142, 104, 54), icon_box, 2, border_radius=8)
+        icon = self.load_image(cfg.sprite_path, size=(50, 50))
         if icon is not None:
             self.screen.blit(icon, icon.get_rect(center=icon_box.center))
         else:
             pygame.draw.circle(self.screen, (86, 172, 96), icon_box.center, 22)
 
-        name_lines = self.wrap_text_lines(self.fonts["tiny"], self.plant_display_name(plant_key), rect.w - 14)[:2]
-        ty = icon_box.bottom + 4
+        name_box = pygame.Rect(rect.x + 8, icon_box.bottom + 5, rect.w - 16, 26)
+        self.draw_framed_panel(name_box, fill=(244, 232, 194), border=(148, 106, 56), radius=7, inner=(252, 242, 216))
+        name_lines = self.wrap_text_lines(self.fonts["tiny"], self.plant_display_name(plant_key), rect.w - 20)[:2]
+        ty = name_box.y + 6
         for line in name_lines:
             ts = self.fonts["tiny"].render(line, True, (58, 42, 24) if not disabled else (90, 78, 64))
             self.screen.blit(ts, ts.get_rect(center=(rect.centerx, ty + 6)))
             ty += 14
 
-        sun_bar = pygame.Rect(rect.x + 8, rect.bottom - 20, rect.w - 16, 12)
-        self.draw_framed_panel(sun_bar, fill=(248, 220, 102), border=(150, 108, 36), radius=5, inner=(252, 232, 148))
-        sun_txt = self.fonts["tiny"].render(self.tr("sun"), True, (76, 52, 24))
-        self.screen.blit(sun_txt, (sun_bar.x + 6, sun_bar.y - 2))
+        bottom_chip = pygame.Rect(rect.x + 8, rect.bottom - 18, rect.w - 16, 12)
+        self.draw_framed_panel(bottom_chip, fill=(182, 126, 64), border=(112, 68, 30), radius=5, inner=(210, 154, 84))
+        bottom_text = self.fit_label(f"{cfg.cost} {self.tr('sun')}", self.fonts["tiny"], bottom_chip.w - 8)
+        self.draw_text_center_shadow(self.fonts["tiny"], bottom_text, (248, 238, 212), bottom_chip.center, shadow=(78, 50, 24), offset=(1, 1))
         if disabled:
             shade = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
             shade.fill((24, 24, 24, 84))
@@ -12235,8 +12355,8 @@ class Game:
         self.draw_scene_backdrop()
         layout = self.plant_select_layout()
         root = layout["frame"]
-        self.draw_framed_panel(root, fill=(126, 80, 42), border=(66, 40, 18), radius=24, inner=(156, 102, 58))
-        inner_main = root.inflate(-28, -28)
+        self.draw_book_panel(root)
+        inner_main = root.inflate(-22, -22)
         self.draw_parchment_panel(inner_main, radius=20)
         level = self.levels[self.pending_level_idx if self.pending_level_idx is not None else self.level_idx]
         field_name = self.tr("field_" + level.battlefield)
@@ -12245,42 +12365,45 @@ class Game:
 
         tray_panel = layout["tray_panel"]
         required_pick_count = self.plant_select_required_pick_count()
-        self.draw_framed_panel(tray_panel, fill=(176, 112, 62), border=(96, 58, 28), radius=14, inner=(222, 156, 88))
-        self.screen.blit(self.fonts["mid"].render(self.tr("selected_tray"), True, (252, 236, 196)), (tray_panel.x + 14, tray_panel.y + 8))
+        self.draw_framed_panel(tray_panel, fill=(150, 96, 48), border=(84, 48, 22), radius=16, inner=(188, 132, 72))
+        tray_header = pygame.Rect(tray_panel.x + 12, tray_panel.y + 8, tray_panel.w - 24, 20)
+        self.draw_framed_panel(tray_header, fill=(118, 74, 34), border=(70, 40, 18), radius=8, inner=(150, 96, 46))
+        self.screen.blit(self.fonts["small"].render(self.tr("selected_tray"), True, (248, 236, 204)), (tray_header.x + 10, tray_header.y + 2))
         count_text = f"{self.tr('pick_count')} ({len(self.plant_select_selected)}/{required_pick_count})"
-        count_surf = self.fonts["small"].render(count_text, True, (252, 232, 196))
-        self.screen.blit(count_surf, (tray_panel.right - count_surf.get_width() - 14, tray_panel.y + 14))
+        count_surf = self.fonts["small"].render(count_text, True, (248, 236, 204))
+        self.screen.blit(count_surf, (tray_header.right - count_surf.get_width() - 10, tray_header.y + 2))
 
         avail_panel = layout["available_panel"]
-        self.draw_framed_panel(avail_panel, fill=(150, 92, 44), border=(84, 48, 22), radius=14, inner=(194, 124, 70))
-        self.draw_panel_grain(avail_panel.inflate(-14, -20), (94, 56, 24), alpha=26, spacing=11)
-        avail_head = pygame.Rect(avail_panel.x + 8, avail_panel.y + 8, avail_panel.w - 16, 28)
-        self.draw_framed_panel(avail_head, fill=(124, 72, 34), border=(72, 40, 18), radius=8, inner=(158, 96, 46))
-        self.screen.blit(self.fonts["small"].render(self.tr("available_plants"), True, (246, 232, 196)), (avail_head.x + 12, avail_head.y + 5))
+        self.draw_seed_chooser_board(avail_panel)
+        avail_head = pygame.Rect(avail_panel.x + 12, avail_panel.y + 8, avail_panel.w - 24, 20)
+        self.draw_framed_panel(avail_head, fill=(118, 72, 34), border=(72, 40, 18), radius=8, inner=(150, 94, 44))
+        self.screen.blit(self.fonts["small"].render(self.tr("available_plants"), True, (246, 232, 196)), (avail_head.x + 10, avail_head.y + 2))
 
         z_panel = layout["zombie_panel"]
-        self.draw_framed_panel(z_panel, fill=(206, 170, 116), border=(98, 66, 30), radius=14, inner=(236, 206, 156))
-        z_head = pygame.Rect(z_panel.x + 8, z_panel.y + 8, z_panel.w - 16, 34)
-        self.draw_framed_panel(z_head, fill=(130, 88, 44), border=(74, 44, 20), radius=8, inner=(160, 112, 58))
-        self.screen.blit(self.fonts["small"].render(self.tr("zombie_preview"), True, (246, 232, 198)), (z_head.x + 10, z_head.y + 8))
+        self.draw_framed_panel(z_panel, fill=(214, 182, 128), border=(104, 70, 32), radius=16, inner=(236, 210, 164))
+        z_head = pygame.Rect(z_panel.x + 10, z_panel.y + 10, z_panel.w - 20, 26)
+        self.draw_framed_panel(z_head, fill=(124, 80, 38), border=(72, 42, 18), radius=8, inner=(156, 106, 54))
+        self.draw_text_center_shadow(self.fonts["small"], self.tr("zombie_preview"), (248, 236, 208), z_head.center, shadow=(70, 42, 20), offset=(1, 1))
 
         tray_slots = self.plant_select_tray_slots()
         for i, rect in enumerate(tray_slots):
             filled = i < len(self.plant_select_selected)
-            self.draw_tray_slot(rect, filled=filled, highlighted=filled)
+            self.draw_selected_seed_slot(rect, filled=filled, highlight=filled)
             if not filled:
                 continue
             kind = self.plant_select_selected[i]
-            icon = self.load_image(self.plants[kind].sprite_path, size=(46, 46))
+            icon = self.load_image(self.plants[kind].sprite_path, size=(42, 42))
             if icon is not None:
                 self.screen.blit(icon, icon.get_rect(center=(rect.centerx, rect.centery - 8)))
             else:
                 pygame.draw.circle(self.screen, (84, 168, 98), (rect.centerx, rect.centery - 8), 18)
-            self.screen.blit(self.fonts["tiny"].render(f"{self.plants[kind].cost}", True, (54, 42, 26)), (rect.x + 8, rect.bottom - 16))
+            cost_chip = pygame.Rect(rect.x + 10, rect.bottom - 18, rect.w - 20, 12)
+            self.draw_framed_panel(cost_chip, fill=(202, 144, 70), border=(118, 72, 28), radius=6, inner=(230, 176, 96))
+            self.draw_text_center_shadow(self.fonts["tiny"], str(self.plants[kind].cost), (250, 238, 212), cost_chip.center, shadow=(78, 48, 24), offset=(1, 1))
 
         viewport = layout["available_viewport"]
         self.draw_framed_panel(viewport.inflate(8, 8), fill=(132, 76, 38), border=(78, 44, 20), radius=10, inner=(170, 102, 56))
-        self.draw_vertical_gradient(viewport, (212, 162, 104), (186, 130, 76))
+        self.draw_vertical_gradient(viewport, (214, 168, 104), (184, 126, 70))
         old_clip = self.screen.get_clip()
         self.screen.set_clip(viewport)
         for kind, rect in self.plant_select_grid_buttons(apply_scroll=True):
@@ -12304,23 +12427,14 @@ class Game:
         list_view = pygame.Rect(z_panel.x + 10, z_panel.y + 50, z_panel.w - 20, z_panel.h - 60)
         zy = list_view.y
         for kind in level.z_weights.keys():
-            row_rect = pygame.Rect(list_view.x, zy, list_view.w, 58)
-            row_hover = row_rect.collidepoint(mouse)
-            fill = (246, 230, 190) if row_hover else (236, 214, 172)
-            self.draw_framed_panel(row_rect, fill=fill, border=(130, 94, 52), radius=8, inner=(248, 236, 206))
-            zicon = self.get_zombie_sprite(kind)
-            if zicon is not None:
-                thumb = pygame.transform.smoothscale(zicon, (42, 52))
-                self.screen.blit(thumb, thumb.get_rect(center=(row_rect.left + 26, row_rect.centery)))
-            else:
-                pygame.draw.rect(self.screen, (126, 142, 106), (row_rect.left + 12, row_rect.top + 10, 30, 36), border_radius=6)
-            self.screen.blit(self.fonts["small"].render(self.zombie_display_name(kind), True, (44, 38, 30)), (row_rect.left + 54, row_rect.top + 17))
-            zy += 64
-            if zy > list_view.bottom - 58:
+            row_rect = pygame.Rect(list_view.x, zy, list_view.w, 54)
+            self.draw_zombie_preview_badge(row_rect, kind, hover=row_rect.collidepoint(mouse))
+            zy += 60
+            if zy > list_view.bottom - 54:
                 break
 
         action_panel = layout["action_panel"]
-        self.draw_framed_panel(action_panel, fill=(166, 104, 56), border=(88, 50, 24), radius=12, inner=(206, 140, 82))
+        self.draw_framed_panel(action_panel, fill=(146, 96, 52), border=(82, 48, 24), radius=16, inner=(178, 122, 72))
         self.plant_select_back_btn = layout["back_btn"]
         self.plant_select_start_btn = layout["start_btn"]
         self.draw_secondary_button(self.plant_select_back_btn, self.tr("back"), hover=self.plant_select_back_btn.collidepoint(mouse))
@@ -12716,26 +12830,24 @@ class Game:
         band = pygame.Rect(0, LAWN_Y - 10, SCREEN_WIDTH, 10)
         self.draw_vertical_gradient(band, (140, 108, 76), (104, 76, 52))
 
-        self.draw_framed_side_panel(layout["left_tools"])
-
+        hud = layout["hud"]
+        self.draw_framed_panel(hud, fill=(160, 110, 56), border=(84, 52, 24), radius=18, inner=(194, 138, 80))
+        top_gloss = pygame.Rect(hud.x + 18, hud.y + 8, hud.w - 36, 12)
+        pygame.draw.rect(self.screen, (244, 228, 188), top_gloss, border_radius=6)
         sun_box = layout["sun_box"]
-        self.draw_framed_panel(sun_box, fill=(246, 224, 154), border=(126, 86, 32), radius=13, inner=(252, 236, 184))
-        pygame.draw.circle(self.screen, (255, 226, 108), (sun_box.x + 25, sun_box.centery), 12)
-        pygame.draw.circle(self.screen, (176, 122, 28), (sun_box.x + 25, sun_box.centery), 12, 2)
-        self.screen.blit(self.fonts["mid"].render(f"{self.tr('sun')}: {self.battle.sun}", True, (38, 34, 24)), (sun_box.x + 44, sun_box.y + 11))
+        self.draw_sun_counter_panel(sun_box, int(self.battle.sun))
 
         self.battle_settings_btn = layout["settings_btn"]
         settings_hover = self.battle_settings_btn.collidepoint(mouse)
-
         self.shovel_btn = layout["shovel_btn"]
-        self.draw_secondary_button(self.shovel_btn, self.tr("shovel"), hover=self.shovel_btn.collidepoint(mouse))
+        self.draw_stone_button(self.shovel_btn, self.tr("shovel"), hover=self.shovel_btn.collidepoint(mouse), enabled=True)
         if self.battle.shovel_mode:
-            pygame.draw.rect(self.screen, (234, 148, 38), self.shovel_btn, 2, border_radius=10)
+            pygame.draw.rect(self.screen, (255, 214, 108), self.shovel_btn.inflate(4, 4), 2, border_radius=18)
         self.slot_spin_btn = layout["slot_btn"]
         if self.battle.is_slot_machine_mode():
             spin_cost = max(1, int(self.battle.mode_float("slot_spin_cost", 25.0)))
             spin_label = self.tr("slot_spin")
-            self.draw_secondary_button(self.slot_spin_btn, spin_label, hover=self.slot_spin_btn.collidepoint(mouse))
+            self.draw_stone_button(self.slot_spin_btn, spin_label, hover=self.slot_spin_btn.collidepoint(mouse), enabled=True)
             if self.battle.sun < spin_cost:
                 shade = pygame.Surface((self.slot_spin_btn.w, self.slot_spin_btn.h), pygame.SRCALPHA)
                 shade.fill((24, 24, 24, 96))
@@ -12745,9 +12857,6 @@ class Game:
 
         seed_bank = layout["seed_bank"]
         self.draw_seed_bank(seed_bank, mouse)
-
-        cluster = layout["right_cluster"]
-        self.draw_framed_panel(cluster, fill=(234, 214, 176), border=(126, 92, 46), radius=10, inner=(246, 232, 200))
         self.pause_btn = pygame.Rect(0, 0, 0, 0)
         self.battle_exit_btn = pygame.Rect(0, 0, 0, 0)
         self.lang_zh_btn = pygame.Rect(0, 0, 0, 0)
@@ -12761,12 +12870,12 @@ class Game:
             mode_text = CLASSIC_MODE_SUBTITLE_BY_ID.get(mode_name, CLASSIC_MODE_TITLE_BY_ID[mode_name]) if self.lang == "zh" else CLASSIC_MODE_TITLE_BY_ID[mode_name]
         else:
             mode_text = self.tr("adventure")
-        line1 = f"{level_text}  |  {self.tr('field')}: {self.tr('field_' + self.battle.field.key)}"
+        field_text = self.tr("field_" + self.battle.field.key)
+        line1 = f"{level_text}  •  {self.tr('field')}: {field_text}"
         show_wave = self.setting_bool("show_wave_number", True)
         show_next_wave = self.setting_bool("show_next_wave_countdown", True)
         if show_wave and self.battle.uses_wave_system() and self.battle.total_waves > 0:
-            wave_text = f"{self.tr('wave_label')} {self.battle.current_wave}/{self.battle.total_waves}"
-            line2 = wave_text
+            line2 = f"{self.tr('wave_label')} {self.battle.current_wave}/{self.battle.total_waves}"
         elif self.battle.is_beghouled_mode() or self.battle.is_beghouled_twist_mode():
             line2 = f"{self.tr('beghouled_score')}: {self.battle.mode_score}/{self.battle.mode_goal}"
         elif self.battle.is_whack_mode():
@@ -12788,21 +12897,25 @@ class Game:
                 line3 += f"  |  {self.tr('survival_endless_round')}: {s_round}"
             else:
                 line3 += f"  |  {self.tr('survival_round')} {s_round}/{max(1, s_total)}"
-        info_x = cluster.x + 12
-        info_w = cluster.w - 126
-        header_chip = pygame.Rect(info_x, cluster.y + 10, info_w, 18)
-        self.draw_framed_panel(header_chip, fill=(214, 194, 158), border=(128, 96, 52), radius=7, inner=(236, 224, 194))
-        header_text = self.fit_label(line1, self.fonts["tiny"], header_chip.w - 10)
-        self.screen.blit(self.fonts["tiny"].render(header_text, True, (46, 38, 26)), (header_chip.x + 6, header_chip.y + 2))
-        info_y = header_chip.bottom + 6
-        for line in self.wrap_text_lines(self.fonts["tiny"], line2, info_w)[:2]:
-            self.screen.blit(self.fonts["tiny"].render(line, True, (46, 38, 26)), (info_x, info_y))
-            info_y += 14
-        for line in self.wrap_text_lines(self.fonts["tiny"], line3, info_w)[:1]:
-            self.screen.blit(self.fonts["tiny"].render(line, True, (46, 38, 26)), (info_x, info_y))
-            info_y += 14
+        info_rect = layout["utility_info"]
+        self.draw_framed_panel(info_rect, fill=(232, 220, 188), border=(126, 92, 46), radius=10, inner=(244, 236, 212))
+        header_text = self.fit_label(line1, self.fonts["tiny"], info_rect.w - 12)
+        self.screen.blit(self.fonts["tiny"].render(header_text, True, (46, 38, 26)), (info_rect.x + 8, info_rect.y + 3))
+        line2_fit = self.fit_label(line2, self.fonts["tiny"], info_rect.w - 12)
+        line3_fit = self.fit_label(line3, self.fonts["tiny"], info_rect.w - 12)
+        self.screen.blit(self.fonts["tiny"].render(line2_fit, True, (70, 54, 32)), (info_rect.x + 8, info_rect.y + 14))
+        info_chip = pygame.Rect(info_rect.right + 8, info_rect.y, layout["wave_meter"].x - info_rect.right - 16, info_rect.h)
+        if info_chip.w > 40:
+            self.draw_framed_panel(info_chip, fill=(232, 220, 188), border=(126, 92, 46), radius=10, inner=(244, 236, 212))
+            mode_fit = self.fit_label(line3_fit, self.fonts["tiny"], info_chip.w - 10)
+            self.screen.blit(self.fonts["tiny"].render(mode_fit, True, (46, 38, 26)), (info_chip.x + 6, info_chip.y + 8))
         if show_wave and self.battle.uses_wave_system() and self.battle.total_waves > 0:
-            self.draw_wave_progress_bar(pygame.Rect(cluster.x + 10, cluster.bottom - 32, cluster.w - 20, 20))
+            self.draw_wave_progress_bar(layout["wave_meter"])
+        else:
+            meter = layout["wave_meter"]
+            self.draw_framed_panel(meter, fill=(184, 130, 74), border=(104, 66, 30), radius=12, inner=(208, 150, 92))
+            label = self.fit_label(line2 if line2 else mode_text, self.fonts["tiny"], meter.w - 12)
+            self.draw_text_center_shadow(self.fonts["tiny"], label, (248, 240, 214), meter.center, shadow=(66, 42, 22), offset=(1, 1))
 
         coin_box = layout["coin_box"]
         self.draw_coin_plaque(coin_box, int(self.save_data.get("coins", 0)), compact=True)
