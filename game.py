@@ -3742,16 +3742,121 @@ class BattleState:
     def beghouled_board_cols(self) -> List[int]:
         return [c for c in range(1, max(2, COLS - 1))]
 
+    def beghouled_upgrade_chain(self) -> List[str]:
+        requested = [k for k in self.mode_list("beghouled_chain") if k in self.plant_types]
+        default_chain = ["sunflower", "peashooter", "snowpea", "repeater", "starfruit", "gatling"]
+        chain: List[str] = []
+        for kind in requested or default_chain:
+            cfg = self.plant_types.get(kind)
+            if cfg is None or cfg.is_support or cfg.is_overlay or cfg.aquatic_only:
+                continue
+            if cfg.behavior in {"bomb", "squash", "row_blast", "ice", "doom", "blover", "grave_buster", "coffee", "imitate", "potato"}:
+                continue
+            if kind not in chain:
+                chain.append(kind)
+        if len(chain) < 4:
+            for kind in default_chain:
+                if kind in self.plant_types and kind not in chain:
+                    chain.append(kind)
+        return chain[: max(4, min(6, len(chain)))]
+
     def beghouled_pool(self) -> List[str]:
         pool = [k for k in self.mode_list("beghouled_pool") if k in self.plant_types]
         if pool:
             return pool
-        return ["sunflower", "peashooter", "wallnut", "potato_mine", "snowpea", "cherrybomb"]
+        chain = self.beghouled_upgrade_chain()
+        base_count = 5 if self.is_beghouled_twist_mode() else 4
+        return chain[: max(3, min(len(chain), base_count))]
 
-    def is_beghouled_cell(self, row: int, col: int) -> bool:
-        return (row, col) in self.beghouled_cells
+    def beghouled_next_kind(self, kind: str) -> str:
+        chain = self.beghouled_upgrade_chain()
+        if not chain:
+            return kind
+        if kind not in chain:
+            return chain[0]
+        idx = chain.index(kind)
+        return chain[min(len(chain) - 1, idx + 1)]
 
-    def setup_beghouled_board(self) -> None:
+    def clear_beghouled_board_entities(self) -> None:
+        cols = set(self.beghouled_board_cols())
+        for collection in (self.main, self.support, self.armor):
+            for pos in [p for p in collection.keys() if p[1] in cols]:
+                del collection[pos]
+
+    def sync_beghouled_board(self) -> None:
+        self.clear_beghouled_board_entities()
+        for (row, col), kind in self.beghouled_cells.items():
+            cfg = self.plant_types.get(kind)
+            if cfg is None:
+                continue
+            plant_hp = float(cfg.hp) * self.plant_hp_scale()
+            p = Plant(kind=kind, row=row, col=col, hp=plant_hp, slot="main", cd=random.uniform(0.12, 0.55))
+            p.state["hp_max"] = float(p.hp)
+            p.state["beghouled_tile"] = 1.0
+            self.ensure_plant_anim_state(p)
+            if kind == "sunflower":
+                p.cd = random.uniform(2.6, 4.2)
+            elif kind in ("repeater", "gatling", "starfruit"):
+                p.cd = random.uniform(0.15, 0.35)
+            self.main[(row, col)] = p
+
+    def collect_beghouled_match_groups(self) -> List[List[Tuple[int, int]]]:
+        cols = self.beghouled_board_cols()
+        if not cols:
+            return []
+        groups: List[set[Tuple[int, int]]] = []
+        for r in range(self.rows()):
+            run: List[Tuple[int, int]] = []
+            run_kind = ""
+            for c in cols:
+                kind = self.beghouled_cells.get((r, c), "")
+                if kind and kind == run_kind:
+                    run.append((r, c))
+                else:
+                    if len(run) >= 3:
+                        groups.append(set(run))
+                    run_kind = kind
+                    run = [(r, c)] if kind else []
+            if len(run) >= 3:
+                groups.append(set(run))
+        for c in cols:
+            run = []
+            run_kind = ""
+            for r in range(self.rows()):
+                kind = self.beghouled_cells.get((r, c), "")
+                if kind and kind == run_kind:
+                    run.append((r, c))
+                else:
+                    if len(run) >= 3:
+                        groups.append(set(run))
+                    run_kind = kind
+                    run = [(r, c)] if kind else []
+            if len(run) >= 3:
+                groups.append(set(run))
+        merged: List[set[Tuple[int, int]]] = []
+        while groups:
+            current = groups.pop()
+            changed = True
+            while changed:
+                changed = False
+                rest: List[set[Tuple[int, int]]] = []
+                for group in groups:
+                    if current & group:
+                        current |= group
+                        changed = True
+                    else:
+                        rest.append(group)
+                groups = rest
+            merged.append(current)
+        return [sorted(group, key=lambda pos: (pos[0], pos[1])) for group in merged]
+
+    def collect_beghouled_matches(self) -> List[Tuple[int, int]]:
+        matched: List[Tuple[int, int]] = []
+        for group in self.collect_beghouled_match_groups():
+            matched.extend(group)
+        return matched
+
+    def setup_beghouled_mode(self) -> None:
         self.cards = []
         self.card_timer = {}
         self.selected = ""
@@ -3782,73 +3887,59 @@ class BattleState:
                     pick = random.choice(pool)
                     tries += 1
                 self.beghouled_cells[(r, c)] = pick
+        self.sync_beghouled_board()
 
-    def collect_beghouled_matches(self) -> List[Tuple[int, int]]:
-        matched = set()
-        cols = self.beghouled_board_cols()
-        if not cols:
-            return []
-        for r in range(self.rows()):
-            run: List[Tuple[int, int]] = []
-            run_kind = ""
-            for c in cols:
-                kind = self.beghouled_cells.get((r, c), "")
-                if kind and kind == run_kind:
-                    run.append((r, c))
-                else:
-                    if len(run) >= 3:
-                        matched.update(run)
-                    run_kind = kind
-                    run = [(r, c)] if kind else []
-            if len(run) >= 3:
-                matched.update(run)
-        for c in cols:
-            run = []
-            run_kind = ""
-            for r in range(self.rows()):
-                kind = self.beghouled_cells.get((r, c), "")
-                if kind and kind == run_kind:
-                    run.append((r, c))
-                else:
-                    if len(run) >= 3:
-                        matched.update(run)
-                    run_kind = kind
-                    run = [(r, c)] if kind else []
-            if len(run) >= 3:
-                matched.update(run)
-        return list(matched)
+    def is_beghouled_cell(self, row: int, col: int) -> bool:
+        return (row, col) in self.beghouled_cells
+
+    def setup_beghouled_board(self) -> None:
+        self.setup_beghouled_mode()
 
     def resolve_beghouled_matches(self, allow_cascade: bool = True) -> int:
-        pool = self.beghouled_pool()
+        refill_pool = self.beghouled_pool()
         total = 0
         cascades = 0
         while True:
-            matches = self.collect_beghouled_matches()
-            if not matches:
+            groups = self.collect_beghouled_match_groups()
+            if not groups:
                 break
-            total += len(matches)
             cascades += 1
-            row_hits: Dict[int, int] = {}
-            for r, _ in matches:
-                row_hits[r] = row_hits.get(r, 0) + 1
-            for row, count in row_hits.items():
-                lane = [z for z in self.zombies if z.row == row and z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0 and not z.hypnotized]
-                if lane:
-                    target = min(lane, key=lambda zz: zz.x)
-                    dmg = 84.0 + count * 44.0
-                    self.damage_zombie(target, dmg, source="beghouled")
-                    target.state["hit_flash"] = 0.14
-                    self.hit_sparks.append({"x": target.x - 10.0, "y": self.row_y(row) - 12.0, "t": 0.2, "ttl": 0.2})
-            for pos in matches:
-                self.beghouled_cells[pos] = random.choice(pool)
-            if not allow_cascade or cascades >= 7:
+            cleared = 0
+            upgrades = 0
+            refill_positions: List[Tuple[int, int]] = []
+            for group in groups:
+                anchor = max(group, key=lambda pos: (pos[0], pos[1]))
+                next_kind = self.beghouled_next_kind(self.beghouled_cells.get(anchor, refill_pool[0]))
+                if next_kind != self.beghouled_cells.get(anchor, next_kind):
+                    upgrades += 1
+                self.beghouled_cells[anchor] = next_kind
+                cleared += len(group)
+                for pos in group:
+                    if pos != anchor:
+                        refill_positions.append(pos)
+            for pos in refill_positions:
+                self.beghouled_cells[pos] = random.choice(refill_pool)
+            gained = cleared + upgrades * 2
+            total += gained
+            self.mode_score += gained
+            self.sync_beghouled_board()
+            if not allow_cascade or cascades >= 6:
                 break
-        if total > 0:
-            self.mode_score += total
-            self.sun += 5 * total
         return total
 
-    def handle_beghouled_click(self, row: int, col: int, twist: bool = False) -> bool:
+    def resolve_beghouled_move(self, updates: List[Tuple[Tuple[int, int], str]], allow_cascade: bool = True) -> bool:
+        snapshot = dict(self.beghouled_cells)
+        for pos, kind in updates:
+            self.beghouled_cells[pos] = kind
+        gained = self.resolve_beghouled_matches(allow_cascade=allow_cascade)
+        if gained <= 0:
+            self.beghouled_cells.clear()
+            self.beghouled_cells.update(snapshot)
+            self.sync_beghouled_board()
+            return False
+        return True
+
+    def handle_beghouled_input(self, row: int, col: int, twist: bool = False) -> bool:
         if not self.is_beghouled_cell(row, col):
             self.beghouled_selected = None
             return False
@@ -3860,11 +3951,8 @@ class BattleState:
                 return False
             vals = [self.beghouled_cells[pos] for pos in square]
             rotated = [vals[3], vals[0], vals[1], vals[2]]
-            for pos, val in zip(square, rotated):
-                self.beghouled_cells[pos] = val
-            if self.resolve_beghouled_matches(allow_cascade=True) <= 0:
-                for pos, val in zip(square, vals):
-                    self.beghouled_cells[pos] = val
+            if not self.resolve_beghouled_move(list(zip(square, rotated)), allow_cascade=True):
+                return False
             return True
         if self.beghouled_selected is None:
             self.beghouled_selected = (row, col)
@@ -3878,15 +3966,14 @@ class BattleState:
             return True
         a = self.beghouled_cells[(sr, sc)]
         b = self.beghouled_cells[(row, col)]
-        self.beghouled_cells[(sr, sc)] = b
-        self.beghouled_cells[(row, col)] = a
-        if self.resolve_beghouled_matches(allow_cascade=True) <= 0:
-            self.beghouled_cells[(sr, sc)] = a
-            self.beghouled_cells[(row, col)] = b
+        self.resolve_beghouled_move([((sr, sc), b), ((row, col), a)], allow_cascade=True)
         self.beghouled_selected = None
         return True
 
-    def setup_seeing_stars_targets(self) -> None:
+    def handle_beghouled_click(self, row: int, col: int, twist: bool = False) -> bool:
+        return self.handle_beghouled_input(row, col, twist=twist)
+
+    def setup_seeing_stars_mode(self) -> None:
         patterns = self.seeing_stars_target_patterns()
         if not patterns:
             self.seeing_stars_targets = []
@@ -3894,21 +3981,22 @@ class BattleState:
             self.mode_score = 0
             self.mode_event_t = 0.0
             return
-        unlocked = int(self.save_data.get("unlocked", 1))
-        fallback_idx = int(clamp(float((max(1, unlocked) - 1) // 10), 0.0, float(len(patterns) - 1)))
-        pattern_idx = int(self.mode_float("seeing_stars_pattern", float(fallback_idx)))
-        pattern_idx = int(clamp(float(pattern_idx), 0.0, float(len(patterns) - 1)))
+        pattern_idx = int(clamp(self.mode_float("seeing_stars_pattern", 0.0), 0.0, float(len(patterns) - 1)))
         base = patterns[pattern_idx]
         targets: List[Tuple[int, int]] = []
         for r, c in base:
             rr = int(clamp(float(r), 0.0, float(self.rows() - 1)))
-            pos = (rr, c)
+            cc = int(clamp(float(c), 0.0, float(COLS - 1)))
+            pos = (rr, cc)
             if pos not in targets:
                 targets.append(pos)
         self.seeing_stars_targets = targets
         self.mode_goal = len(targets)
         self.mode_score = 0
         self.mode_event_t = 0.0
+
+    def setup_seeing_stars_targets(self) -> None:
+        self.setup_seeing_stars_mode()
 
     def update_seeing_stars_mode(self, dt: float) -> None:
         if not self.seeing_stars_targets:
@@ -3921,10 +4009,117 @@ class BattleState:
         self.mode_score = done
         if done >= len(self.seeing_stars_targets):
             self.mode_event_t += dt
-            if self.mode_event_t >= 0.9:
+            if self.mode_event_t >= 0.35:
                 self.result = "win"
         else:
             self.mode_event_t = 0.0
+
+    def draw_seeing_stars_overlay(self, screen: pygame.Surface) -> None:
+        pulse = 0.5 + 0.5 * math.sin(self.elapsed * 3.2)
+        for row, col in self.seeing_stars_targets:
+            cx, cy = self.cell_center(row, col)
+            points = []
+            for i in range(10):
+                ang = math.radians(-90 + i * 36)
+                rr = 18 if i % 2 == 0 else 8
+                points.append((cx + math.cos(ang) * rr, cy + math.sin(ang) * rr))
+            filled = False
+            p = self.main.get((row, col))
+            if p and p.kind == "starfruit" and p.hp > 0:
+                filled = True
+            fill_col = (250, 224, 122) if filled else (224, 186, 94)
+            edge_col = (150, 104, 46) if filled else (136, 96, 48)
+            pygame.draw.polygon(screen, fill_col, points)
+            pygame.draw.polygon(screen, edge_col, points, 2)
+            if not filled:
+                glow = pygame.Surface((50, 50), pygame.SRCALPHA)
+                pygame.draw.circle(glow, (255, 230, 160, int(28 + 24 * pulse)), (25, 25), 18)
+                screen.blit(glow, (cx - 25, cy - 25))
+
+    def draw_beghouled_overlay(self, screen: pygame.Surface, plant_sprite_fn) -> None:
+        for (row, col), kind in self.beghouled_cells.items():
+            cx, cy = self.cell_center(row, col)
+            rect = pygame.Rect(cx - 26, cy - 28, 52, 56)
+            fill = (244, 230, 194)
+            border = (142, 100, 54)
+            if self.beghouled_selected == (row, col):
+                border = (236, 144, 38)
+                fill = (252, 240, 210)
+            top_fill = tuple(int(clamp(c + 10, 0, 255)) for c in fill)
+            bot_fill = tuple(int(clamp(c - 8, 0, 255)) for c in fill)
+            for y in range(rect.h):
+                t = y / max(1, rect.h - 1)
+                col_fill = (
+                    int(top_fill[0] + (bot_fill[0] - top_fill[0]) * t),
+                    int(top_fill[1] + (bot_fill[1] - top_fill[1]) * t),
+                    int(top_fill[2] + (bot_fill[2] - top_fill[2]) * t),
+                )
+                pygame.draw.line(screen, col_fill, (rect.x, rect.y + y), (rect.right - 1, rect.y + y))
+            pygame.draw.rect(screen, border, rect, 2, border_radius=8)
+            groove = pygame.Rect(rect.x + 4, rect.y + 4, rect.w - 8, 11)
+            pygame.draw.rect(screen, (196, 150, 86), groove, border_radius=5)
+            pygame.draw.rect(screen, (114, 78, 40), groove, 1, border_radius=5)
+            icon = plant_sprite_fn(kind, "main")
+            if icon is not None:
+                icon = pygame.transform.smoothscale(icon, (32, 32))
+                screen.blit(icon, icon.get_rect(center=(cx, cy - 3)))
+            else:
+                pygame.draw.circle(screen, (98, 184, 104), (cx, cy - 3), 13)
+            chain = self.beghouled_upgrade_chain()
+            tier = chain.index(kind) + 1 if kind in chain else 1
+            dots = min(3, tier)
+            for i in range(dots):
+                pygame.draw.circle(screen, (94, 72, 44), (cx - 8 + i * 8, cy + 16), 2)
+
+    def update_beghouled_mode(self, dt: float) -> None:
+        for pos, kind in self.beghouled_cells.items():
+            plant = self.main.get(pos)
+            if plant is None or plant.kind != kind or plant.hp <= 0:
+                self.sync_beghouled_board()
+                break
+        if self.mode_score >= self.mode_goal:
+            self.mode_event_t += dt
+            if self.mode_event_t >= 0.4:
+                self.result = "win"
+            return
+        self.mode_event_t = 0.0
+        self.mode_spawn_t += dt
+        alive = [z for z in self.zombies if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0 and not z.hypnotized]
+        active_cap = 5 if self.is_beghouled_twist_mode() else 4
+        base_interval = self.mode_float("beghouled_spawn_interval", 2.0 if self.is_beghouled_twist_mode() else 2.25)
+        progress = clamp(self.mode_score / max(1.0, float(self.mode_goal)), 0.0, 1.0)
+        spawn_interval = max(1.45 if self.is_beghouled_twist_mode() else 1.65, base_interval - progress * 0.45)
+        pool = [k for k in self.mode_list("beghouled_zombies") if k in self.zombie_types]
+        if not pool:
+            pool = ["normal", "conehead", "buckethead", "newspaper"]
+        while self.mode_spawn_t >= spawn_interval and len(alive) < active_cap:
+            self.mode_spawn_t -= spawn_interval
+            row_loads = {
+                row: sum(
+                    1
+                    for z in alive
+                    if z.row == row and z.x > LAWN_X + CELL_W * 2.5
+                )
+                for row in range(self.rows())
+            }
+            row = min(row_loads, key=lambda rr: (row_loads[rr], random.random()))
+            kind = random.choice(pool)
+            spawn_x = self.lawn_right() + random.randint(28, 72)
+            hp_scale = 0.76 if self.is_beghouled_twist_mode() else 0.70
+            speed_scale = 0.94 if self.is_beghouled_twist_mode() else 0.86
+            dps_scale = 0.90 if self.is_beghouled_twist_mode() else 0.84
+            self.zombies.append(
+                self.spawn_zombie_instance(
+                    kind,
+                    row,
+                    float(spawn_x),
+                    wave_idx=1,
+                    hp_scale=hp_scale,
+                    speed_scale=speed_scale,
+                    dps_scale=dps_scale,
+                )
+            )
+            alive = [z for z in self.zombies if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0 and not z.hypnotized]
 
     def spawn_zombiquarium_fish(self, row: Optional[int] = None) -> bool:
         water_rows = list(self.field.water_rows) if self.field.water_rows else [min(self.rows() - 1, 1), min(self.rows() - 1, 3)]
@@ -4165,21 +4360,7 @@ class BattleState:
 
     def update_special_mode_logic(self, dt: float) -> None:
         if self.is_beghouled_mode() or self.is_beghouled_twist_mode():
-            if self.mode_score < self.mode_goal:
-                self.mode_spawn_t += dt
-                spawn_interval = max(1.1, self.mode_float("beghouled_spawn_interval", 2.2) - self.elapsed * 0.01)
-                pool = [k for k in self.mode_list("beghouled_zombies") if k in self.zombie_types]
-                if not pool:
-                    pool = ["normal", "conehead", "buckethead", "newspaper"]
-                while self.mode_spawn_t >= spawn_interval:
-                    self.mode_spawn_t -= spawn_interval
-                    row = random.randrange(self.rows())
-                    kind = random.choice(pool)
-                    x = self.lawn_right() + random.randint(24, 84)
-                    self.zombies.append(self.spawn_zombie_instance(kind, row, float(x), wave_idx=1, hp_scale=0.84, speed_scale=0.92, dps_scale=0.92))
-            alive = any(z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0 for z in self.zombies)
-            if self.mode_score >= self.mode_goal and not alive:
-                self.result = "win"
+            self.update_beghouled_mode(dt)
         if self.is_seeing_stars_mode():
             self.update_seeing_stars_mode(dt)
         if self.is_zombiquarium_mode():
@@ -4461,7 +4642,7 @@ class BattleState:
             self.wave_budgets = []
             self.wave_spawn_queue = []
             self.wave_spawn_total = 0
-            self.setup_beghouled_board()
+            self.setup_beghouled_mode()
         elif self.is_whack_mode():
             self.total_waves = 0
             self.large_wave_indices = ()
@@ -4472,7 +4653,7 @@ class BattleState:
             self.setup_whack_mode()
         else:
             if self.is_seeing_stars_mode():
-                self.setup_seeing_stars_targets()
+                self.setup_seeing_stars_mode()
             if self.is_zombiquarium_mode():
                 self.setup_zombiquarium()
                 self.initial_selected_cards = []
@@ -4563,8 +4744,6 @@ class BattleState:
         pos = (row, col)
         cfg = self.plant_types[kind]
         water = self.is_water(row)
-        if self.is_seeing_stars_mode() and kind == "starfruit" and self.seeing_stars_targets and pos not in self.seeing_stars_targets:
-            return False
         if pos in self.graves and kind != "grave_buster":
             return False
         if kind == "grave_buster":
@@ -5367,40 +5546,9 @@ class BattleState:
                 pygame.draw.line(fog, (170, 178, 190, alpha), (x, 0), (x, fog.get_height()))
             screen.blit(fog, (LAWN_X, LAWN_Y))
         if self.is_seeing_stars_mode():
-            for row, col in self.seeing_stars_targets:
-                cx, cy = self.cell_center(row, col)
-                points = []
-                for i in range(10):
-                    ang = math.radians(-90 + i * 36)
-                    rr = 18 if i % 2 == 0 else 8
-                    points.append((cx + math.cos(ang) * rr, cy + math.sin(ang) * rr))
-                filled = False
-                p = self.main.get((row, col))
-                if p and p.kind == "starfruit" and p.hp > 0:
-                    filled = True
-                pygame.draw.polygon(screen, (246, 220, 120) if filled else (214, 174, 94), points)
-                pygame.draw.polygon(screen, (132, 94, 44), points, 2)
+            self.draw_seeing_stars_overlay(screen)
         if self.is_beghouled_mode() or self.is_beghouled_twist_mode():
-            for (row, col), kind in self.beghouled_cells.items():
-                cx, cy = self.cell_center(row, col)
-                rect = pygame.Rect(cx - 27, cy - 29, 54, 58)
-                fill = (246, 232, 196)
-                border = (146, 104, 54)
-                if self.beghouled_selected == (row, col):
-                    border = (236, 142, 34)
-                    fill = (252, 240, 210)
-                pygame.draw.rect(screen, fill, rect, border_radius=8)
-                pygame.draw.rect(screen, border, rect, 2, border_radius=8)
-                icon = plant_sprite_fn(kind, "main")
-                if icon is not None:
-                    icon = pygame.transform.smoothscale(icon, (34, 34))
-                    screen.blit(icon, icon.get_rect(center=(cx, cy - 4)))
-                else:
-                    pygame.draw.circle(screen, (98, 184, 104), (cx, cy - 4), 13)
-                dot_col = (92, 70, 42)
-                pygame.draw.circle(screen, dot_col, (cx - 10, cy + 15), 2)
-                pygame.draw.circle(screen, dot_col, (cx, cy + 15), 2)
-                pygame.draw.circle(screen, dot_col, (cx + 10, cy + 15), 2)
+            self.draw_beghouled_overlay(screen, plant_sprite_fn)
         if self.is_whack_mode():
             for row in range(self.rows()):
                 for col in range(2, COLS):
@@ -9802,29 +9950,34 @@ class Game:
             self.scene == "battle"
             and (
                 self.battle.mode_bool("conveyor", False)
+                or self.battle.is_beghouled_mode()
+                or self.battle.is_beghouled_twist_mode()
+                or self.battle.is_seeing_stars_mode()
+                or self.battle.is_i_zombie_mode()
                 or self.battle.is_zombiquarium_mode()
                 or self.battle.is_last_stand_mode()
                 or self.battle.is_vasebreaker_mode()
                 or self.battle.is_bungee_blitz_mode()
+                or self.battle.is_whack_mode()
             )
         )
-        hud_h = 102 if special_mode else 108
-        bank_h = 60 if special_mode else 64
+        hud_h = 94 if special_mode else 104
+        bank_h = 56 if special_mode else 62
         hud = pygame.Rect(12, 10, SCREEN_WIDTH - 24, hud_h)
-        sun_box = pygame.Rect(hud.x + 8, hud.y + 10, 104 if special_mode else 112, 54)
-        shovel_btn = pygame.Rect(hud.x + 10, hud.bottom - 22, 76 if special_mode else 46, 18)
-        slot_btn = pygame.Rect(shovel_btn.right + 6, shovel_btn.y, 96 if special_mode else 54, 18)
-        settings_btn = pygame.Rect(hud.right - 82, hud.y + 10, 70, 26)
+        sun_box = pygame.Rect(hud.x + 8, hud.y + 8, 94 if special_mode else 108, 50)
+        shovel_btn = pygame.Rect(hud.x + 10, hud.bottom - 20, 68 if special_mode else 46, 16)
+        slot_btn = pygame.Rect(shovel_btn.right + 5, shovel_btn.y, 86 if special_mode else 54, 16)
+        settings_btn = pygame.Rect(hud.right - (64 if special_mode else 72), hud.y + 10, 54 if special_mode else 60, 24)
         seed_bank = pygame.Rect(sun_box.right + 10, hud.y + 8, settings_btn.x - sun_box.right - 18, bank_h)
-        utility_info = pygame.Rect(seed_bank.x, seed_bank.bottom + 6, seed_bank.w - 160, 18)
-        wave_meter = pygame.Rect(utility_info.right + 8, seed_bank.bottom + 5, 152, 20)
+        utility_info = pygame.Rect(seed_bank.x, seed_bank.bottom + 4, seed_bank.w - (144 if special_mode else 156), 16)
+        wave_meter = pygame.Rect(utility_info.right + 8, seed_bank.bottom + 3, 136 if special_mode else 146, 18)
         left_tools = pygame.Rect(sun_box.x - 2, hud.y + 2, sun_box.w + 8, hud.h - 6)
         right_cluster = pygame.Rect(utility_info.x, utility_info.y, utility_info.w, utility_info.h)
         pause_btn = pygame.Rect(0, 0, 0, 0)
         exit_btn = pygame.Rect(0, 0, 0, 0)
         lang_zh_btn = pygame.Rect(0, 0, 0, 0)
         lang_en_btn = pygame.Rect(0, 0, 0, 0)
-        coin_box = pygame.Rect(20, SCREEN_HEIGHT - 56, 208, 36)
+        coin_box = pygame.Rect(20, SCREEN_HEIGHT - 52, 192, 32)
         return {
             "hud": hud,
             "left_tools": left_tools,
@@ -10211,13 +10364,10 @@ class Game:
         mode_name = str(self.battle.mode_rules.get("mode_name", ""))
         bank_label = ""
         if conveyor_mode:
-            bank_label = CLASSIC_MODE_SUBTITLE_BY_ID.get(mode_name, CLASSIC_MODE_TITLE_BY_ID.get(mode_name, self.tr("mini_games"))) if self.lang == "zh" else CLASSIC_MODE_TITLE_BY_ID.get(mode_name, self.tr("mini_games"))
+            bank_label = self.battle_mode_display_label(mode_name)
         self.draw_seed_bank_top(bank, bank_label)
         if self.battle.is_beghouled_mode() or self.battle.is_beghouled_twist_mode():
-            if self.lang == "zh":
-                title_txt = CLASSIC_MODE_SUBTITLE_BY_ID.get(mode_name, CLASSIC_MODE_TITLE_BY_ID.get(mode_name, self.tr("mini_games")))
-            else:
-                title_txt = CLASSIC_MODE_TITLE_BY_ID.get(mode_name, self.tr("mini_games"))
+            title_txt = self.battle_mode_display_label(mode_name)
             hint_key = "beghouled_twist_hint" if self.battle.is_beghouled_twist_mode() else "beghouled_hint"
             line1 = self.fonts["small"].render(title_txt, True, (60, 42, 24))
             line2 = self.fonts["tiny"].render(self.tr(hint_key), True, (86, 62, 34))
@@ -10231,10 +10381,7 @@ class Game:
             self.screen.blit(line3, (bank.x + 12, bank.y + 42))
             return
         if self.battle.is_whack_mode():
-            if self.lang == "zh":
-                title_txt = CLASSIC_MODE_SUBTITLE_BY_ID.get(mode_name, CLASSIC_MODE_TITLE_BY_ID.get(mode_name, self.tr("mini_games")))
-            else:
-                title_txt = CLASSIC_MODE_TITLE_BY_ID.get(mode_name, self.tr("mini_games"))
+            title_txt = self.battle_mode_display_label(mode_name)
             line1 = self.fonts["small"].render(title_txt, True, (60, 42, 24))
             line2 = self.fonts["tiny"].render(self.tr("whack_hint"), True, (86, 62, 34))
             line3 = self.fonts["tiny"].render(
@@ -10323,8 +10470,13 @@ class Game:
         if self.battle.is_seeing_stars_mode():
             done = self.battle.mode_score
             goal = max(1, len(self.battle.seeing_stars_targets))
-            line = self.fonts["tiny"].render(f"{self.tr('seeing_stars_goal')} ({done}/{goal})", True, (76, 56, 34))
-            self.screen.blit(line, (bank.x + 12, bank.y + 8))
+            title_txt = self.battle_mode_display_label(mode_name)
+            line1 = self.fonts["small"].render(title_txt, True, (60, 42, 24))
+            line2 = self.fonts["tiny"].render(self.tr("seeing_stars_goal"), True, (86, 62, 34))
+            line3 = self.fonts["tiny"].render(f"{self.tr('seeing_stars_done')}: {done}/{goal}", True, (74, 52, 28))
+            self.screen.blit(line1, (bank.x + 12, bank.y + 6))
+            self.screen.blit(line2, (bank.x + 12, bank.y + 24))
+            self.screen.blit(line3, (bank.x + 12, bank.y + 42))
         if self.battle.is_zombiquarium_mode():
             fish_n = len(self.battle.zombiquarium_fish)
             feed_cost = max(5, int(self.battle.mode_float("zombiquarium_feed_cost", 5.0)))
@@ -10340,17 +10492,17 @@ class Game:
             self.screen.blit(line, (bank.x + 12, bank.y + 8))
     def plant_select_layout(self) -> Dict[str, pygame.Rect]:
         frame = pygame.Rect(16, 12, SCREEN_WIDTH - 32, SCREEN_HEIGHT - 24)
-        title_sign = pygame.Rect(frame.x + 344, frame.y + 10, frame.w - 688, 44)
-        content_gap = 14
-        side_w = 252
-        main_w = frame.w - 68 - side_w - content_gap
-        tray_panel = pygame.Rect(frame.x + 34, title_sign.bottom + 8, main_w, 84)
-        zombie_panel = pygame.Rect(tray_panel.right + content_gap, title_sign.bottom + 6, side_w, frame.h - 126)
-        available_panel = pygame.Rect(frame.x + 34, tray_panel.bottom + 8, main_w, frame.bottom - tray_panel.bottom - 70)
+        title_sign = pygame.Rect(frame.x + 360, frame.y + 10, frame.w - 720, 40)
+        content_gap = 12
+        side_w = 232
+        main_w = frame.w - 62 - side_w - content_gap
+        tray_panel = pygame.Rect(frame.x + 30, title_sign.bottom + 6, main_w, 78)
+        zombie_panel = pygame.Rect(tray_panel.right + content_gap, title_sign.bottom + 4, side_w, frame.h - 114)
+        available_panel = pygame.Rect(frame.x + 30, tray_panel.bottom + 7, main_w, frame.bottom - tray_panel.bottom - 62)
         available_viewport = pygame.Rect(available_panel.x + 12, available_panel.y + 30, available_panel.w - 24, available_panel.h - 40)
-        action_panel = pygame.Rect(frame.x + 34, frame.bottom - 50, frame.w - 68, 34)
-        back_btn = pygame.Rect(action_panel.x + 2, action_panel.y - 2, 138, 38)
-        start_btn = pygame.Rect(action_panel.right - 204, action_panel.y - 4, 204, 42)
+        action_panel = pygame.Rect(frame.x + 30, frame.bottom - 44, frame.w - 60, 32)
+        back_btn = pygame.Rect(action_panel.x + 2, action_panel.y - 1, 126, 34)
+        start_btn = pygame.Rect(action_panel.right - 188, action_panel.y - 3, 188, 38)
         return {
             "frame": frame,
             "title_sign": title_sign,
@@ -10365,12 +10517,12 @@ class Game:
 
     def plant_select_grid_metrics(self) -> Dict[str, int]:
         return {
-            "card_w": 96,
-            "card_h": 106,
-            "gap_x": 4,
-            "gap_y": 5,
-            "pad_x": 2,
-            "pad_y": 4,
+            "card_w": 94,
+            "card_h": 104,
+            "gap_x": 3,
+            "gap_y": 4,
+            "pad_x": 1,
+            "pad_y": 3,
         }
 
     def plant_select_available_viewport(self) -> pygame.Rect:
@@ -10425,12 +10577,12 @@ class Game:
         slots: List[pygame.Rect] = []
         layout = self.plant_select_layout()
         tray = layout["tray_panel"]
-        slot_w = 84
-        slot_h = 60
-        gap = 6
+        slot_w = 80
+        slot_h = 56
+        gap = 5
         total_w = self.plant_select_pick_limit * slot_w + max(0, self.plant_select_pick_limit - 1) * gap
         x0 = tray.x + max(10, (tray.w - total_w) // 2)
-        y0 = tray.y + 18
+        y0 = tray.y + 16
         for i in range(self.plant_select_pick_limit):
             slots.append(pygame.Rect(x0 + i * (slot_w + gap), y0, slot_w, slot_h))
         return slots
@@ -10963,6 +11115,13 @@ class Game:
         self.draw_text_shadow(self.fonts["tiny"], self.tr("sun"), (92, 54, 18), (rect.x + 50, rect.y + 9), shadow=(252, 242, 198), offset=(1, 1))
         self.draw_text_shadow(self.fonts["ui"], str(int(sun_value)), (52, 34, 14), (rect.x + 48, rect.y + 28), shadow=(252, 242, 210), offset=(1, 1))
 
+    def battle_mode_display_label(self, mode_name: str) -> str:
+        if mode_name in CLASSIC_MODE_TITLE_BY_ID:
+            if self.lang == "zh":
+                return CLASSIC_MODE_SUBTITLE_BY_ID.get(mode_name, CLASSIC_MODE_TITLE_BY_ID[mode_name])
+            return CLASSIC_MODE_TITLE_BY_ID[mode_name]
+        return self.tr("adventure")
+
     def draw_seed_bank_top(self, rect: pygame.Rect, label: str = "") -> None:
         self.draw_framed_panel(rect, fill=(162, 108, 52), border=(84, 50, 20), radius=18, inner=(202, 146, 86))
         channel = rect.inflate(-14, -10)
@@ -11088,17 +11247,17 @@ class Game:
     def draw_zombie_preview_badge(self, rect: pygame.Rect, zombie_key: str, hover: bool = False) -> None:
         fill = (244, 228, 192) if hover else (236, 216, 176)
         self.draw_framed_panel(rect, fill=fill, border=(130, 94, 52), radius=10, inner=(248, 238, 210))
-        thumb_box = pygame.Rect(rect.x + 8, rect.y + 6, 34, rect.h - 12)
+        thumb_box = pygame.Rect(rect.x + 7, rect.y + 5, 30, rect.h - 10)
         self.draw_mode_thumb_gradient(self.screen, thumb_box, (232, 224, 210), (200, 188, 166))
         pygame.draw.rect(self.screen, (140, 110, 74), thumb_box, 1, border_radius=8)
-        zicon = self.get_zombie_sprite(zombie_key, size=(28, 34))
+        zicon = self.get_zombie_sprite(zombie_key, size=(24, 30))
         if zicon is not None:
             self.screen.blit(zicon, zicon.get_rect(center=thumb_box.center))
         else:
-            pygame.draw.rect(self.screen, (126, 142, 106), (thumb_box.x + 5, thumb_box.y + 4, 24, 28), border_radius=5)
-        label = self.fit_label(self.zombie_display_name(zombie_key), self.fonts["tiny"], rect.w - 60)
-        self.screen.blit(self.fonts["tiny"].render(label, True, (44, 38, 30)), (rect.x + 48, rect.y + 9))
-        chip = pygame.Rect(rect.right - 22, rect.y + 7, 14, 12)
+            pygame.draw.rect(self.screen, (126, 142, 106), (thumb_box.x + 4, thumb_box.y + 4, 22, 24), border_radius=5)
+        label = self.fit_label(self.zombie_display_name(zombie_key), self.fonts["tiny"], rect.w - 54)
+        self.screen.blit(self.fonts["tiny"].render(label, True, (44, 38, 30)), (rect.x + 42, rect.y + 8))
+        chip = pygame.Rect(rect.right - 18, rect.y + 6, 10, 10)
         self.draw_framed_panel(chip, fill=(234, 182, 92), border=(128, 84, 36), radius=6, inner=(248, 214, 128))
         self.draw_text_center_shadow(self.fonts["tiny"], "!", (80, 52, 18), chip.center, shadow=(248, 240, 214), offset=(1, 1))
 
@@ -11328,14 +11487,14 @@ class Game:
         return entries[start:start + size], page, total
 
     def mode_scene_layout(self) -> Dict[str, pygame.Rect]:
-        frame = pygame.Rect(56, 36, SCREEN_WIDTH - 112, SCREEN_HEIGHT - 80)
-        title = pygame.Rect(frame.x + 254, frame.y + 10, frame.w - 508, 62)
-        cards_area = pygame.Rect(frame.x + 24, frame.y + 88, frame.w - 48, frame.h - 148)
-        pager_y = frame.bottom - 42
-        page_prev = pygame.Rect(frame.centerx - 86, pager_y, 38, 26)
-        page_badge = pygame.Rect(frame.centerx - 40, pager_y, 80, 24)
-        page_next = pygame.Rect(frame.centerx + 48, pager_y, 38, 26)
-        back_btn = pygame.Rect(frame.x + 18, frame.bottom - 40, 96, 28)
+        frame = pygame.Rect(60, 38, SCREEN_WIDTH - 120, SCREEN_HEIGHT - 84)
+        title = pygame.Rect(frame.x + 266, frame.y + 10, frame.w - 532, 56)
+        cards_area = pygame.Rect(frame.x + 22, frame.y + 82, frame.w - 44, frame.h - 138)
+        pager_y = frame.bottom - 36
+        page_prev = pygame.Rect(frame.centerx - 78, pager_y, 34, 24)
+        page_badge = pygame.Rect(frame.centerx - 36, pager_y + 1, 72, 22)
+        page_next = pygame.Rect(frame.centerx + 44, pager_y, 34, 24)
+        back_btn = pygame.Rect(frame.x + 16, frame.bottom - 34, 88, 26)
         return {
             "frame": frame,
             "title": title,
@@ -11398,12 +11557,12 @@ class Game:
         self.draw_mode_thumb_gradient(self.screen, inner_rect, self.shift_color(inner, 6), self.shift_color(inner, -6))
         pygame.draw.rect(self.screen, self.shift_color(border, 18), inner_rect, 1, border_radius=12)
 
-        title_h = max(26, int(rect.h * 0.16))
-        status_h = 14
-        title_area = pygame.Rect(rect.x + 12, rect.y + 6, rect.w - 24, title_h)
-        title_bar = pygame.Rect(title_area.x + 8, title_area.y + 1, title_area.w - 16, max(16, title_h - 10))
-        thumb_area = pygame.Rect(rect.x + 10, title_area.bottom + 5, rect.w - 20, rect.h - title_h - status_h - 24)
-        badge_area = pygame.Rect(rect.x + 18, rect.bottom - status_h - 8, rect.w - 36, status_h)
+        title_h = max(24, int(rect.h * 0.145))
+        status_h = 12
+        title_area = pygame.Rect(rect.x + 10, rect.y + 5, rect.w - 20, title_h)
+        title_bar = pygame.Rect(title_area.x + 7, title_area.y + 1, title_area.w - 14, max(15, title_h - 9))
+        thumb_area = pygame.Rect(rect.x + 9, title_area.bottom + 4, rect.w - 18, rect.h - title_h - status_h - 20)
+        badge_area = pygame.Rect(rect.x + 18, rect.bottom - status_h - 6, rect.w - 36, status_h)
 
         primary_title = zh_title if self.lang == "zh" and zh_title else title
         secondary_title = title if self.lang == "zh" else zh_title
@@ -11415,9 +11574,9 @@ class Game:
         primary_title = self.fit_label(primary_title, self.fonts["small"], title_bar.w - 26)
         title_main = self.fonts["small"].render(primary_title, True, (52, 34, 18))
         self.screen.blit(title_main, title_main.get_rect(center=(title_area.centerx, title_bar.centery)))
-        if secondary_title and title_area.h >= 28:
+        if secondary_title and title_area.h >= 26:
             title_sub = self.fonts["tiny"].render(self.fit_label(secondary_title, self.fonts["tiny"], title_area.w - 8), True, (96, 70, 42))
-            self.screen.blit(title_sub, title_sub.get_rect(center=(title_area.centerx, title_area.bottom - 3)))
+            self.screen.blit(title_sub, title_sub.get_rect(center=(title_area.centerx, title_area.bottom - 2)))
 
         frame_col = (156, 108, 58) if not selected else (236, 156, 52)
         self.draw_panel_shadow(thumb_area, radius=10, alpha=34, offset=(0, 2))
@@ -11691,8 +11850,9 @@ class Game:
                     "return_scene": scene,
                     "start_sun_override": 75.0,
                     "no_sky_sun": True,
-                    "beghouled_goal": 38.0,
-                    "beghouled_spawn_interval": 2.25,
+                    "beghouled_goal": 52.0,
+                    "beghouled_chain": ["sunflower", "peashooter", "snowpea", "repeater", "starfruit", "gatling"],
+                    "beghouled_spawn_interval": 2.35,
                     "beghouled_zombies": ["normal", "conehead", "buckethead", "newspaper"],
                 }
                 self.start_level(idx, selected_cards=[], mode_rules=rules)
@@ -11705,8 +11865,9 @@ class Game:
                     "return_scene": scene,
                     "start_sun_override": 80.0,
                     "no_sky_sun": True,
-                    "beghouled_goal": 44.0,
-                    "beghouled_spawn_interval": 2.0,
+                    "beghouled_goal": 64.0,
+                    "beghouled_chain": ["sunflower", "peashooter", "snowpea", "repeater", "starfruit", "gatling"],
+                    "beghouled_spawn_interval": 2.05,
                     "beghouled_zombies": ["normal", "conehead", "buckethead", "newspaper", "screen_door"],
                 }
                 self.start_level(idx, selected_cards=[], mode_rules=rules)
@@ -11762,10 +11923,20 @@ class Game:
                     "return_scene": scene,
                     "start_sun_override": 275.0,
                     "seeing_stars_pattern": float(pattern_idx),
-                    "spawn_rate_mult": 1.06,
-                    "zombie_hp_scale": 0.94,
-                    "zombie_dps_scale": 0.95,
-                    "wave_interval": 21.0,
+                    "spawn_rate_mult": 0.94,
+                    "zombie_hp_scale": 0.90,
+                    "zombie_dps_scale": 0.92,
+                    "wave_interval": 24.0,
+                    "total_waves_override": 4.0,
+                    "large_wave_indices": [3, 4],
+                    "final_wave_index": 4.0,
+                    "wave_budgets": [4, 5, 7, 9],
+                    "zombie_weights_override": {
+                        "normal": 0.56,
+                        "conehead": 0.22,
+                        "buckethead": 0.12,
+                        "pole_vaulting": 0.10,
+                    },
                 }
                 self.open_plant_select(idx, forced_pool=pool, pick_limit=8, mode_rules=rules, return_scene=scene)
                 return
@@ -13359,10 +13530,10 @@ class Game:
         list_view = pygame.Rect(z_panel.x + 10, z_panel.y + 42, z_panel.w - 20, z_panel.h - 52)
         zy = list_view.y
         for kind in level.z_weights.keys():
-            row_rect = pygame.Rect(list_view.x, zy, list_view.w, 46)
+            row_rect = pygame.Rect(list_view.x, zy, list_view.w, 42)
             self.draw_zombie_preview_badge(row_rect, kind, hover=row_rect.collidepoint(mouse))
-            zy += 50
-            if zy > list_view.bottom - 46:
+            zy += 44
+            if zy > list_view.bottom - 42:
                 break
 
         action_panel = layout["action_panel"]
@@ -13769,10 +13940,7 @@ class Game:
         sun_box = layout["sun_box"]
         self.draw_sun_counter_panel(sun_box, int(self.battle.sun))
         mode_name = str(self.battle.mode_rules.get("mode_name", ""))
-        if mode_name in CLASSIC_MODE_TITLE_BY_ID:
-            mode_text = CLASSIC_MODE_SUBTITLE_BY_ID.get(mode_name, CLASSIC_MODE_TITLE_BY_ID[mode_name]) if self.lang == "zh" else CLASSIC_MODE_TITLE_BY_ID[mode_name]
-        else:
-            mode_text = self.tr("adventure")
+        mode_text = self.battle_mode_display_label(mode_name)
 
         self.battle_settings_btn = layout["settings_btn"]
         settings_hover = self.battle_settings_btn.collidepoint(mouse)
@@ -13815,6 +13983,18 @@ class Game:
         field_text = self.tr("field_" + self.battle.field.key)
         show_wave = self.setting_bool("show_wave_number", True)
         show_next_wave = self.setting_bool("show_next_wave_countdown", True)
+        compact_special = (
+            self.battle.mode_bool("conveyor", False)
+            or self.battle.is_beghouled_mode()
+            or self.battle.is_beghouled_twist_mode()
+            or self.battle.is_seeing_stars_mode()
+            or self.battle.is_i_zombie_mode()
+            or self.battle.is_vasebreaker_mode()
+            or self.battle.is_zombiquarium_mode()
+            or self.battle.is_last_stand_mode()
+            or self.battle.is_bungee_blitz_mode()
+            or self.battle.is_whack_mode()
+        )
         utility_parts: List[str] = []
         if level_text:
             utility_parts.append(level_text)
@@ -13834,6 +14014,7 @@ class Game:
             utility_parts.append(f"{self.tr('whack_miss')}: {self.battle.mode_misses}")
         elif self.battle.is_seeing_stars_mode():
             meter_text = f"{self.tr('seeing_stars_done')}: {self.battle.mode_score}/{max(1, len(self.battle.seeing_stars_targets))}"
+            utility_parts.append(self.tr("seeing_stars_goal"))
         elif self.battle.is_zombiquarium_mode():
             meter_text = f"{self.tr('zombiquarium_trophy_cost')}: {self.battle.mode_goal}"
             utility_parts.append(f"{self.tr('fish_count')}: {len(self.battle.zombiquarium_fish)}")
@@ -13844,7 +14025,8 @@ class Game:
             meter_text = f"{self.tr('time')}: {remain}{self.tr('sec')}"
         if show_next_wave and self.battle.uses_wave_system() and self.battle.total_waves > 0 and self.battle.wave_pause_t > 0 and self.battle.current_wave < self.battle.total_waves and not self.battle.last_stand_in_prep():
             utility_parts.append(f"{self.tr('next_wave_in')}: {self.battle.wave_pause_t:.1f}{self.tr('sec')}")
-        utility_parts.append(f"{self.tr('kills')}: {self.battle.kills}")
+        if not compact_special:
+            utility_parts.append(f"{self.tr('kills')}: {self.battle.kills}")
         if str(self.battle.mode_rules.get("mode_family", "")) == "survival":
             s_round = int(self.battle.mode_rules.get("survival_round_index", 1))
             s_total = int(self.battle.mode_rules.get("survival_total_rounds", 5))
@@ -13857,7 +14039,7 @@ class Game:
         utility_text = self.fit_label("  •  ".join(utility_parts), self.fonts["tiny"], info_rect.w - 12)
         utility_surf = self.fonts["tiny"].render(utility_text, True, (46, 38, 26))
         self.screen.blit(utility_surf, utility_surf.get_rect(center=info_rect.center))
-        if show_wave and self.battle.uses_wave_system() and self.battle.total_waves > 0 and not self.battle.last_stand_in_prep():
+        if show_wave and self.battle.uses_wave_system() and self.battle.total_waves > 0 and not self.battle.last_stand_in_prep() and not self.battle.is_seeing_stars_mode():
             self.draw_wave_progress_bar(layout["wave_meter"])
         else:
             meter = layout["wave_meter"]
