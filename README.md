@@ -134,8 +134,17 @@ Runtime settings currently include:
 Quick start:
 
 1. Open a terminal in the project folder
-2. Install dependencies
-3. Run the game
+2. Run the install command
+3. Run the game command
+
+If you are already inside the project folder, copy and paste:
+
+```powershell
+py -3.13 -m pip install -r requirements.txt
+py -3.13 game.py
+```
+
+If you are not inside the project folder yet, first open PowerShell in the `python_pvz` folder, then run the two commands above.
 
 If you just want the shortest Windows commands, use:
 
@@ -324,7 +333,11 @@ Current ongoing work includes:
 
 ## 运行方式
 
-最简单的方式就是按这两句直接运行：
+最简单的做法是：
+
+1. 先进入这个项目文件夹
+2. 在 `python_pvz` 文件夹里打开 PowerShell
+3. 再直接输入下面这两行：
 
 ```powershell
 py -3.13 -m pip install -r requirements.txt
