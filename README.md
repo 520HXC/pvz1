@@ -131,22 +131,38 @@ Runtime settings currently include:
 
 ## Run
 
-Install dependencies:
+Quick start:
+
+1. Open a terminal in the project folder
+2. Install dependencies
+3. Run the game
+
+If you just want the shortest Windows commands, use:
+
+```powershell
+py -3.13 -m pip install -r requirements.txt
+py -3.13 game.py
+```
+
+What those commands do:
+
+- First line: installs the required package(s), mainly `pygame`
+- Second line: starts the game
+
+Generic commands:
 
 ```bash
 pip install -r requirements.txt
-```
-
-Run the game:
-
-```bash
 python game.py
 ```
 
-On Windows, you can also use the Python launcher:
+On Windows, `py -3.13` means: use Python 3.13 to run this project.
+
+If `py -3.13` does not work on your machine, try:
 
 ```powershell
-py -3.13 game.py
+python -m pip install -r requirements.txt
+python game.py
 ```
 
 ## Art / Asset Policy
@@ -308,22 +324,38 @@ Current ongoing work includes:
 
 ## 运行方式
 
-先安装依赖：
+最简单的方式就是按这两句直接运行：
+
+```powershell
+py -3.13 -m pip install -r requirements.txt
+py -3.13 game.py
+```
+
+这两句的意思是：
+
+- 第一条：安装这个项目需要的库，主要就是 `pygame`
+- 第二条：启动游戏
+
+如果你想按步骤理解，可以这样看：
+
+1. 先在项目文件夹里打开终端
+2. 安装依赖
+3. 再运行游戏
+
+通用写法：
 
 ```bash
 pip install -r requirements.txt
-```
-
-再运行游戏：
-
-```bash
 python game.py
 ```
 
-如果你在 Windows 上运行，也可以直接使用 Python Launcher：
+在 Windows 上，`py -3.13` 的意思就是“用 Python 3.13 来运行”。
+
+如果你电脑上 `py -3.13` 不能用，就试这组：
 
 ```powershell
-py -3.13 game.py
+python -m pip install -r requirements.txt
+python game.py
 ```
 
 ## 美术与资源说明
