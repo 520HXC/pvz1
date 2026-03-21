@@ -837,6 +837,8 @@ I18N = {
         "prototype": "Prototype",
         "playable_now": "Playable",
         "completed": "Completed",
+        "flags_short": "{count}F",
+        "boss_short": "Boss",
         "mini_games": "Mini-Games",
         "puzzle": "Puzzle",
         "survival": "Survival",
@@ -1102,6 +1104,8 @@ I18N = {
         "prototype": "原型",
         "playable_now": "可游玩",
         "completed": "已通关",
+        "flags_short": "{count}旗",
+        "boss_short": "首领",
         "mini_games": "小游戏",
         "puzzle": "解谜模式",
         "survival": "生存模式",
@@ -10700,12 +10704,12 @@ class Game:
         left_sign = pygame.Rect(62, 52, 430, 96)
         left_sub_sign = pygame.Rect(86, 164, 390, 50)
         statue_rect = pygame.Rect(116, 420, 118, 186)
-        zen_badge = pygame.Rect(344, 570, 162, 74)
-        book_btn = pygame.Rect(tombstone.x + 52, tombstone.bottom - 78, 136, 68)
-        shop_btn = pygame.Rect(tombstone.x + 198, tombstone.bottom - 72, 108, 46)
-        options_btn = pygame.Rect(tombstone.x + 312, tombstone.bottom - 72, 112, 46)
-        help_btn = pygame.Rect(tombstone.x + 334, tombstone.bottom - 20, 96, 40)
-        quit_btn = pygame.Rect(tombstone.right - 86, tombstone.bottom - 20, 80, 40)
+        zen_badge = pygame.Rect(332, 578, 154, 70)
+        book_btn = pygame.Rect(tombstone.x + 42, tombstone.bottom - 60, 126, 62)
+        shop_btn = pygame.Rect(tombstone.x + 198, tombstone.bottom - 42, 98, 38)
+        options_btn = pygame.Rect(tombstone.x + 308, tombstone.bottom - 62, 112, 44)
+        help_btn = pygame.Rect(tombstone.x + 414, tombstone.bottom - 34, 88, 38)
+        quit_btn = pygame.Rect(tombstone.right - 82, tombstone.bottom - 74, 76, 40)
         return {
             "tombstone": tombstone,
             "adventure_btn": adv_btn,
@@ -12391,20 +12395,26 @@ class Game:
         self.draw_tombstone_button(self.start_mini_btn, self.tr("mini_games"), hover=self.start_mini_btn.collidepoint(mouse), enabled=True)
         self.draw_tombstone_button(self.start_puzzle_btn, self.tr("puzzle"), hover=self.start_puzzle_btn.collidepoint(mouse), enabled=True)
         self.draw_tombstone_button(self.start_survival_btn, self.tr("survival"), hover=self.start_survival_btn.collidepoint(mouse), enabled=True)
-
-        prop_shelf = pygame.Rect(layout["tombstone"].x + 30, layout["tombstone"].bottom - 94, layout["tombstone"].w - 60, 98)
-        self.draw_framed_panel(prop_shelf, fill=(126, 96, 62), border=(72, 48, 26), radius=18, inner=(154, 120, 80))
-        self.draw_panel_grain(prop_shelf.inflate(-10, -8), (82, 58, 32), alpha=26, spacing=10)
+        prop_ground = pygame.Rect(layout["tombstone"].x + 24, layout["tombstone"].bottom - 36, layout["tombstone"].w - 48, 64)
+        pygame.draw.ellipse(self.screen, (156, 120, 84), prop_ground)
+        pygame.draw.ellipse(self.screen, (102, 70, 48), prop_ground, 2)
         self.draw_book_button(
             self.start_book_btn,
             self.tr("encyclopedia"),
             "",
             hover=self.start_book_btn.collidepoint(mouse),
         )
+        key_ring = (self.start_shop_btn.x - 10, self.start_shop_btn.centery - 4)
+        pygame.draw.circle(self.screen, (184, 66, 60), key_ring, 8)
+        pygame.draw.circle(self.screen, (246, 234, 214), key_ring, 4)
+        pygame.draw.line(self.screen, (172, 166, 158), (key_ring[0] + 6, key_ring[1] + 6), (self.start_shop_btn.x + 8, self.start_shop_btn.y + 8), 2)
         self.draw_secondary_button(self.start_shop_btn, self.tr("shop"), hover=self.start_shop_btn.collidepoint(mouse))
         self.draw_leaf_button(self.start_options_btn, self.tr("options"), hover=self.start_options_btn.collidepoint(mouse))
         self.draw_leaf_button(self.start_help_btn, self.tr("help"), hover=self.start_help_btn.collidepoint(mouse))
         self.draw_leaf_button(self.start_quit_btn, self.tr("quit"), hover=self.start_quit_btn.collidepoint(mouse))
+        for fx, fy in ((self.start_options_btn.centerx + 28, self.start_options_btn.bottom + 2), (self.start_help_btn.centerx + 20, self.start_help_btn.bottom + 2), (self.start_quit_btn.centerx + 8, self.start_quit_btn.bottom + 2)):
+            pygame.draw.ellipse(self.screen, (238, 224, 168), (fx - 12, fy - 8, 24, 14))
+            pygame.draw.ellipse(self.screen, (132, 108, 54), (fx - 12, fy - 8, 24, 14), 2)
 
         coin_badge = pygame.Rect(54, 632, 252, 48)
         self.draw_coin_plaque(coin_badge, int(self.save_data.get("coins", 0)))
@@ -12534,6 +12544,9 @@ class Game:
         selected = self.adventure_chapter_selected == world
         cleared_count, total_count = self.adventure_world_progress(world)
         chapter_done = total_count > 0 and cleared_count >= total_count
+        stack_back = rect.move(12, 8)
+        self.draw_panel_shadow(stack_back, radius=18, alpha=62, offset=(0, 4))
+        self.draw_framed_panel(stack_back, fill=(220, 204, 178), border=(138, 110, 78), radius=18, inner=(238, 228, 206))
         self.draw_panel_shadow(rect, radius=18, alpha=78, offset=(0, 6))
         outer = rect.inflate(8, 8)
         pygame.draw.rect(self.screen, (86, 54, 30), outer, border_radius=22)
@@ -12546,6 +12559,14 @@ class Game:
         preview_rect = pygame.Rect(card.x + 14, card.y + 30, card.w - 28, card.h - 92)
         preview = self.load_adventure_chapter_preview(world, preview_rect.size)
         self.screen.blit(preview, preview_rect)
+        for corner in (
+            pygame.Rect(preview_rect.x - 2, preview_rect.y - 2, 18, 8),
+            pygame.Rect(preview_rect.right - 16, preview_rect.y - 2, 18, 8),
+            pygame.Rect(preview_rect.x - 2, preview_rect.bottom - 6, 18, 8),
+            pygame.Rect(preview_rect.right - 16, preview_rect.bottom - 6, 18, 8),
+        ):
+            pygame.draw.rect(self.screen, (250, 244, 228), corner, border_radius=3)
+            pygame.draw.rect(self.screen, (156, 124, 82), corner, 1, border_radius=3)
         pygame.draw.rect(self.screen, (92, 62, 34), preview_rect, 2, border_radius=10)
         range_badge = pygame.Rect(card.x + 18, preview_rect.bottom + 6, 100, 16)
         focus_badge = pygame.Rect(range_badge.right + 6, preview_rect.bottom + 6, card.right - range_badge.right - 24, 16)
@@ -12604,6 +12625,9 @@ class Game:
         cleared = self.adventure_level_cleared(level)
         current = self.level_idx == level.idx - 1
         is_boss = level.display_code == "5-10"
+        stack_back = rect.move(8, 6)
+        self.draw_panel_shadow(stack_back, radius=16, alpha=54, offset=(0, 3))
+        self.draw_framed_panel(stack_back, fill=(226, 214, 196), border=(140, 118, 92), radius=12, inner=(242, 236, 224))
         outer = rect.inflate(10, 10)
         self.draw_panel_shadow(outer, radius=18, alpha=74, offset=(0, 5))
         paper = rect.copy()
@@ -12623,8 +12647,25 @@ class Game:
         frame_rect = preview_rect.inflate(6, 6)
         pygame.draw.rect(self.screen, (86, 58, 32), frame_rect, border_radius=9)
         self.screen.blit(preview, preview_rect)
+        for corner in (
+            pygame.Rect(preview_rect.x - 1, preview_rect.y - 1, 16, 7),
+            pygame.Rect(preview_rect.right - 15, preview_rect.y - 1, 16, 7),
+            pygame.Rect(preview_rect.x - 1, preview_rect.bottom - 5, 16, 7),
+            pygame.Rect(preview_rect.right - 15, preview_rect.bottom - 5, 16, 7),
+        ):
+            pygame.draw.rect(self.screen, (250, 244, 228), corner, border_radius=3)
+            pygame.draw.rect(self.screen, (164, 132, 88), corner, 1, border_radius=3)
         pygame.draw.rect(self.screen, (246, 238, 218), preview_rect.inflate(2, 2), 1, border_radius=8)
         pygame.draw.rect(self.screen, (94, 66, 38), preview_rect, 2, border_radius=8)
+        flag_badge = pygame.Rect(preview_rect.x + 6, preview_rect.y + 6, 44, 18)
+        self.draw_framed_panel(flag_badge, fill=(198, 46, 38), border=(112, 28, 20), radius=8, inner=(226, 86, 72))
+        flag_text = self.fonts["tiny"].render(self.tr("flags_short").format(count=level.flags_first_clear), True, (248, 240, 216))
+        self.screen.blit(flag_text, flag_text.get_rect(center=flag_badge.center))
+        if is_boss:
+            boss_badge = pygame.Rect(preview_rect.right - 50, preview_rect.y + 6, 44, 18)
+            self.draw_framed_panel(boss_badge, fill=(120, 52, 46), border=(72, 24, 22), radius=8, inner=(158, 76, 70))
+            boss_text = self.fonts["tiny"].render(self.tr("boss_short"), True, (248, 236, 214))
+            self.screen.blit(boss_text, boss_text.get_rect(center=boss_badge.center))
         title = self.level_display_name(level)
         title_shadow = self.fonts["mid"].render(title, True, (40, 28, 18))
         title_surf = self.fonts["mid"].render(title, True, (82, 144, 54) if unlocked else (116, 110, 98))
@@ -12659,6 +12700,11 @@ class Game:
             self.draw_framed_panel(clear_chip, fill=(214, 190, 116), border=(132, 96, 42), radius=5, inner=(238, 220, 152))
             clear_txt = self.fonts["tiny"].render(self.tr("completed"), True, (74, 48, 20))
             self.screen.blit(clear_txt, clear_txt.get_rect(center=clear_chip.center))
+        elif current:
+            now_chip = pygame.Rect(paper.x + 108, paper.bottom - 20, 76, 11)
+            self.draw_framed_panel(now_chip, fill=(142, 190, 112), border=(76, 114, 54), radius=5, inner=(176, 216, 146))
+            now_txt = self.fonts["tiny"].render(self.tr("playable_now"), True, (54, 70, 30))
+            self.screen.blit(now_txt, now_txt.get_rect(center=now_chip.center))
         if current:
             pygame.draw.rect(self.screen, (255, 214, 108), outer, 3, border_radius=20)
         if hover and unlocked:
