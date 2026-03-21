@@ -291,31 +291,50 @@ SEEING_STARS_LAYOUTS: Dict[str, Tuple[Tuple[int, int], ...]] = {
 }
 
 ZOMBOTANY_VARIANT_ROSTERS: Dict[str, Tuple[str, ...]] = {
-    "mini_zombotany": ("sunflower", "peashooter", "wallnut"),
-    "mini_zombotany_2": ("sunflower", "peashooter", "wallnut", "snowpea", "repeater"),
+    "mini_zombotany": ("peashooter", "wallnut"),
+    "mini_zombotany_2": ("peashooter", "wallnut", "tall_nut", "squash", "jalapeno", "gatling"),
+}
+
+PORTAL_COMBAT_LAYOUTS: Dict[str, Tuple[Tuple[Tuple[int, int], Tuple[int, int]], ...]] = {
+    "mini_portal_combat": (
+        (((0, 2), (3, 6)), ((1, 6), (4, 2))),
+        (((0, 5), (2, 2)), ((3, 4), (1, 7))),
+        (((0, 3), (4, 6)), ((2, 6), (1, 2))),
+    ),
 }
 
 SPECIAL_MINIGAME_RULESETS: Dict[str, Dict[str, object]] = {
     "mini_invisi_ghoul": {
-        "field": "night",
+        "field": "fog",
         "stage_style": "normal_select",
-        "forced_pool": ["sun_shroom", "puff_shroom", "fume_shroom", "scaredy_shroom", "plantern", "peashooter", "snowpea", "wallnut", "tall_nut", "spikeweed", "torchwood", "cherrybomb"],
+        "forced_pool": ["plantern", "cactus", "split_pea", "starfruit", "pumpkin", "blover", "lily_pad", "tangle_kelp"],
         "pick_limit": 8,
         "mode_rules": {
             "mode_family": "mini_invisi_ghoul",
-            "start_sun_override": 300.0,
-            "spawn_rate_mult": 1.02,
-            "zombie_hp_scale": 0.92,
-            "zombie_dps_scale": 0.94,
-            "wave_interval": 21.0,
+            "start_sun_override": 325.0,
+            "no_sky_sun": True,
+            "hide_fog_overlay": True,
+            "spawn_rate_mult": 0.98,
+            "zombie_hp_scale": 0.90,
+            "zombie_dps_scale": 0.92,
+            "wave_interval": 19.0,
+            "total_waves_override": 20.0,
+            "large_wave_indices": [10, 20],
+            "final_wave_index": 20.0,
             "special_hint_key": "invisi_ghoul_hint",
+            "invisi_base_alpha": 0.10,
+            "invisi_partial_alpha": 0.78,
+            "invisi_reveal_alpha": 0.96,
+            "forced_zombie_pool": ["normal", "conehead", "buckethead", "ducky_tube", "dolphin_rider", "jack_in_the_box", "zomboni", "flag_zombie"],
             "zombie_weights_override": {
-                "normal": 0.28,
-                "conehead": 0.22,
-                "newspaper": 0.18,
-                "buckethead": 0.14,
-                "screen_door": 0.10,
-                "flag_zombie": 0.08,
+                "normal": 0.24,
+                "conehead": 0.18,
+                "buckethead": 0.12,
+                "ducky_tube": 0.14,
+                "dolphin_rider": 0.12,
+                "jack_in_the_box": 0.10,
+                "zomboni": 0.06,
+                "flag_zombie": 0.04,
             },
         },
     },
@@ -326,70 +345,80 @@ SPECIAL_MINIGAME_RULESETS: Dict[str, Dict[str, object]] = {
         "pick_limit": 8,
         "mode_rules": {
             "mode_family": "mini_zombotany",
-            "spawn_rate_mult": 1.00,
-            "zombie_hp_scale": 0.94,
+            "start_sun_override": 200.0,
+            "spawn_rate_mult": 0.96,
+            "zombie_hp_scale": 0.92,
             "zombie_dps_scale": 0.92,
-            "wave_interval": 21.0,
+            "wave_interval": 20.0,
+            "total_waves_override": 20.0,
+            "large_wave_indices": [10, 20],
+            "final_wave_index": 20.0,
             "special_hint_key": "zombotany_hint",
-            "zombotany_variants": ["sunflower", "peashooter", "wallnut"],
+            "forced_zombie_pool": ["normal", "conehead", "buckethead", "flag_zombie"],
+            "zombotany_variants": ["peashooter", "wallnut"],
             "zombie_weights_override": {
-                "normal": 0.42,
+                "normal": 0.50,
                 "conehead": 0.24,
-                "buckethead": 0.14,
+                "buckethead": 0.16,
                 "flag_zombie": 0.10,
-                "newspaper": 0.10,
             },
         },
     },
     "mini_zombotany_2": {
-        "field": "night",
+        "field": "day",
         "stage_style": "normal_select",
-        "forced_pool": ["puff_shroom", "sun_shroom", "fume_shroom", "wallnut", "hypno_shroom", "scaredy_shroom", "cherrybomb", "tall_nut", "torchwood", "spikeweed"],
+        "forced_pool": ["sunflower", "peashooter", "wallnut", "snowpea", "repeater", "tall_nut", "squash", "jalapeno", "cherrybomb"],
         "pick_limit": 8,
         "mode_rules": {
             "mode_family": "mini_zombotany_2",
-            "spawn_rate_mult": 1.08,
-            "zombie_hp_scale": 0.98,
+            "start_sun_override": 225.0,
+            "spawn_rate_mult": 1.04,
+            "zombie_hp_scale": 0.96,
             "zombie_dps_scale": 0.96,
-            "wave_interval": 19.0,
+            "wave_interval": 18.0,
+            "total_waves_override": 30.0,
+            "large_wave_indices": [10, 20, 30],
+            "final_wave_index": 30.0,
             "special_hint_key": "zombotany_hint",
-            "zombotany_variants": ["sunflower", "peashooter", "wallnut", "snowpea", "repeater"],
+            "forced_zombie_pool": ["normal", "conehead", "buckethead", "flag_zombie"],
+            "zombotany_variants": ["peashooter", "wallnut", "tall_nut", "squash", "jalapeno", "gatling"],
             "zombie_weights_override": {
-                "normal": 0.28,
-                "conehead": 0.18,
-                "buckethead": 0.18,
-                "newspaper": 0.16,
-                "screen_door": 0.12,
-                "football": 0.08,
+                "normal": 0.38,
+                "conehead": 0.22,
+                "buckethead": 0.24,
+                "flag_zombie": 0.16,
             },
         },
     },
     "mini_portal_combat": {
-        "field": "pool",
+        "field": "night",
         "stage_style": "normal_select",
-        "forced_pool": ["lily_pad", "peashooter", "repeater", "threepeater", "tangle_kelp", "torchwood", "wallnut", "jalapeno", "cherrybomb"],
-        "pick_limit": 8,
+        "forced_pool": ["peashooter", "wallnut", "cherrybomb", "repeater", "torchwood", "cactus"],
+        "pick_limit": 6,
         "mode_rules": {
             "mode_family": "mini_portal_combat",
-            "start_sun_override": 450.0,
-            "spawn_rate_mult": 1.04,
+            "start_sun_override": 350.0,
+            "no_sky_sun": True,
+            "spawn_rate_mult": 0.98,
             "zombie_hp_scale": 0.92,
-            "zombie_speed_scale": 1.02,
+            "zombie_speed_scale": 1.00,
             "zombie_dps_scale": 0.92,
-            "wave_interval": 20.0,
+            "wave_interval": 19.0,
+            "total_waves_override": 20.0,
+            "large_wave_indices": [10, 20],
+            "final_wave_index": 20.0,
             "special_hint_key": "portal_combat_hint",
-            "portal_pairs": [
-                [[0, 2], [3, 6]],
-                [[1, 6], [4, 2]],
-                [[2, 3], [0, 5]],
-            ],
+            "portal_layouts": PORTAL_COMBAT_LAYOUTS["mini_portal_combat"],
+            "portal_pairs": PORTAL_COMBAT_LAYOUTS["mini_portal_combat"][0],
+            "portal_shuffle_interval": 12.0,
+            "forced_zombie_pool": ["normal", "conehead", "buckethead", "pole_vaulting", "balloon", "flag_zombie"],
             "zombie_weights_override": {
-                "normal": 0.34,
-                "conehead": 0.24,
-                "buckethead": 0.16,
+                "normal": 0.30,
+                "conehead": 0.22,
+                "buckethead": 0.14,
                 "pole_vaulting": 0.12,
-                "newspaper": 0.08,
-                "flag_zombie": 0.06,
+                "balloon": 0.14,
+                "flag_zombie": 0.08,
             },
         },
     },
@@ -400,21 +429,26 @@ SPECIAL_MINIGAME_RULESETS: Dict[str, Dict[str, object]] = {
         "pick_limit": 8,
         "mode_rules": {
             "mode_family": "mini_bobsled_bonanza",
-            "spawn_rate_mult": 1.06,
-            "zombie_hp_scale": 0.98,
-            "zombie_speed_scale": 1.06,
-            "zombie_dps_scale": 0.98,
-            "wave_interval": 18.0,
+            "start_sun_override": 450.0,
+            "spawn_rate_mult": 0.98,
+            "zombie_hp_scale": 0.94,
+            "zombie_speed_scale": 1.04,
+            "zombie_dps_scale": 0.94,
+            "wave_interval": 18.5,
+            "total_waves_override": 30.0,
+            "large_wave_indices": [10, 20, 30],
+            "final_wave_index": 30.0,
             "special_hint_key": "bobsled_bonanza_hint",
+            "forced_zombie_pool": ["ducky_tube", "snorkel", "dolphin_rider", "zomboni", "bobsled_team", "flag_zombie"],
+            "bobsled_burst_interval": 11.5,
+            "bobsled_burst_cap": 2.0,
+            "bobsled_burst_cycle": ["bobsled_team", "zomboni", "bobsled_team"],
             "zombie_weights_override": {
-                "normal": 0.10,
-                "conehead": 0.08,
-                "buckethead": 0.12,
-                "ducky_tube": 0.14,
+                "ducky_tube": 0.12,
                 "snorkel": 0.10,
                 "dolphin_rider": 0.12,
-                "zomboni": 0.14,
-                "bobsled_team": 0.20,
+                "zomboni": 0.20,
+                "bobsled_team": 0.46,
             },
         },
     },
@@ -425,19 +459,24 @@ SPECIAL_MINIGAME_RULESETS: Dict[str, Dict[str, object]] = {
         "pick_limit": 8,
         "mode_rules": {
             "mode_family": "mini_zombie_nimble_zombie_quick",
-            "spawn_rate_mult": 1.22,
-            "zombie_hp_scale": 0.84,
-            "zombie_speed_scale": 1.42,
+            "start_sun_override": 225.0,
+            "spawn_rate_mult": 1.18,
+            "zombie_hp_scale": 0.82,
+            "zombie_speed_scale": 1.56,
             "zombie_dps_scale": 0.96,
-            "plant_interval_scale": 0.72,
+            "plant_interval_scale": 0.66,
             "wave_interval": 15.0,
+            "total_waves_override": 20.0,
+            "large_wave_indices": [10, 20],
+            "final_wave_index": 20.0,
             "special_hint_key": "nimble_quick_hint",
+            "forced_zombie_pool": ["normal", "conehead", "buckethead", "pole_vaulting", "flag_zombie"],
             "zombie_weights_override": {
-                "normal": 0.42,
+                "normal": 0.46,
                 "conehead": 0.26,
-                "buckethead": 0.12,
-                "pole_vaulting": 0.12,
-                "flag_zombie": 0.08,
+                "buckethead": 0.08,
+                "pole_vaulting": 0.14,
+                "flag_zombie": 0.06,
             },
         },
     },
@@ -449,19 +488,21 @@ SPECIAL_MINIGAME_RULESETS: Dict[str, Dict[str, object]] = {
         "mode_rules": {
             "mode_family": "mini_pogo_party",
             "start_sun_override": 500.0,
-            "spawn_rate_mult": 1.08,
-            "zombie_hp_scale": 0.96,
+            "spawn_rate_mult": 1.00,
+            "zombie_hp_scale": 0.94,
             "zombie_speed_scale": 1.06,
             "zombie_dps_scale": 0.96,
             "wave_interval": 17.0,
+            "total_waves_override": 30.0,
+            "large_wave_indices": [10, 20, 30],
+            "final_wave_index": 30.0,
             "special_hint_key": "pogo_party_hint",
+            "forced_zombie_pool": ["normal", "conehead", "flag_zombie", "pogo"],
             "zombie_weights_override": {
-                "normal": 0.12,
-                "conehead": 0.08,
-                "buckethead": 0.08,
-                "pogo": 0.56,
-                "ladder": 0.10,
-                "flag_zombie": 0.06,
+                "normal": 0.18,
+                "conehead": 0.12,
+                "pogo": 0.62,
+                "flag_zombie": 0.08,
             },
         },
     },
@@ -1136,12 +1177,13 @@ I18N = {
         "seeing_stars_goal": "Fill all stars with Starfruit.",
         "seeing_stars_done": "Stars Completed",
         "seeing_stars_hint": "Only Starfruit planted on marked stars counts.",
-        "invisi_ghoul_hint": "Use the conveyor and Plantern to expose invisible zombies.",
-        "portal_combat_hint": "Portals warp peas and zombies across lanes.",
-        "zombotany_hint": "Plant-headed zombies bring plant traits into battle.",
-        "bobsled_bonanza_hint": "Sled teams pressure icy ground lanes first.",
-        "nimble_quick_hint": "Zombies sprint faster, but your plants fire faster too.",
-        "pogo_party_hint": "Most of the pressure comes from pogo zombies.",
+"invisi_ghoul_hint": "Use Plantern coverage to expose invisible zombies.",
+"portal_combat_hint": "Portals shift lanes for peas and zombies.",
+"zombotany_hint": "Plant-headed zombies keep the powers of their plant heads.",
+"bobsled_bonanza_hint": "Frozen lanes invite Zomboni and sled-team rushes.",
+"nimble_quick_hint": "Everything moves faster, so react and rebuild quickly.",
+"pogo_party_hint": "Pogo zombies lead the pressure on the roof.",
+"portal_shifted": "Portals shifted!",
         "column_like_hint": "Planting one tile clones the whole column.",
         "zombiquarium_hint": "Keep your zombie fish fed; hungry fish stop making sun.",
         "zombiquarium_feed_cost": "Feed Cost",
@@ -1424,12 +1466,13 @@ I18N = {
         "seeing_stars_goal": "把所有星位种上杨桃。",
         "seeing_stars_done": "星位完成",
         "seeing_stars_hint": "只有种在星位上的活杨桃才会计数。",
-        "invisi_ghoul_hint": "利用传送带和路灯花，把隐形僵尸逼出来。",
-        "portal_combat_hint": "传送门会把豌豆和僵尸送去别的线路。",
-        "zombotany_hint": "植物头僵尸会带着植物特性一起进攻。",
-        "bobsled_bonanza_hint": "雪橇小队会优先冲击结冰的陆路。",
-        "nimble_quick_hint": "僵尸跑得更快，但你的植物射速也更快。",
-        "pogo_party_hint": "本关主压力来自成群跳跳僵尸。",
+"invisi_ghoul_hint": "用路灯花照出隐形僵尸，盯住突然逼近的线路。",
+"portal_combat_hint": "传送门会把豌豆和僵尸送到别的线路。",
+"zombotany_hint": "植物头僵尸会把对应植物的能力一起带进战斗。",
+"bobsled_bonanza_hint": "结冰的线路会不断迎来冰车和雪橇小队。",
+"nimble_quick_hint": "全场节奏更快，补位和反应都要更快。",
+"pogo_party_hint": "本关主压力来自成群跳跳僵尸，其他敌人只是陪衬。",
+"portal_shifted": "传送门换位了！",
         "column_like_hint": "任意落点会复制到整列。",
         "zombiquarium_hint": "喂养僵尸鱼，饥饿时会停止产阳光。",
         "zombiquarium_feed_cost": "喂食花费",
@@ -2726,6 +2769,11 @@ class BattleState:
         self.zombiquarium_fish: List[Dict[str, float]] = []
         self.portal_pairs: List[Dict[str, object]] = []
         self.ice_rows: Dict[int, float] = {}
+        self.portal_layout_index = 0
+        self.portal_shuffle_t = 0.0
+        self.portal_shift_notice_t = 0.0
+        self.bobsled_burst_t = 0.0
+        self.bobsled_burst_cycle_index = 0
 
     def mode_bool(self, key: str, default: bool = False) -> bool:
         val = self.mode_rules.get(key, default)
@@ -2843,6 +2891,9 @@ class BattleState:
         mode_id = "mini_beghouled_twist" if self.is_beghouled_twist_mode() else "mini_beghouled"
         return BEGHOULDED_SCORE_RULES.get(mode_id, BEGHOULDED_SCORE_RULES["mini_beghouled"])
 
+    def special_minigame_ruleset(self) -> Dict[str, object]:
+        return dict(SPECIAL_MINIGAME_RULESETS.get(self.mode_name(), {}))
+
     def seeing_stars_layouts(self) -> Dict[str, List[Tuple[int, int]]]:
         rows = self.rows()
         layouts: Dict[str, List[Tuple[int, int]]] = {}
@@ -2879,16 +2930,20 @@ class BattleState:
             return 1.0
         if zombie.state.get("dying_t", 0.0) > 0.0:
             return 1.0
-        if zombie.x < (LAWN_X + CELL_W * 2.0):
-            return 0.95
+        edge_alpha = clamp(self.mode_float("invisi_reveal_alpha", 0.95), 0.2, 1.0)
+        base_alpha = clamp(self.mode_float("invisi_base_alpha", 0.14), 0.04, 0.9)
+        partial_alpha = clamp(self.mode_float("invisi_partial_alpha", 0.82), base_alpha, 1.0)
+        grace_cols = max(1.0, self.mode_float("invisi_grace_cols", 2.0))
+        if zombie.x < (LAWN_X + CELL_W * grace_cols):
+            return edge_alpha
         if self.zombie_revealed_by_plantern(zombie):
-            return 0.95
+            return edge_alpha
         reveal_t = float(zombie.state.get("invisi_reveal_t", 0.0))
         if reveal_t > 0.0:
-            return clamp(0.42 + reveal_t * 0.75, 0.42, 0.92)
+            return clamp(partial_alpha + reveal_t * 0.75, partial_alpha, edge_alpha)
         if zombie.state.get("bite_t", 0.0) > 0.02:
-            return 0.82
-        return 0.14
+            return partial_alpha
+        return base_alpha
 
     def zombie_total_hp(self, zombie: Zombie) -> float:
         if zombie.kind == "newspaper":
@@ -4688,7 +4743,7 @@ class BattleState:
     def setup_portal_combat_mode(self) -> None:
         self.portal_pairs.clear()
         raw_pairs = self.mode_rules.get("portal_pairs", [])
-        if not isinstance(raw_pairs, list) or not raw_pairs:
+        if not isinstance(raw_pairs, (list, tuple)) or not raw_pairs:
             raw_pairs = [
                 [[0, 2], [max(0, self.rows() - 2), 6]],
                 [[min(1, self.rows() - 1), 6], [max(0, self.rows() - 1), 2]],
@@ -4721,6 +4776,103 @@ class BattleState:
 
     def setup_bobsled_bonanza_mode(self) -> None:
         self.ice_rows = {row: 9999.0 for row in range(self.rows()) if not self.is_water(row)}
+
+    def setup_special_minigame_mode(self) -> None:
+        if self.mode_bool("hide_fog_overlay", False) and self.field.has_fog:
+            self.fog_clear_t = 9999.0
+        self.portal_layout_index = 0
+        self.portal_shuffle_t = 0.0
+        self.portal_shift_notice_t = 0.0
+        self.bobsled_burst_t = 0.0
+        self.bobsled_burst_cycle_index = 0
+        if self.is_seeing_stars_mode():
+            self.setup_seeing_stars_mode()
+        if self.is_portal_combat_mode():
+            raw_layouts = self.mode_rules.get("portal_layouts", [])
+            if isinstance(raw_layouts, (list, tuple)) and raw_layouts:
+                self.mode_rules["portal_pairs"] = raw_layouts[0]
+            self.setup_portal_combat_mode()
+        if self.is_zombiquarium_mode():
+            self.setup_zombiquarium()
+            self.initial_selected_cards = []
+        if self.is_last_stand_mode():
+            self.mode_rules["last_stand_prepare"] = bool(self.mode_rules.get("last_stand_prepare", True))
+            self.wave_pause_t = 0.0
+            self.current_wave = 0
+            self.next_wave = 1.0
+        if self.is_bobsled_bonanza_mode():
+            self.setup_bobsled_bonanza_mode()
+        if self.is_bungee_blitz_mode():
+            self.total_waves = 0
+            self.large_wave_indices = ()
+            self.final_wave_index = 0
+            self.wave_budgets = []
+            self.wave_spawn_queue = []
+            self.wave_spawn_total = 0
+            self.wave_spawn_remaining = 0
+            self.cleaners = [False for _ in range(self.rows())]
+
+    def update_special_minigame_mode(self, dt: float) -> None:
+        if self.is_portal_combat_mode():
+            raw_layouts = self.mode_rules.get("portal_layouts", [])
+            interval = self.mode_float("portal_shuffle_interval", 0.0)
+            if isinstance(raw_layouts, (list, tuple)) and len(raw_layouts) > 1 and interval > 0.0:
+                self.portal_shuffle_t += dt
+                if self.portal_shuffle_t >= interval:
+                    self.portal_shuffle_t -= interval
+                    self.portal_layout_index = (self.portal_layout_index + 1) % len(raw_layouts)
+                    self.mode_rules["portal_pairs"] = raw_layouts[self.portal_layout_index]
+                    self.setup_portal_combat_mode()
+                    self.portal_shift_notice_t = 1.6
+            self.portal_shift_notice_t = max(0.0, self.portal_shift_notice_t - dt)
+        if self.is_bobsled_bonanza_mode():
+            for row in list(self.ice_rows.keys()):
+                self.ice_rows[row] = max(0.0, float(self.ice_rows.get(row, 0.0)) - dt * 0.02)
+            interval = self.mode_float("bobsled_burst_interval", 0.0)
+            cap = max(0, int(self.mode_float("bobsled_burst_cap", 0.0)))
+            cycle = [k for k in self.mode_list("bobsled_burst_cycle") if k in self.zombie_types]
+            if interval > 0.0 and cap > 0 and cycle:
+                self.bobsled_burst_t += dt
+                active_specials = sum(
+                    1
+                    for z in self.zombies
+                    if z.kind in {"bobsled_team", "zomboni"} and z.hp > 0 and float(z.state.get("dying_t", 0.0)) <= 0.0
+                )
+                while self.bobsled_burst_t >= interval:
+                    self.bobsled_burst_t -= interval
+                    if active_specials >= cap:
+                        continue
+                    kind = cycle[self.bobsled_burst_cycle_index % len(cycle)]
+                    self.bobsled_burst_cycle_index += 1
+                    self.spawn_zombie(self.current_wave or 1, forced_kind=kind)
+                    active_specials += 1
+
+    def draw_special_minigame_overlay(self, screen: pygame.Surface, plant_sprite_fn) -> None:
+        if self.is_portal_combat_mode():
+            self.draw_portal_combat_overlay(screen)
+            if self.portal_shift_notice_t > 0.0:
+                alpha = int(clamp(self.portal_shift_notice_t / 1.6, 0.0, 1.0) * 220)
+                note_rect = pygame.Rect(LAWN_X + 180, LAWN_Y + 8, 180, 14)
+                plate = pygame.Surface(note_rect.size, pygame.SRCALPHA)
+                plate.fill((88, 42, 96, min(180, alpha)))
+                screen.blit(plate, note_rect.topleft)
+                pygame.draw.rect(screen, (216, 190, 250, min(210, alpha)), note_rect, 2, border_radius=9)
+        if self.is_seeing_stars_mode():
+            self.draw_seeing_stars_overlay(screen)
+        if self.is_beghouled_mode() or self.is_beghouled_twist_mode():
+            self.draw_beghouled_overlay(screen, plant_sprite_fn)
+        if self.is_invisi_ghoul_mode():
+            pulse = 0.5 + 0.5 * math.sin(self.elapsed * 3.2)
+            for collection in (self.main, self.support):
+                for plant in collection.values():
+                    if plant.hp <= 0 or plant.kind != "plantern":
+                        continue
+                    cx, cy = self.cell_center(plant.row, plant.col)
+                    aura = pygame.Surface((CELL_W * 5, CELL_H * 3), pygame.SRCALPHA)
+                    center = (aura.get_width() // 2, aura.get_height() // 2)
+                    for radius, alpha in ((48, 22), (72, 16), (92, 10)):
+                        pygame.draw.circle(aura, (248, 228, 142, int(alpha * (0.7 + pulse * 0.3))), center, radius, 2)
+                    screen.blit(aura, (cx - aura.get_width() // 2, cy - aura.get_height() // 2))
 
     def apply_portal_transfer(self, row: int, x: float, direction: int, cooldown: float) -> Tuple[int, float, float]:
         if cooldown > 0.0 or not self.portal_pairs:
@@ -4775,8 +4927,16 @@ class BattleState:
             zombie.hp *= 1.45
             zombie.hp_max *= 1.45
             zombie.speed *= 0.92
+        elif variant == "tall_nut":
+            zombie.hp *= 1.8
+            zombie.hp_max *= 1.8
+            zombie.speed *= 0.86
         elif variant == "sunflower":
             zombie.state["zombotany_action_t"] = random.uniform(4.8, 6.6)
+        elif variant == "gatling":
+            zombie.state["zombotany_action_t"] = random.uniform(1.5, 2.0)
+        elif variant in ("squash", "jalapeno"):
+            zombie.state["zombotany_action_t"] = random.uniform(2.2, 3.0)
 
     def update_zombotany_zombie(self, zombie: Zombie, dt: float) -> None:
         variant = str(zombie.state.get("zombotany_variant", ""))
@@ -4790,8 +4950,36 @@ class BattleState:
             self.tokens.append(Token(zombie.x - 8, self.row_y(zombie.row) - 18, 25, 8.0, "sun"))
             zombie.state["zombotany_action_t"] = random.uniform(5.4, 7.0)
             return
-        front_plant = any((p.row == zombie.row and self.cell_center(p.row, p.col)[0] < zombie.x) for p in self.main.values())
-        if not front_plant:
+        front_plants = [
+            plant
+            for collection in (self.armor, self.main, self.support)
+            for plant in collection.values()
+            if plant.row == zombie.row and plant.hp > 0 and self.is_plant_edible(plant) and self.cell_center(plant.row, plant.col)[0] < zombie.x
+        ]
+        front_plants.sort(key=lambda plant: zombie.x - self.cell_center(plant.row, plant.col)[0])
+        front_target = front_plants[0] if front_plants else None
+        if variant == "jalapeno":
+            if not zombie.state.get("zombotany_used_special", 0.0):
+                if front_target and (zombie.x - self.cell_center(front_target.row, front_target.col)[0]) <= CELL_W * 2.1:
+                    for plant in list(self.main.values()) + list(self.support.values()) + list(self.armor.values()):
+                        if plant.row != zombie.row or plant.hp <= 0:
+                            continue
+                        plant.hp -= 9999
+                        plant.state["hit_flash"] = 0.24
+                    zombie.state["zombotany_used_special"] = 1.0
+                    zombie.state["bite_t"] = max(float(zombie.state.get("bite_t", 0.0)), 0.18)
+                zombie.state["zombotany_action_t"] = random.uniform(5.0, 6.4)
+                return
+            zombie.state["zombotany_action_t"] = random.uniform(3.0, 4.2)
+            return
+        if variant == "squash":
+            if front_target and (zombie.x - self.cell_center(front_target.row, front_target.col)[0]) <= CELL_W * 1.8:
+                front_target.hp -= 220.0
+                front_target.state["hit_flash"] = 0.24
+                zombie.state["bite_t"] = max(float(zombie.state.get("bite_t", 0.0)), 0.18)
+            zombie.state["zombotany_action_t"] = random.uniform(2.4, 3.2)
+            return
+        if front_target is None:
             zombie.state["zombotany_action_t"] = random.uniform(0.8, 1.4)
             return
         damage = 16.0
@@ -4806,6 +4994,12 @@ class BattleState:
         elif variant == "repeater":
             shots = 2
             damage = 18.0
+        elif variant == "gatling":
+            shots = 4
+            damage = 17.0
+        elif variant == "tall_nut":
+            zombie.state["zombotany_action_t"] = random.uniform(1.5, 2.2)
+            return
         elif variant == "peashooter":
             damage = 16.0
         else:
@@ -4834,13 +5028,11 @@ class BattleState:
             self.update_seeing_stars_mode(dt)
         if self.is_zombiquarium_mode():
             self.update_zombiquarium_mode(dt)
-        if self.is_bobsled_bonanza_mode():
-            for row in list(self.ice_rows.keys()):
-                self.ice_rows[row] = max(0.0, float(self.ice_rows.get(row, 0.0)) - dt * 0.02)
         if self.is_bungee_blitz_mode():
             self.update_bungee_blitz_mode(dt)
         if self.is_whack_mode():
             self.update_whack_mode(dt)
+        self.update_special_minigame_mode(dt)
 
     def slot_machine_spin(self) -> Tuple[str, int, Optional[str]]:
         if not self.is_slot_machine_mode():
@@ -5080,6 +5272,11 @@ class BattleState:
         self.zombiquarium_fish.clear()
         self.portal_pairs.clear()
         self.ice_rows.clear()
+        self.portal_layout_index = 0
+        self.portal_shuffle_t = 0.0
+        self.portal_shift_notice_t = 0.0
+        self.bobsled_burst_t = 0.0
+        self.bobsled_burst_cycle_index = 0
         if self.mode_bool("conveyor", False):
             self.conveyor_pool = [k for k in self.mode_list("conveyor_pool") if k in self.plant_types] or list(available)
             self.conveyor_cap = max(4, int(self.mode_float("conveyor_cap", 8.0)))
@@ -5126,29 +5323,7 @@ class BattleState:
             self.wave_spawn_total = 0
             self.setup_whack_mode()
         else:
-            if self.is_seeing_stars_mode():
-                self.setup_seeing_stars_mode()
-            if self.is_portal_combat_mode():
-                self.setup_portal_combat_mode()
-            if self.is_zombiquarium_mode():
-                self.setup_zombiquarium()
-                self.initial_selected_cards = []
-            if self.is_last_stand_mode():
-                self.mode_rules["last_stand_prepare"] = bool(self.mode_rules.get("last_stand_prepare", True))
-                self.wave_pause_t = 0.0
-                self.current_wave = 0
-                self.next_wave = 1.0
-            if self.is_bobsled_bonanza_mode():
-                self.setup_bobsled_bonanza_mode()
-            if self.is_bungee_blitz_mode():
-                self.total_waves = 0
-                self.large_wave_indices = ()
-                self.final_wave_index = 0
-                self.wave_budgets = []
-                self.wave_spawn_queue = []
-                self.wave_spawn_total = 0
-                self.wave_spawn_remaining = 0
-                self.cleaners = [False for _ in range(self.rows())]
+            self.setup_special_minigame_mode()
         if self.mode_bool("survival_resume", False):
             state_payload = self.mode_rules.get("survival_resume_state")
             if isinstance(state_payload, dict):
@@ -6113,12 +6288,7 @@ class BattleState:
                 screen.blit(ice, row_rect.topleft)
                 for yy in range(row_rect.y + 6, row_rect.bottom - 6, 8):
                     pygame.draw.line(screen, (214, 238, 252), (row_rect.x + 10, yy), (row_rect.right - 10, yy), 1)
-        if self.is_portal_combat_mode():
-            self.draw_portal_combat_overlay(screen)
-        if self.is_seeing_stars_mode():
-            self.draw_seeing_stars_overlay(screen)
-        if self.is_beghouled_mode() or self.is_beghouled_twist_mode():
-            self.draw_beghouled_overlay(screen, plant_sprite_fn)
+        self.draw_special_minigame_overlay(screen, plant_sprite_fn)
         if self.is_whack_mode():
             for row in range(self.rows()):
                 for col in range(2, COLS):
@@ -10560,16 +10730,16 @@ class Game:
 
     def battle_hud_layout(self) -> Dict[str, pygame.Rect]:
         special_mode = self.scene == "battle" and self.battle.is_special_hud_mode()
-        hud_h = 92 if special_mode else 102
-        bank_h = 54 if special_mode else 60
+        hud_h = 90 if special_mode else 102
+        bank_h = 52 if special_mode else 60
         hud = pygame.Rect(12, 10, SCREEN_WIDTH - 24, hud_h)
-        sun_box = pygame.Rect(hud.x + 8, hud.y + 8, 92 if special_mode else 104, 48)
-        shovel_btn = pygame.Rect(hud.x + 10, hud.bottom - 19, 64 if special_mode else 46, 15)
-        slot_btn = pygame.Rect(shovel_btn.right + 5, shovel_btn.y, 82 if special_mode else 54, 15)
-        settings_btn = pygame.Rect(hud.right - (60 if special_mode else 68), hud.y + 9, 50 if special_mode else 58, 22)
+        sun_box = pygame.Rect(hud.x + 8, hud.y + 7, 90 if special_mode else 104, 46)
+        shovel_btn = pygame.Rect(hud.x + 10, hud.bottom - 18, 60 if special_mode else 46, 14)
+        slot_btn = pygame.Rect(shovel_btn.right + 4, shovel_btn.y, 76 if special_mode else 54, 14)
+        settings_btn = pygame.Rect(hud.right - (56 if special_mode else 68), hud.y + 8, 46 if special_mode else 58, 21)
         seed_bank = pygame.Rect(sun_box.right + 10, hud.y + 8, settings_btn.x - sun_box.right - 18, bank_h)
-        utility_info = pygame.Rect(seed_bank.x, seed_bank.bottom + 3, seed_bank.w - (140 if special_mode else 152), 15)
-        wave_meter = pygame.Rect(utility_info.right + 8, seed_bank.bottom + 2, 136 if special_mode else 144, 18)
+        utility_info = pygame.Rect(seed_bank.x, seed_bank.bottom + 2, seed_bank.w - (146 if special_mode else 152), 14)
+        wave_meter = pygame.Rect(utility_info.right + 8, seed_bank.bottom + 1, 132 if special_mode else 144, 17)
         left_tools = pygame.Rect(sun_box.x - 2, hud.y + 2, sun_box.w + 8, hud.h - 6)
         right_cluster = pygame.Rect(utility_info.x, utility_info.y, utility_info.w, utility_info.h)
         pause_btn = pygame.Rect(0, 0, 0, 0)
@@ -10962,7 +11132,7 @@ class Game:
         conveyor_mode = self.battle.mode_bool("conveyor", False)
         mode_name = str(self.battle.mode_rules.get("mode_name", ""))
         bank_label = ""
-        if conveyor_mode:
+        if conveyor_mode or self.battle.is_portal_combat_mode() or self.battle.is_bobsled_bonanza_mode() or self.battle.is_invisi_ghoul_mode() or self.battle.is_zombotany_mode() or self.battle.is_nimble_mode() or self.battle.is_pogo_party_mode():
             bank_label = self.battle_mode_display_label(mode_name)
         self.draw_seed_bank_top(bank, bank_label)
         if self.battle.is_beghouled_mode() or self.battle.is_beghouled_twist_mode():
@@ -11091,17 +11261,17 @@ class Game:
             self.screen.blit(line, (bank.x + 12, bank.y + 8))
     def plant_select_layout(self) -> Dict[str, pygame.Rect]:
         frame = pygame.Rect(16, 12, SCREEN_WIDTH - 32, SCREEN_HEIGHT - 24)
-        title_sign = pygame.Rect(frame.x + 372, frame.y + 10, frame.w - 744, 38)
+        title_sign = pygame.Rect(frame.x + 388, frame.y + 10, frame.w - 776, 36)
         content_gap = 12
-        side_w = 230
+        side_w = 224
         main_w = frame.w - 62 - side_w - content_gap
-        tray_panel = pygame.Rect(frame.x + 30, title_sign.bottom + 6, main_w, 76)
-        zombie_panel = pygame.Rect(tray_panel.right + content_gap, title_sign.bottom + 4, side_w, frame.h - 114)
-        available_panel = pygame.Rect(frame.x + 30, tray_panel.bottom + 7, main_w, frame.bottom - tray_panel.bottom - 58)
+        tray_panel = pygame.Rect(frame.x + 30, title_sign.bottom + 6, main_w, 78)
+        zombie_panel = pygame.Rect(tray_panel.right + content_gap, title_sign.bottom + 4, side_w, frame.h - 112)
+        available_panel = pygame.Rect(frame.x + 30, tray_panel.bottom + 6, main_w, frame.bottom - tray_panel.bottom - 54)
         available_viewport = pygame.Rect(available_panel.x + 12, available_panel.y + 30, available_panel.w - 24, available_panel.h - 40)
-        action_panel = pygame.Rect(frame.x + 30, frame.bottom - 42, frame.w - 60, 30)
-        back_btn = pygame.Rect(action_panel.x + 2, action_panel.y - 1, 120, 32)
-        start_btn = pygame.Rect(action_panel.right - 178, action_panel.y - 2, 178, 34)
+        action_panel = pygame.Rect(frame.x + 30, frame.bottom - 40, frame.w - 60, 28)
+        back_btn = pygame.Rect(action_panel.x + 2, action_panel.y - 1, 112, 30)
+        start_btn = pygame.Rect(action_panel.right - 168, action_panel.y - 1, 168, 32)
         return {
             "frame": frame,
             "title_sign": title_sign,
@@ -11116,13 +11286,40 @@ class Game:
 
     def plant_select_grid_metrics(self) -> Dict[str, int]:
         return {
-            "card_w": 92,
-            "card_h": 102,
+            "card_w": 90,
+            "card_h": 100,
             "gap_x": 3,
             "gap_y": 4,
             "pad_x": 1,
             "pad_y": 3,
         }
+
+    def plant_select_preview_zombies(self, level: LevelConfig) -> List[str]:
+        rules = dict(self.pending_mode_rules or {})
+        ordered: List[str] = []
+        override = rules.get("zombie_weights_override")
+        if isinstance(override, dict):
+            pairs: List[Tuple[str, float]] = []
+            for key, value in override.items():
+                kind = str(key)
+                if kind not in self.zombies:
+                    continue
+                try:
+                    weight = float(value)
+                except (TypeError, ValueError):
+                    continue
+                if weight > 0.0:
+                    pairs.append((kind, weight))
+            pairs.sort(key=lambda item: (-item[1], item[0]))
+            ordered.extend(kind for kind, _ in pairs)
+        forced = [kind for kind in rules.get("forced_zombie_pool", []) if kind in self.zombies] if isinstance(rules.get("forced_zombie_pool", []), list) else []
+        for kind in forced:
+            if kind not in ordered:
+                ordered.append(kind)
+        for kind in level.z_weights.keys():
+            if kind in self.zombies and kind not in ordered:
+                ordered.append(kind)
+        return ordered
 
     def plant_select_available_viewport(self) -> pygame.Rect:
         return self.plant_select_layout()["available_viewport"]
@@ -13949,7 +14146,11 @@ class Game:
         self.draw_parchment_panel(inner_main, radius=20)
         level = self.levels[self.pending_level_idx if self.pending_level_idx is not None else self.level_idx]
         field_name = self.tr("field_" + level.battlefield)
+        pending_mode_name = str((self.pending_mode_rules or {}).get("mode_name", ""))
+        mode_label = self.battle_mode_display_label(pending_mode_name) if pending_mode_name else ""
         title_sub = f"{self.level_display_name(level)}  |  {self.tr('field')}: {field_name}"
+        if mode_label and pending_mode_name not in ("", "adventure"):
+            title_sub = f"{title_sub}  |  {mode_label}"
         self.draw_wood_sign(layout["title_sign"], self.tr("choose_plants"), title_sub)
 
         tray_panel = layout["tray_panel"]
@@ -13973,6 +14174,8 @@ class Game:
         z_head = pygame.Rect(z_panel.x + 10, z_panel.y + 10, z_panel.w - 20, 22)
         self.draw_framed_panel(z_head, fill=(124, 80, 38), border=(72, 42, 18), radius=8, inner=(156, 106, 54))
         self.draw_text_center_shadow(self.fonts["small"], self.tr("zombie_preview"), (248, 236, 208), z_head.center, shadow=(70, 42, 20), offset=(1, 1))
+        preview_hint_key = str((self.pending_mode_rules or {}).get("special_hint_key", ""))
+        preview_hint = self.tr(preview_hint_key) if preview_hint_key else ""
 
         tray_slots = self.plant_select_tray_slots()
         for i, rect in enumerate(tray_slots):
@@ -14013,9 +14216,17 @@ class Game:
             pygame.draw.rect(self.screen, (242, 186, 88), (track.x - 2, knob_y, 10, knob_h), border_radius=5)
             pygame.draw.rect(self.screen, (124, 76, 34), (track.x - 2, knob_y, 10, knob_h), 2, border_radius=5)
 
-        list_view = pygame.Rect(z_panel.x + 10, z_panel.y + 42, z_panel.w - 20, z_panel.h - 52)
+        list_top = z_panel.y + 42
+        if preview_hint:
+            hint_rect = pygame.Rect(z_panel.x + 12, z_panel.y + 38, z_panel.w - 24, 32)
+            self.draw_framed_panel(hint_rect, fill=(224, 206, 162), border=(132, 96, 48), radius=8, inner=(240, 226, 188))
+            hint_text = self.fit_label(preview_hint, self.fonts["tiny"], hint_rect.w - 10)
+            hint_surf = self.fonts["tiny"].render(hint_text, True, (72, 50, 26))
+            self.screen.blit(hint_surf, hint_surf.get_rect(center=hint_rect.center))
+            list_top = hint_rect.bottom + 6
+        list_view = pygame.Rect(z_panel.x + 10, list_top, z_panel.w - 20, z_panel.bottom - list_top - 10)
         zy = list_view.y
-        for kind in level.z_weights.keys():
+        for kind in self.plant_select_preview_zombies(level):
             row_rect = pygame.Rect(list_view.x, zy, list_view.w, 42)
             self.draw_zombie_preview_badge(row_rect, kind, hover=row_rect.collidepoint(mouse))
             zy += 44
@@ -14471,7 +14682,7 @@ class Game:
         show_next_wave = self.setting_bool("show_next_wave_countdown", True)
         compact_special = self.battle.is_special_hud_mode()
         utility_parts: List[str] = []
-        if level_text:
+        if level_text and not compact_special:
             utility_parts.append(level_text)
         if mode_name and mode_name not in ("", "adventure"):
             utility_parts.append(mode_text)
@@ -14479,7 +14690,10 @@ class Game:
             utility_parts.append(field_text)
         hint_key = self.battle.special_hint_key()
         if hint_key:
-            utility_parts.append(self.tr(hint_key))
+            if compact_special:
+                utility_parts = [mode_text if mode_name else field_text, self.tr(hint_key)]
+            else:
+                utility_parts.append(self.tr(hint_key))
         if self.battle.is_last_stand_mode() and self.battle.last_stand_in_prep():
             meter_text = self.tr("last_stand_prepare")
         elif self.battle.is_beghouled_mode() or self.battle.is_beghouled_twist_mode():
@@ -14507,7 +14721,7 @@ class Game:
             meter_text = mode_text
         else:
             meter_text = f"{self.tr('time')}: {remain}{self.tr('sec')}"
-        if show_next_wave and self.battle.uses_wave_system() and self.battle.total_waves > 0 and self.battle.wave_pause_t > 0 and self.battle.current_wave < self.battle.total_waves and not self.battle.last_stand_in_prep():
+        if show_next_wave and self.battle.uses_wave_system() and self.battle.total_waves > 0 and self.battle.wave_pause_t > 0 and self.battle.current_wave < self.battle.total_waves and not self.battle.last_stand_in_prep() and not compact_special:
             utility_parts.append(f"{self.tr('next_wave_in')}: {self.battle.wave_pause_t:.1f}{self.tr('sec')}")
         if not compact_special:
             utility_parts.append(f"{self.tr('kills')}: {self.battle.kills}")
