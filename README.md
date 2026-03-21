@@ -143,10 +143,10 @@ Run the game:
 python game.py
 ```
 
-If you want to use the local Windows Python install directly:
+On Windows, you can also use the Python launcher:
 
 ```powershell
-"C:\Users\huang\AppData\Local\Programs\Python\Python313\python.exe" game.py
+py -3.13 game.py
 ```
 
 ## Art / Asset Policy
@@ -320,10 +320,10 @@ pip install -r requirements.txt
 python game.py
 ```
 
-如果你想直接用本机的 Windows Python：
+如果你在 Windows 上运行，也可以直接使用 Python Launcher：
 
 ```powershell
-"C:\Users\huang\AppData\Local\Programs\Python\Python313\python.exe" game.py
+py -3.13 game.py
 ```
 
 ## 美术与资源说明
