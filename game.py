@@ -839,6 +839,8 @@ I18N = {
         "completed": "Completed",
         "flags_short": "{count}F",
         "boss_short": "Boss",
+        "conveyor_short": "Belt",
+        "special_short": "Special",
         "mini_games": "Mini-Games",
         "puzzle": "Puzzle",
         "survival": "Survival",
@@ -1106,6 +1108,8 @@ I18N = {
         "completed": "已通关",
         "flags_short": "{count}旗",
         "boss_short": "首领",
+        "conveyor_short": "传送带",
+        "special_short": "特殊",
         "mini_games": "小游戏",
         "puzzle": "解谜模式",
         "survival": "生存模式",
@@ -1458,6 +1462,52 @@ ADVENTURE_SPECIAL_WAVE_COUNTS: Dict[str, int] = {
     "5-10": 16,
 }
 
+ADVENTURE_STAGE_STYLE_OVERRIDES: Dict[str, str] = {
+    "1-5": "bonus_special",
+    "1-10": "conveyor",
+    "2-5": "bonus_special",
+    "2-10": "conveyor",
+    "3-5": "conveyor",
+    "3-10": "conveyor",
+    "4-5": "bonus_special",
+    "4-10": "conveyor",
+    "5-5": "bonus_special",
+    "5-10": "boss_conveyor",
+}
+
+ADVENTURE_STAGE_PRESET_IDS: Dict[str, str] = {
+    "1-5": "mini_wallnut_bowling",
+    "1-10": "adventure_conveyor_day",
+    "2-5": "mini_whack_a_zombie",
+    "2-10": "adventure_conveyor_night",
+    "3-5": "mini_big_trouble_little_zombie",
+    "3-10": "adventure_conveyor_pool",
+    "4-5": "adventure_vasebreaker",
+    "4-10": "adventure_conveyor_fog",
+    "5-5": "adventure_bungee_blitz",
+    "5-10": "adventure_zomboss_boss",
+}
+
+ADVENTURE_CONVEYOR_POOLS: Dict[str, Tuple[str, ...]] = {
+    "1-10": ("peashooter", "wallnut", "potato_mine", "snowpea", "repeater", "cherrybomb", "chomper"),
+    "2-10": ("puff_shroom", "fume_shroom", "scaredy_shroom", "hypno_shroom", "grave_buster", "ice_shroom", "wallnut", "snowpea"),
+    "3-5": ("sunflower", "peashooter", "wallnut", "potato_mine", "snowpea", "repeater", "cherrybomb", "jalapeno", "torchwood", "spikeweed"),
+    "3-10": ("lily_pad", "tangle_kelp", "threepeater", "repeater", "torchwood", "wallnut", "jalapeno", "tall_nut"),
+    "4-10": ("lily_pad", "sea_shroom", "plantern", "blover", "starfruit", "pumpkin", "cactus", "jalapeno"),
+    "5-5": ("flower_pot", "chomper", "pumpkin", "cherrybomb"),
+    "5-10": ("flower_pot", "cabbage_pult", "kernel_pult", "melon_pult", "umbrella_leaf", "jalapeno", "cherrybomb", "wallnut", "tall_nut"),
+}
+
+MODE_ENTRY_STYLES: Dict[str, str] = {
+    "mini_wallnut_bowling": "conveyor",
+    "mini_wallnut_bowling_2": "conveyor",
+    "mini_its_raining_seeds": "conveyor",
+    "mini_big_trouble_little_zombie": "conveyor",
+    "mini_column_like_you_see_em": "conveyor",
+    "mini_whack_a_zombie": "bonus_special",
+    "mini_dr_zomboss_revenge": "boss_conveyor",
+}
+
 ADVENTURE_WORLD_ZOMBIE_POOLS: Dict[int, Tuple[Tuple[str, ...], ...]] = {
     1: (
         ("normal",),
@@ -1703,6 +1753,8 @@ class LevelConfig:
     display_code: str = ""
     chapter_key: str = "chapter_1"
     preview_theme: str = "day_intro"
+    stage_style: str = "normal_select"
+    stage_mode_id: str = ""
     flags_first_clear: int = 1
     adventure_zombie_pool: Tuple[str, ...] = ()
     guaranteed_zombies: Tuple[Tuple[int, str, int], ...] = ()
@@ -1986,6 +2038,8 @@ def build_levels(total: int = 50) -> List[LevelConfig]:
         idx = (world - 1) * 10 + stage
         display_code = f"{world}-{stage}"
         plan = ADVENTURE_WAVE_PLANS.get(display_code, {})
+        stage_style = ADVENTURE_STAGE_STYLE_OVERRIDES.get(display_code, "normal_select")
+        stage_mode_id = ADVENTURE_STAGE_PRESET_IDS.get(display_code, "")
         total_waves, large_wave_indices, final_wave_index, wave_budgets = build_wave_plan(world, stage, danger, battlefield, boss=boss)
         levels.append(
             LevelConfig(
@@ -2010,6 +2064,8 @@ def build_levels(total: int = 50) -> List[LevelConfig]:
                 display_code=display_code,
                 chapter_key=f"chapter_{world}",
                 preview_theme=preview_theme,
+                stage_style=stage_style,
+                stage_mode_id=stage_mode_id,
                 flags_first_clear=int(plan.get("flags_first_clear", 1)),
                 adventure_zombie_pool=tuple(str(x) for x in plan.get("available_zombies", tuple(weights(z_pairs).keys()))),
                 guaranteed_zombies=tuple((int(w), str(k), int(c)) for w, k, c in plan.get("guaranteed_zombies", tuple())),
@@ -4244,6 +4300,8 @@ class BattleState:
             self.wave_budgets = []
             self.wave_spawn_queue = []
             self.wave_spawn_total = 0
+            if self.field.has_fog:
+                self.fog_clear_t = 9999.0
             self.setup_vasebreaker_board()
         elif self.is_i_zombie_mode():
             self.total_waves = 0
@@ -9286,6 +9344,198 @@ class Game:
             return f"关卡{code}"
         return f"Level {code}"
 
+    def stage_style_for_level(self, level: LevelConfig) -> str:
+        style = str(getattr(level, "stage_style", "normal_select") or "normal_select")
+        return style if style in {"normal_select", "conveyor", "bonus_special", "boss_conveyor"} else "normal_select"
+
+    def mode_entry_stage_style(self, entry_id: str) -> str:
+        style = MODE_ENTRY_STYLES.get(entry_id, "normal_select")
+        return style if style in {"normal_select", "conveyor", "bonus_special", "boss_conveyor"} else "normal_select"
+
+    def stage_style_label_key(self, style: str) -> str:
+        if style == "conveyor":
+            return "conveyor_short"
+        if style == "bonus_special":
+            return "special_short"
+        if style == "boss_conveyor":
+            return "boss_short"
+        return ""
+
+    def stage_style_badge_palette(self, style: str) -> Tuple[Tuple[int, int, int], Tuple[int, int, int], Tuple[int, int, int], Tuple[int, int, int]]:
+        if style == "conveyor":
+            return (194, 138, 58), (118, 74, 24), (224, 176, 88), (58, 34, 14)
+        if style == "bonus_special":
+            return (184, 124, 76), (110, 66, 34), (210, 156, 108), (54, 30, 14)
+        if style == "boss_conveyor":
+            return (140, 58, 52), (82, 28, 24), (176, 84, 78), (248, 236, 214)
+        return (112, 156, 72), (76, 96, 50), (150, 190, 94), (244, 240, 214)
+
+    def draw_stage_style_badge(self, rect: pygame.Rect, style: str) -> None:
+        label_key = self.stage_style_label_key(style)
+        if not label_key:
+            return
+        fill, border, inner, text_col = self.stage_style_badge_palette(style)
+        self.draw_framed_panel(rect, fill=fill, border=border, radius=8, inner=inner)
+        label = self.fit_label(self.tr(label_key), self.fonts["tiny"], rect.w - 8)
+        text = self.fonts["tiny"].render(label, True, text_col)
+        self.screen.blit(text, text.get_rect(center=rect.center))
+
+    def adventure_conveyor_pool(self, level: LevelConfig) -> List[str]:
+        pool = [k for k in ADVENTURE_CONVEYOR_POOLS.get(level.display_code, tuple()) if k in self.plants]
+        if pool:
+            return list(dict.fromkeys(pool))
+        fallback = [k for k in self.battle.level_available_cards(level) if k not in {"sunflower", "sun_shroom", "marigold", "imitater"}]
+        return list(dict.fromkeys(fallback or self.battle.level_available_cards(level)))
+
+    def adventure_stage_mode_rules(self, level: LevelConfig) -> Dict[str, object]:
+        style = self.stage_style_for_level(level)
+        if style == "normal_select":
+            return {}
+        code = level.display_code
+        preset_id = str(getattr(level, "stage_mode_id", "") or "")
+        if preset_id == "mini_wallnut_bowling":
+            return {
+                "mode_name": preset_id,
+                "mode_family": "mini_wallnut_bowling",
+                "return_scene": "adventure_level_select",
+                "conveyor": True,
+                "conveyor_pool": ["wallnut", "cherrybomb"],
+                "conveyor_interval": 1.72,
+                "conveyor_cap": 9,
+                "no_sun_cost": True,
+                "no_sky_sun": True,
+                "spawn_rate_mult": 0.94,
+                "zombie_hp_scale": 0.84,
+                "zombie_dps_scale": 0.88,
+                "wave_interval": 24.0,
+                "rhythm_cycle": 22.0,
+            }
+        if preset_id == "mini_whack_a_zombie":
+            return {
+                "mode_name": preset_id,
+                "mode_family": "mini_whack_a_zombie",
+                "return_scene": "adventure_level_select",
+                "start_sun_override": 0.0,
+                "no_sky_sun": True,
+                "whack_goal": 20.0,
+                "whack_miss_limit": 10.0,
+                "whack_spawn_interval": 0.96,
+                "whack_active_cap": 5.0,
+                "whack_zombies": ["normal", "conehead"],
+            }
+        if preset_id == "adventure_vasebreaker":
+            return {
+                "mode_name": preset_id,
+                "mode_family": "puzzle_vasebreaker",
+                "return_scene": "adventure_level_select",
+                "start_sun_override": 0.0,
+                "no_sky_sun": True,
+                "vasebreaker_tier": 0.0,
+            }
+        if preset_id == "mini_big_trouble_little_zombie":
+            return {
+                "mode_name": preset_id,
+                "mode_family": "adventure_conveyor",
+                "return_scene": "adventure_level_select",
+                "conveyor": True,
+                "conveyor_pool": self.adventure_conveyor_pool(level),
+                "conveyor_interval": 1.24,
+                "conveyor_cap": 10,
+                "no_sun_cost": True,
+                "no_sky_sun": True,
+                "spawn_rate_mult": 1.18,
+                "zombie_hp_scale": 0.58,
+                "zombie_speed_scale": 1.42,
+                "zombie_dps_scale": 0.82,
+                "wave_interval": 17.0,
+            }
+        if preset_id == "adventure_bungee_blitz":
+            return {
+                "mode_name": preset_id,
+                "mode_family": "adventure_bungee_blitz",
+                "return_scene": "adventure_level_select",
+                "conveyor": True,
+                "conveyor_pool": self.adventure_conveyor_pool(level),
+                "conveyor_interval": 1.34,
+                "conveyor_cap": 10,
+                "no_sun_cost": True,
+                "no_sky_sun": True,
+                "spawn_rate_mult": 1.02,
+                "zombie_hp_scale": 0.94,
+                "zombie_dps_scale": 0.94,
+                "wave_interval": 19.0,
+            }
+        if style == "conveyor":
+            interval = max(1.18, 1.44 - (level.world - 1) * 0.05)
+            cap = 9 if level.world <= 2 else 10
+            hp_scale = 0.90 + level.world * 0.02
+            dps_scale = 0.90 + level.world * 0.02
+            return {
+                "mode_name": preset_id or f"adventure_conveyor_{code}",
+                "mode_family": "adventure_conveyor",
+                "return_scene": "adventure_level_select",
+                "conveyor": True,
+                "conveyor_pool": self.adventure_conveyor_pool(level),
+                "conveyor_interval": interval,
+                "conveyor_cap": cap,
+                "no_sun_cost": True,
+                "no_sky_sun": True,
+                "spawn_rate_mult": 0.98 + level.world * 0.02,
+                "zombie_hp_scale": hp_scale,
+                "zombie_dps_scale": dps_scale,
+                "wave_interval": max(17.0, 21.0 - level.world),
+            }
+        if style == "boss_conveyor":
+            return {
+                "mode_name": preset_id or "adventure_zomboss_boss",
+                "mode_family": "boss_conveyor",
+                "return_scene": "adventure_level_select",
+                "conveyor": True,
+                "conveyor_pool": self.adventure_conveyor_pool(level),
+                "conveyor_interval": 1.16,
+                "conveyor_cap": 10,
+                "no_sun_cost": True,
+                "no_sky_sun": True,
+                "spawn_rate_mult": 1.12,
+                "zombie_hp_scale": 1.02,
+                "zombie_speed_scale": 1.02,
+                "zombie_dps_scale": 1.02,
+                "wave_interval": 16.0,
+                "rhythm_cycle": 17.0,
+            }
+        return {}
+
+    def launch_level_or_mode(
+        self,
+        idx: int,
+        stage_style: Optional[str] = None,
+        selected_cards: Optional[List[str]] = None,
+        forced_pool: Optional[List[str]] = None,
+        preset_selected: Optional[List[str]] = None,
+        pick_limit: Optional[int] = None,
+        mode_rules: Optional[Dict[str, object]] = None,
+        return_scene: str = "adventure_level_select",
+    ) -> None:
+        if not (0 <= idx < len(self.levels)):
+            return
+        level = self.levels[idx]
+        self.adventure_chapter_selected = int(getattr(level, "world", self.adventure_chapter_selected))
+        style = stage_style or self.stage_style_for_level(level)
+        rules = dict(mode_rules or {})
+        rules.setdefault("return_scene", return_scene)
+        if style == "normal_select":
+            self.open_plant_select(
+                idx,
+                forced_pool=forced_pool,
+                preset_selected=preset_selected,
+                pick_limit=pick_limit,
+                mode_rules=rules,
+                return_scene=return_scene,
+            )
+            return
+        direct_cards = [k for k in (selected_cards or []) if k in self.plants]
+        self.start_level(idx, selected_cards=direct_cards, mode_rules=rules)
+
     def open_plant_select(
         self,
         idx: int,
@@ -10937,6 +11187,7 @@ class Game:
             self.draw_mode_thumb_zombie(self.screen, area.right + 14, area.y + 26, kind="buckethead", scale=0.74)
 
     def draw_mode_card(self, mode_id: str, rect: pygame.Rect, title: str, zh_title: str, status: str, thumb_key: str, hover: bool, selected: bool) -> None:
+        stage_style = self.mode_entry_stage_style(mode_id)
         fill = (232, 204, 152) if not hover else (242, 216, 164)
         inner = (248, 238, 210) if not hover else (255, 246, 224)
         border = (132, 88, 42) if not selected else (228, 154, 48)
@@ -11013,6 +11264,9 @@ class Game:
             pygame.draw.circle(self.screen, (246, 214, 96), medal, 4)
             pygame.draw.circle(self.screen, (148, 104, 36), medal, 4, 1)
             pygame.draw.circle(self.screen, (252, 238, 168), medal, 2)
+        if stage_style != "normal_select":
+            style_badge = pygame.Rect(thumb_area.x + 6, thumb_area.y + 6, 46, 16)
+            self.draw_stage_style_badge(style_badge, stage_style)
 
         if status == "playable":
             bfill, bborder, btxt = (154, 198, 134), (72, 112, 60), self.tr("playable_now")
@@ -11407,17 +11661,23 @@ class Game:
                 return
             if entry_id == "mini_big_trouble_little_zombie":
                 idx = self.find_level_by_field("day")
-                pool = ["sunflower", "peashooter", "wallnut", "potato_mine", "snowpea", "repeater", "cherrybomb", "jalapeno", "torchwood", "spikeweed"]
                 rules = {
                     "mode_name": entry_id,
+                    "mode_family": "adventure_conveyor",
                     "return_scene": scene,
+                    "conveyor": True,
+                    "conveyor_pool": self.adventure_conveyor_pool(self.levels[idx]),
+                    "conveyor_interval": 1.24,
+                    "conveyor_cap": 10,
+                    "no_sun_cost": True,
+                    "no_sky_sun": True,
                     "spawn_rate_mult": 1.28,
                     "zombie_hp_scale": 0.64,
                     "zombie_speed_scale": 1.36,
                     "zombie_dps_scale": 0.88,
                     "wave_interval": 16.0,
                 }
-                self.open_plant_select(idx, forced_pool=pool, pick_limit=8, mode_rules=rules, return_scene=scene)
+                self.launch_level_or_mode(idx, stage_style="conveyor", selected_cards=[], mode_rules=rules, return_scene=scene)
                 return
             if entry_id == "mini_portal_combat":
                 idx = self.find_level_by_field("pool")
@@ -11502,7 +11762,14 @@ class Game:
                 idx = max(0, len(self.levels) - 1)
                 rules = {
                     "mode_name": entry_id,
+                    "mode_family": "boss_conveyor",
                     "return_scene": scene,
+                    "conveyor": True,
+                    "conveyor_pool": self.adventure_conveyor_pool(self.levels[idx]),
+                    "conveyor_interval": 1.08,
+                    "conveyor_cap": 10,
+                    "no_sun_cost": True,
+                    "no_sky_sun": True,
                     "spawn_rate_mult": 1.26,
                     "zombie_hp_scale": 1.12,
                     "zombie_speed_scale": 1.06,
@@ -11512,7 +11779,7 @@ class Game:
                     "large_wave_indices": [6, 12, 16, 18],
                     "final_wave_index": 18.0,
                 }
-                self.open_plant_select(idx, pick_limit=8, mode_rules=rules, return_scene=scene)
+                self.launch_level_or_mode(idx, stage_style="boss_conveyor", selected_cards=[], mode_rules=rules, return_scene=scene)
                 return
             self.show_mode_notice("mode_not_available")
             return
@@ -12063,7 +12330,14 @@ class Game:
             levels = self.adventure_levels_for_world(self.adventure_chapter_selected)
             for level, rect in zip(levels, layout["cards"]):
                 if rect.collidepoint(p) and self.adventure_level_unlocked(level):
-                    self.open_plant_select(level.idx - 1, return_scene="adventure_level_select")
+                    stage_rules = self.adventure_stage_mode_rules(level)
+                    self.launch_level_or_mode(
+                        level.idx - 1,
+                        stage_style=self.stage_style_for_level(level),
+                        selected_cards=[],
+                        mode_rules=stage_rules,
+                        return_scene="adventure_level_select",
+                    )
                     return
             return
         if self.scene in ("mini_select", "puzzle_select", "survival_select"):
@@ -12637,6 +12911,7 @@ class Game:
         cleared = self.adventure_level_cleared(level)
         current = self.level_idx == level.idx - 1
         is_boss = level.display_code == "5-10"
+        stage_style = self.stage_style_for_level(level)
         stack_back = rect.move(8, 6)
         self.draw_panel_shadow(stack_back, radius=16, alpha=54, offset=(0, 3))
         self.draw_framed_panel(stack_back, fill=(226, 214, 196), border=(140, 118, 92), radius=12, inner=(242, 236, 224))
@@ -12673,6 +12948,10 @@ class Game:
         self.draw_framed_panel(flag_badge, fill=(198, 46, 38), border=(112, 28, 20), radius=8, inner=(226, 86, 72))
         flag_text = self.fonts["tiny"].render(self.tr("flags_short").format(count=level.flags_first_clear), True, (248, 240, 216))
         self.screen.blit(flag_text, flag_text.get_rect(center=flag_badge.center))
+        if stage_style != "normal_select":
+            style_badge = pygame.Rect(flag_badge.right + 6, preview_rect.y + 6, 54, 18)
+            badge_style = "conveyor" if stage_style == "boss_conveyor" else stage_style
+            self.draw_stage_style_badge(style_badge, badge_style)
         if is_boss:
             boss_badge = pygame.Rect(preview_rect.right - 50, preview_rect.y + 6, 44, 18)
             self.draw_framed_panel(boss_badge, fill=(120, 52, 46), border=(72, 24, 22), radius=8, inner=(158, 76, 70))
