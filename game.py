@@ -244,6 +244,489 @@ WALLNUT_BOWLING_MODE_IDS = {"mini_wallnut_bowling", "mini_wallnut_bowling_2"}
 VASEBREAKER_MODE_IDS = {entry_id for entry_id, _, _ in CLASSIC_PUZZLE_VASEBREAKER_LIST}
 I_ZOMBIE_MODE_IDS = {entry_id for entry_id, _, _ in CLASSIC_PUZZLE_IZOMBIE_LIST}
 
+ADVENTURE_CHAPTERS: List[Dict[str, object]] = [
+    {
+        "world": 1,
+        "chapter_key": "chapter_1",
+        "field": "day",
+        "title_key": "chapter_1_title",
+        "subtitle_key": "chapter_1_subtitle",
+        "theme": "chapter_day",
+    },
+    {
+        "world": 2,
+        "chapter_key": "chapter_2",
+        "field": "night",
+        "title_key": "chapter_2_title",
+        "subtitle_key": "chapter_2_subtitle",
+        "theme": "chapter_night",
+    },
+    {
+        "world": 3,
+        "chapter_key": "chapter_3",
+        "field": "pool",
+        "title_key": "chapter_3_title",
+        "subtitle_key": "chapter_3_subtitle",
+        "theme": "chapter_pool",
+    },
+    {
+        "world": 4,
+        "chapter_key": "chapter_4",
+        "field": "fog",
+        "title_key": "chapter_4_title",
+        "subtitle_key": "chapter_4_subtitle",
+        "theme": "chapter_fog",
+    },
+    {
+        "world": 5,
+        "chapter_key": "chapter_5",
+        "field": "roof",
+        "title_key": "chapter_5_title",
+        "subtitle_key": "chapter_5_subtitle",
+        "theme": "chapter_roof",
+    },
+]
+
+
+def adventure_preview_recipe(
+    scene: str,
+    plants: Optional[List[Tuple[str, str, float]]] = None,
+    zombies: Optional[List[Tuple[str, str, float]]] = None,
+    props: Optional[List[Tuple[str, str, float]]] = None,
+    effects: Optional[List[Tuple[str, str, float]]] = None,
+) -> Dict[str, object]:
+    return {
+        "scene": scene,
+        "plants": plants or [],
+        "zombies": zombies or [],
+        "props": props or [],
+        "effects": effects or [],
+    }
+
+
+def build_adventure_preview_recipes() -> Dict[str, Dict[str, object]]:
+    recipes: Dict[str, Dict[str, object]] = {}
+
+    def add(
+        code: str,
+        scene: str,
+        plants: List[Tuple[str, str, float]],
+        zombies: List[Tuple[str, str, float]],
+        props: Optional[List[Tuple[str, str, float]]] = None,
+        effects: Optional[List[Tuple[str, str, float]]] = None,
+    ) -> None:
+        recipes[code] = adventure_preview_recipe(scene, plants, zombies, props, effects)
+
+    add(
+        "1-1",
+        "day",
+        [("sunflower", "front_left", 1.00), ("pea", "center_left", 1.04)],
+        [("normal", "lane_right", 0.92)],
+        [("sun_token", "sky_left", 0.92)],
+        [("pea_shot", "center", 0.94)],
+    )
+    add(
+        "1-2",
+        "day",
+        [("wallnut", "front_left", 1.06), ("pea", "back_left", 0.76)],
+        [("conehead", "lane_right", 0.94)],
+        [],
+        [("impact", "center_right", 0.92)],
+    )
+    add(
+        "1-3",
+        "day",
+        [("sunflower", "front_left", 0.92), ("sunflower", "center_left", 0.88)],
+        [("flag_zombie", "lane_right", 0.90), ("normal", "far_right", 0.72)],
+        [("sun_token", "sky_mid", 0.86)],
+        [("flag_wave", "sky_right", 0.84)],
+    )
+    add(
+        "1-4",
+        "day",
+        [("potato_mine", "front_left", 0.98), ("sunflower", "back_left", 0.70)],
+        [("newspaper", "lane_right", 0.92)],
+        [("dirt_patch", "front_left", 0.92)],
+        [("mine_blink", "front_left", 0.94)],
+    )
+    add(
+        "1-5",
+        "day",
+        [("wallnut", "front_left", 0.98), ("snowpea", "center_left", 0.98)],
+        [("pole_vaulting", "lane_right", 0.96)],
+        [],
+        [("snow_shot", "center", 0.94), ("pole_line", "lane_right", 0.92)],
+    )
+    add(
+        "1-6",
+        "day",
+        [("repeater", "front_left", 0.98), ("cherrybomb", "center_left", 0.90)],
+        [("buckethead", "lane_right", 0.92), ("normal", "far_right", 0.72)],
+        [],
+        [("double_pea", "center", 0.94), ("explosion", "center_right", 0.84)],
+    )
+    add(
+        "1-7",
+        "day",
+        [("chomper", "front_left", 1.00), ("repeater", "back_left", 0.76)],
+        [("screen_door", "lane_right", 0.88), ("newspaper", "far_right", 0.68)],
+        [],
+        [("bite_arc", "center_left", 0.90)],
+    )
+    add(
+        "1-8",
+        "day",
+        [("torchwood", "front_left", 0.94), ("pea", "back_left", 0.72), ("tall_nut", "center", 0.96)],
+        [("flag_zombie", "lane_right", 0.88), ("conehead", "far_right", 0.68)],
+        [],
+        [("fire_pea", "center", 0.94), ("flag_wave", "sky_right", 0.84)],
+    )
+    add(
+        "1-9",
+        "day",
+        [("jalapeno", "front_left", 0.96), ("wallnut", "center_left", 0.90)],
+        [("football", "lane_right", 0.92), ("buckethead", "far_right", 0.72)],
+        [],
+        [("flame_lane", "center", 0.96)],
+    )
+    add(
+        "1-10",
+        "day",
+        [("gatling", "front_left", 1.00), ("tall_nut", "center", 0.98), ("sunflower", "back_left", 0.68)],
+        [("buckethead", "lane_right", 0.88), ("football", "front_right", 0.90), ("flag_zombie", "far_right", 0.70)],
+        [("sun_token", "sky_left", 0.80)],
+        [("big_wave", "sky_mid", 0.96), ("double_pea", "center", 0.94)],
+    )
+
+    add(
+        "2-1",
+        "night",
+        [("puff_shroom", "front_left", 0.92), ("sun_shroom", "center_left", 0.92)],
+        [("newspaper", "lane_right", 0.90)],
+        [("grave", "grave_left", 0.92), ("grave", "grave_right", 0.92)],
+        [("spore", "center", 0.90)],
+    )
+    add(
+        "2-2",
+        "night",
+        [("grave_buster", "grave_left", 0.98), ("sun_shroom", "front_left", 0.88)],
+        [("conehead", "lane_right", 0.88), ("newspaper", "far_right", 0.70)],
+        [("grave", "grave_mid", 0.92)],
+        [],
+    )
+    add(
+        "2-3",
+        "night",
+        [("fume_shroom", "front_left", 0.98), ("wallnut", "center_left", 0.88)],
+        [("screen_door", "lane_right", 0.88)],
+        [("grave", "grave_right", 0.92)],
+        [("fume_cloud", "center", 0.94)],
+    )
+    add(
+        "2-4",
+        "night",
+        [("scaredy_shroom", "front_left", 0.94), ("sun_shroom", "back_left", 0.72)],
+        [("dancing", "lane_right", 0.90), ("backup_dancer", "far_right", 0.68)],
+        [("grave", "grave_left", 0.86), ("grave", "grave_right", 0.86)],
+        [("moon_glow", "sky_left", 0.92)],
+    )
+    add(
+        "2-5",
+        "night",
+        [("hypno_shroom", "front_left", 0.98), ("wallnut", "center_left", 0.86)],
+        [("backup_dancer", "lane_right", 0.84), ("dancing", "far_right", 0.74)],
+        [("grave", "grave_mid", 0.88)],
+        [("spiral", "front_left", 0.92)],
+    )
+    add(
+        "2-6",
+        "night",
+        [("ice_shroom", "front_left", 0.98), ("fume_shroom", "center_left", 0.84)],
+        [("jack_in_the_box", "lane_right", 0.90)],
+        [("grave", "grave_right", 0.86)],
+        [("frost_burst", "center", 0.96)],
+    )
+    add(
+        "2-7",
+        "night",
+        [("doom_shroom", "front_left", 0.98), ("grave_buster", "grave_left", 0.84)],
+        [("football", "lane_right", 0.92)],
+        [("crater", "front_left", 1.00), ("grave", "grave_right", 0.82)],
+        [("smoke", "center_left", 0.92)],
+    )
+    add(
+        "2-8",
+        "night",
+        [("pumpkin", "front_left", 0.92), ("fume_shroom", "center_left", 0.82)],
+        [("screen_door", "lane_right", 0.90), ("buckethead", "far_right", 0.72)],
+        [("grave", "grave_mid", 0.86)],
+        [("fume_cloud", "center", 0.90)],
+    )
+    add(
+        "2-9",
+        "night",
+        [("hypno_shroom", "front_left", 0.90), ("pumpkin", "center_left", 0.88), ("fume_shroom", "back_left", 0.72)],
+        [("football", "lane_right", 0.92), ("buckethead", "far_right", 0.72)],
+        [("grave", "grave_left", 0.82), ("grave", "grave_right", 0.82)],
+        [("spiral", "front_left", 0.84)],
+    )
+    add(
+        "2-10",
+        "night",
+        [("sun_shroom", "front_left", 0.90), ("fume_shroom", "center_left", 0.82), ("pumpkin", "center", 0.90)],
+        [("dancing", "lane_right", 0.90), ("backup_dancer", "front_right", 0.76), ("jack_in_the_box", "far_right", 0.70)],
+        [("grave", "grave_left", 0.82), ("grave", "grave_mid", 0.82), ("grave", "grave_right", 0.82)],
+        [("big_wave", "sky_mid", 0.88)],
+    )
+
+    add(
+        "3-1",
+        "pool",
+        [("pea", "front_left", 0.92), ("lily_pad", "pool_left", 0.96)],
+        [("ducky_tube", "lane_right", 0.90), ("normal", "far_right", 0.68)],
+        [],
+        [("splash", "pool_mid", 0.88)],
+    )
+    add(
+        "3-2",
+        "pool",
+        [("lily_pad", "pool_left", 0.96), ("snowpea", "center_left", 0.92)],
+        [("snorkel", "lane_right", 0.90)],
+        [],
+        [("snow_shot", "center", 0.90), ("splash", "pool_right", 0.82)],
+    )
+    add(
+        "3-3",
+        "pool",
+        [("lily_pad", "pool_left", 0.94), ("tangle_kelp", "pool_mid", 0.98)],
+        [("dolphin_rider", "lane_right", 0.90)],
+        [],
+        [("water_arc", "pool_right", 0.92)],
+    )
+    add(
+        "3-4",
+        "pool",
+        [("tall_nut", "center_left", 0.94), ("lily_pad", "pool_left", 0.92)],
+        [("snorkel", "lane_right", 0.86), ("ducky_tube", "far_right", 0.72)],
+        [],
+        [("splash", "pool_mid", 0.82)],
+    )
+    add(
+        "3-5",
+        "pool",
+        [("lily_pad", "pool_left", 0.92), ("torchwood", "front_left", 0.86), ("pea", "back_left", 0.72)],
+        [("dolphin_rider", "lane_right", 0.88), ("buckethead", "far_right", 0.72)],
+        [],
+        [("fire_pea", "center", 0.90)],
+    )
+    add(
+        "3-6",
+        "pool",
+        [("tangle_kelp", "pool_left", 0.94), ("threepeater", "center_left", 0.92)],
+        [("zomboni", "lane_right", 0.92)],
+        [],
+        [("ice_trail", "lane_right", 0.94)],
+    )
+    add(
+        "3-7",
+        "pool",
+        [("tall_nut", "center_left", 0.94), ("tangle_kelp", "pool_mid", 0.92)],
+        [("snorkel", "lane_right", 0.84), ("dolphin_rider", "far_right", 0.74)],
+        [],
+        [("water_arc", "pool_right", 0.84)],
+    )
+    add(
+        "3-8",
+        "pool",
+        [("threepeater", "center_left", 0.94), ("snowpea", "front_left", 0.82)],
+        [("bobsled_team", "lane_right", 0.92), ("dolphin_rider", "far_right", 0.72)],
+        [],
+        [("snow_shot", "center", 0.86)],
+    )
+    add(
+        "3-9",
+        "pool",
+        [("tall_nut", "front_left", 0.94), ("threepeater", "center_left", 0.92), ("tangle_kelp", "pool_mid", 0.90)],
+        [("zomboni", "lane_right", 0.88), ("bobsled_team", "far_right", 0.74)],
+        [],
+        [("ice_trail", "lane_right", 0.88)],
+    )
+    add(
+        "3-10",
+        "pool",
+        [("tall_nut", "front_left", 0.92), ("threepeater", "center_left", 0.92), ("jalapeno", "center", 0.82)],
+        [("bobsled_team", "lane_right", 0.86), ("zomboni", "front_right", 0.88), ("dolphin_rider", "far_right", 0.72)],
+        [],
+        [("flame_lane", "center", 0.86), ("big_wave", "sky_mid", 0.86)],
+    )
+
+    add(
+        "4-1",
+        "fog",
+        [("plantern", "front_left", 0.94), ("puff_shroom", "center_left", 0.82)],
+        [("balloon", "air_right", 0.86), ("normal", "lane_right", 0.74)],
+        [],
+        [("fog_overlay", "sky_mid", 0.92)],
+    )
+    add(
+        "4-2",
+        "fog",
+        [("plantern", "front_left", 0.92), ("fume_shroom", "center_left", 0.84)],
+        [("bungee", "air_right", 0.88)],
+        [],
+        [("rope_drop", "air_right", 0.90), ("fog_overlay", "sky_mid", 0.92)],
+    )
+    add(
+        "4-3",
+        "fog",
+        [("cactus", "front_left", 0.92), ("plantern", "center_left", 0.82)],
+        [("balloon", "air_right", 0.90)],
+        [],
+        [("fog_overlay", "sky_mid", 0.90)],
+    )
+    add(
+        "4-4",
+        "fog",
+        [("plantern", "front_left", 0.90), ("pumpkin", "center_left", 0.84)],
+        [("digger", "lane_right", 0.90)],
+        [("dirt_patch", "lane_right", 0.86)],
+        [("fog_overlay", "sky_mid", 0.90)],
+    )
+    add(
+        "4-5",
+        "fog",
+        [("umbrella_leaf", "front_left", 0.92), ("plantern", "center_left", 0.82)],
+        [("bungee", "air_mid", 0.84), ("balloon", "air_right", 0.82)],
+        [],
+        [("rope_drop", "air_mid", 0.86), ("fog_overlay", "sky_mid", 0.92)],
+    )
+    add(
+        "4-6",
+        "fog",
+        [("pumpkin", "front_left", 0.90), ("fume_shroom", "center_left", 0.82)],
+        [("pogo", "lane_right", 0.90)],
+        [],
+        [("pogo_spring", "lane_right", 0.90), ("fog_overlay", "sky_mid", 0.92)],
+    )
+    add(
+        "4-7",
+        "fog",
+        [("tall_nut", "front_left", 0.92), ("umbrella_leaf", "center_left", 0.82)],
+        [("ladder", "lane_right", 0.90)],
+        [],
+        [("fog_overlay", "sky_mid", 0.90)],
+    )
+    add(
+        "4-8",
+        "fog",
+        [("cactus", "front_left", 0.88), ("plantern", "center_left", 0.82), ("umbrella_leaf", "center", 0.82)],
+        [("balloon", "air_right", 0.84), ("bungee", "air_mid", 0.80), ("ladder", "lane_right", 0.76)],
+        [],
+        [("rope_drop", "air_mid", 0.80), ("fog_overlay", "sky_mid", 0.94)],
+    )
+    add(
+        "4-9",
+        "fog",
+        [("pumpkin", "front_left", 0.88), ("plantern", "center_left", 0.82), ("cactus", "back_left", 0.72)],
+        [("digger", "lane_right", 0.84), ("pogo", "front_right", 0.80), ("balloon", "air_right", 0.80)],
+        [("dirt_patch", "front_right", 0.82)],
+        [("pogo_spring", "front_right", 0.80), ("fog_overlay", "sky_mid", 0.96)],
+    )
+    add(
+        "4-10",
+        "fog",
+        [("umbrella_leaf", "front_left", 0.90), ("plantern", "center_left", 0.82), ("pumpkin", "center", 0.84)],
+        [("ladder", "lane_right", 0.82), ("football", "front_right", 0.84), ("balloon", "air_right", 0.80)],
+        [],
+        [("big_wave", "sky_mid", 0.84), ("fog_overlay", "sky_mid", 0.98)],
+    )
+
+    add(
+        "5-1",
+        "roof",
+        [("flower_pot", "roof_left", 0.92), ("pea", "roof_mid", 0.86)],
+        [("normal", "roof_right", 0.84)],
+        [("chimney", "sky_right", 0.82)],
+        [],
+    )
+    add(
+        "5-2",
+        "roof",
+        [("flower_pot", "roof_left", 0.88), ("cabbage_pult", "roof_mid", 0.92)],
+        [("conehead", "roof_right", 0.86)],
+        [("chimney", "sky_right", 0.82)],
+        [("cabbage_arc", "center", 0.94)],
+    )
+    add(
+        "5-3",
+        "roof",
+        [("flower_pot", "roof_left", 0.88), ("kernel_pult", "roof_mid", 0.94)],
+        [("buckethead", "roof_right", 0.86)],
+        [("chimney", "sky_right", 0.82)],
+        [("corn_arc", "center", 0.94)],
+    )
+    add(
+        "5-4",
+        "roof",
+        [("flower_pot", "roof_left", 0.86), ("melon_pult", "roof_mid", 0.96)],
+        [("football", "roof_right", 0.88)],
+        [("chimney", "sky_right", 0.80)],
+        [("melon_arc", "center", 0.96)],
+    )
+    add(
+        "5-5",
+        "roof",
+        [("umbrella_leaf", "roof_left", 0.88), ("melon_pult", "roof_mid", 0.94)],
+        [("catapult", "roof_right", 0.90)],
+        [("chimney", "sky_right", 0.78)],
+        [("melon_arc", "center", 0.90)],
+    )
+    add(
+        "5-6",
+        "roof",
+        [("cabbage_pult", "roof_left", 0.90), ("kernel_pult", "roof_mid", 0.88)],
+        [("catapult", "roof_right", 0.90), ("ladder", "front_right", 0.72)],
+        [("chimney", "sky_right", 0.78)],
+        [("corn_arc", "center", 0.88), ("catapult_arc", "roof_right", 0.86)],
+    )
+    add(
+        "5-7",
+        "roof",
+        [("melon_pult", "roof_left", 0.92), ("umbrella_leaf", "roof_mid", 0.86)],
+        [("gargantuar", "roof_right", 0.90)],
+        [("chimney", "sky_right", 0.76)],
+        [("melon_arc", "center", 0.86)],
+    )
+    add(
+        "5-8",
+        "roof",
+        [("umbrella_leaf", "roof_left", 0.86), ("melon_pult", "roof_mid", 0.90), ("flower_pot", "roof_mid2", 0.76)],
+        [("gargantuar", "roof_right", 0.88), ("catapult", "front_right", 0.82)],
+        [("chimney", "sky_right", 0.74)],
+        [("catapult_arc", "front_right", 0.86)],
+    )
+    add(
+        "5-9",
+        "roof",
+        [("cob_cannon", "roof_left", 0.92), ("umbrella_leaf", "roof_mid", 0.82)],
+        [("gargantuar", "roof_right", 0.84), ("football", "front_right", 0.78)],
+        [("chimney", "sky_right", 0.74)],
+        [("cob_arc", "center", 0.94), ("big_wave", "sky_mid", 0.82)],
+    )
+    add(
+        "5-10",
+        "boss",
+        [("cob_cannon", "roof_left", 0.94), ("melon_pult", "roof_mid", 0.88), ("flower_pot", "roof_mid2", 0.72)],
+        [("zomboss", "boss_right", 1.04), ("imp", "front_right", 0.78), ("gargantuar", "roof_right", 0.74)],
+        [("boss_alert", "sky_mid", 0.96), ("chimney", "sky_left", 0.72)],
+        [("boss_glow", "boss_right", 1.00), ("cob_arc", "center", 0.90)],
+    )
+
+    return recipes
+
+
+ADVENTURE_PREVIEW_RECIPES = build_adventure_preview_recipes()
+
 I18N = {
     "en": {
         "language": "Language",
@@ -252,6 +735,21 @@ I18N = {
         "pvz_title": "PVZ Adventure",
         "level_select": "Level Select",
         "select_a_level": "Select A Level",
+        "chapter_select": "Chapter Select",
+        "choose_a_chapter": "Choose a Chapter",
+        "adventure_levels_title": "Adventure Levels",
+        "adventure_levels_subtitle": "Choose a stage from this chapter.",
+        "back_to_chapters": "Back To Chapters",
+        "chapter_1_title": "Front Yard Alert",
+        "chapter_1_subtitle": "Day Lawn Basics",
+        "chapter_2_title": "Nightfall",
+        "chapter_2_subtitle": "Mushrooms And Graves",
+        "chapter_3_title": "Pool Trouble",
+        "chapter_3_subtitle": "Water Lanes Open",
+        "chapter_4_title": "Fog Rising",
+        "chapter_4_subtitle": "Vision Under Pressure",
+        "chapter_5_title": "Roof Showdown",
+        "chapter_5_subtitle": "Lobbers And Final Boss",
         "shop": "Shop",
         "daves_shop": "Dave's Shop",
         "back": "Back",
@@ -494,6 +992,21 @@ I18N = {
         "pvz_title": "植物大战僵尸",
         "level_select": "选择关卡",
         "select_a_level": "选择一个关卡",
+        "chapter_select": "章节选择",
+        "choose_a_chapter": "选择一个章节",
+        "adventure_levels_title": "冒险关卡",
+        "adventure_levels_subtitle": "从当前章节中选择一关开始战斗。",
+        "back_to_chapters": "返回章节选择",
+        "chapter_1_title": "前院告急",
+        "chapter_1_subtitle": "白天草坪入门",
+        "chapter_2_title": "夜幕降临",
+        "chapter_2_subtitle": "蘑菇与墓碑",
+        "chapter_3_title": "泳池危机",
+        "chapter_3_subtitle": "水陆双线开启",
+        "chapter_4_title": "迷雾笼罩",
+        "chapter_4_subtitle": "视野与空袭压力",
+        "chapter_5_title": "屋顶决战",
+        "chapter_5_subtitle": "抛射防线与最终首领",
         "shop": "商店",
         "daves_shop": "疯狂戴夫商店",
         "back": "返回",
@@ -951,6 +1464,11 @@ class LevelConfig:
     large_wave_indices: Tuple[int, ...] = ()
     final_wave_index: int = 0
     wave_budgets: Tuple[int, ...] = ()
+    world: int = 1
+    stage: int = 1
+    display_code: str = ""
+    chapter_key: str = "chapter_1"
+    preview_theme: str = "day_intro"
 
 
 @dataclass
@@ -1169,7 +1687,6 @@ def build_zombies() -> Dict[str, ZombieType]:
 
 def build_levels(total: int = 50) -> List[LevelConfig]:
     all_plants = build_plants()
-    all_keys = list(all_plants.keys())
     zombie_keys = set(build_zombies().keys())
 
     def pool(keys: List[str]) -> List[str]:
@@ -1180,9 +1697,7 @@ def build_levels(total: int = 50) -> List[LevelConfig]:
         for k, v in pairs:
             if k in zombie_keys:
                 out[k] = v
-        if not out:
-            out = {"normal": 1.0}
-        return out
+        return out or {"normal": 1.0}
 
     core = ["sunflower", "peashooter", "wallnut", "potato_mine", "snowpea", "repeater", "cherrybomb", "chomper"]
     day_tools = ["squash", "jalapeno", "spikeweed", "torchwood", "tall_nut", "threepeater", "gatling"]
@@ -1192,64 +1707,54 @@ def build_levels(total: int = 50) -> List[LevelConfig]:
     roof_pack = ["flower_pot", "cabbage_pult", "kernel_pult", "melon_pult", "winter_melon", "cob_cannon", "spikerock"]
     late_pack = ["marigold", "gold_magnet", "gloom_shroom", "imitater"]
 
-    cards_early = pool(core + day_tools)
-    cards_night = pool(core + day_tools[:4] + mushroom_pack + ["pumpkin"])
-    cards_pool = pool(core + day_tools + mushroom_pack[:4] + pool_pack + ["pumpkin"])
-    cards_fog = pool(core + day_tools + mushroom_pack + pool_pack + fog_pack)
-    cards_roof = pool(core + day_tools + roof_pack + ["flower_pot", "pumpkin", "umbrella_leaf", "garlic"])
-    cards_mixed = pool(all_keys)
+    cards_day = pool(core + ["squash", "jalapeno", "torchwood", "tall_nut"])
+    cards_night = pool(core + ["squash", "jalapeno"] + mushroom_pack + ["pumpkin"])
+    cards_pool = pool(core + ["squash", "jalapeno", "torchwood", "tall_nut"] + mushroom_pack[:4] + pool_pack + ["pumpkin"])
+    cards_fog = pool(core + ["squash", "jalapeno", "torchwood", "tall_nut"] + mushroom_pack + pool_pack + fog_pack)
+    cards_roof = pool(core + day_tools + roof_pack + pool_pack[:2] + fog_pack + late_pack)
 
     levels: List[LevelConfig] = []
-    idx = 1
 
-    def build_wave_plan(level_idx: int, danger: int, battlefield: str) -> Tuple[int, Tuple[int, ...], int, Tuple[int, ...]]:
-        if level_idx <= 8:
-            total = 2 + (level_idx - 1) // 3
-        elif level_idx <= 16:
-            total = 4 + (level_idx - 9) // 3
-        elif level_idx <= 24:
-            total = 5 + (level_idx - 17) // 3
-        elif level_idx <= 32:
-            total = 6 + (level_idx - 25) // 4
-        elif level_idx <= 40:
-            total = 6 + (level_idx - 33) // 3
-        elif level_idx <= 49:
-            total = 7 + (level_idx - 41) // 4
+    def build_wave_plan(world: int, stage: int, danger: int, battlefield: str, boss: bool = False) -> Tuple[int, Tuple[int, ...], int, Tuple[int, ...]]:
+        if boss:
+            total_waves = 9
+            large = {3, 6, 8, 9}
+        elif world == 1:
+            total_waves = 2 + min(3, (stage - 1) // 3) + (1 if stage >= 9 else 0)
+            large = {max(2, total_waves - 1), total_waves}
+        elif world == 2:
+            total_waves = 4 + min(2, (stage - 1) // 4) + (1 if stage >= 8 else 0)
+            large = {max(2, total_waves // 2), total_waves}
+        elif world == 3:
+            total_waves = 5 + min(2, (stage - 1) // 4) + (1 if stage >= 9 else 0)
+            large = {max(2, total_waves // 2), total_waves}
+        elif world == 4:
+            total_waves = 6 + min(1, (stage - 1) // 5) + (1 if stage >= 8 else 0)
+            large = {max(2, total_waves // 2), max(3, total_waves - 1), total_waves}
         else:
-            total = 9
-        total = int(clamp(float(total), 2.0, 9.0))
-
-        large = {total}
-        if total >= 4:
-            large.add(max(2, total // 2))
-        if total >= 6:
-            large.add(max(3, total - 2))
-        if level_idx >= 41:
-            large.add(max(2, total - 1))
-        if level_idx == 50:
-            large.update({3, 6, 9})
-        large = {wave for wave in large if 1 <= wave <= total}
-
-        base_budget = 2 + danger
-        if battlefield in ("pool", "fog", "roof"):
-            base_budget += 1
+            total_waves = 6 + min(1, (stage - 1) // 4) + (1 if stage >= 8 else 0) + (1 if stage >= 10 else 0)
+            large = {max(2, total_waves // 2), max(3, total_waves - 1), total_waves}
+        total_waves = int(clamp(float(total_waves), 2.0, 9.0))
+        large = {wave for wave in large if 1 <= wave <= total_waves}
+        base_budget = 2 + danger + (1 if battlefield in ("pool", "fog", "roof") else 0)
         budgets: List[int] = []
-        for wave_idx in range(1, total + 1):
-            budget = base_budget + int(math.ceil(wave_idx * 0.8))
+        for wave_idx in range(1, total_waves + 1):
+            budget = base_budget + int(math.ceil(wave_idx * 0.75))
             if wave_idx in large:
                 budget += 1 + max(1, danger // 3)
-            if wave_idx == total:
-                budget += 2 + max(1, danger // 2)
-            if level_idx <= 3:
+            if wave_idx == total_waves:
+                budget += 1 + max(1, danger // 2)
+            if world == 1 and stage <= 3:
                 budget = max(2, budget - 2)
-            elif level_idx <= 8:
+            elif world == 1:
                 budget = max(3, budget - 1)
             budgets.append(int(budget))
-        return total, tuple(sorted(large)), total, tuple(budgets)
+        return total_waves, tuple(sorted(large)), total_waves, tuple(budgets)
 
     def add_level(
+        world: int,
+        stage: int,
         battlefield: str,
-        duration: float,
         start_sun: int,
         spawn_base: float,
         spawn_min: float,
@@ -1258,15 +1763,18 @@ def build_levels(total: int = 50) -> List[LevelConfig]:
         cards: List[str],
         danger: int,
         tag_key: str,
+        preview_theme: str,
+        boss: bool = False,
     ) -> None:
-        nonlocal idx
-        total_waves, large_wave_indices, final_wave_index, wave_budgets = build_wave_plan(idx, danger, battlefield)
+        idx = (world - 1) * 10 + stage
+        total_waves, large_wave_indices, final_wave_index, wave_budgets = build_wave_plan(world, stage, danger, battlefield, boss=boss)
+        display_code = f"{world}-{stage}"
         levels.append(
             LevelConfig(
                 idx=idx,
-                name=f"Level {idx}",
+                name=f"Level {display_code}",
                 battlefield=battlefield,
-                duration=duration,
+                duration=96 + world * 16 + stage * 4 + (10 if battlefield in ("pool", "fog", "roof") else 0),
                 start_sun=start_sun,
                 spawn_base=spawn_base,
                 spawn_min=spawn_min,
@@ -1279,181 +1787,164 @@ def build_levels(total: int = 50) -> List[LevelConfig]:
                 large_wave_indices=large_wave_indices,
                 final_wave_index=final_wave_index,
                 wave_budgets=wave_budgets,
+                world=world,
+                stage=stage,
+                display_code=display_code,
+                chapter_key=f"chapter_{world}",
+                preview_theme=preview_theme,
             )
         )
-        idx += 1
 
-    # Band 1: early day tutorial (1-8)
-    early_templates = [
+    world1_zombies = [
         [("normal", 1.0)],
-        [("normal", 0.78), ("conehead", 0.22)],
-        [("normal", 0.70), ("conehead", 0.30)],
-        [("normal", 0.62), ("conehead", 0.30), ("pole_vaulting", 0.08)],
-        [("normal", 0.58), ("conehead", 0.28), ("newspaper", 0.14)],
-        [("normal", 0.52), ("conehead", 0.28), ("buckethead", 0.10), ("pole_vaulting", 0.10)],
-        [("normal", 0.40), ("conehead", 0.26), ("buckethead", 0.18), ("newspaper", 0.16)],
-        [("normal", 0.34), ("conehead", 0.24), ("buckethead", 0.20), ("screen_door", 0.10), ("flag_zombie", 0.12)],
+        [("normal", 0.88), ("conehead", 0.12)],
+        [("normal", 0.80), ("conehead", 0.20)],
+        [("normal", 0.72), ("conehead", 0.18), ("flag_zombie", 0.10)],
+        [("normal", 0.64), ("conehead", 0.18), ("pole_vaulting", 0.18)],
+        [("normal", 0.58), ("conehead", 0.18), ("newspaper", 0.14), ("pole_vaulting", 0.10)],
+        [("normal", 0.50), ("conehead", 0.18), ("newspaper", 0.14), ("buckethead", 0.10), ("pole_vaulting", 0.08)],
+        [("normal", 0.44), ("conehead", 0.18), ("buckethead", 0.14), ("screen_door", 0.10), ("flag_zombie", 0.14)],
+        [("normal", 0.38), ("conehead", 0.16), ("buckethead", 0.16), ("screen_door", 0.12), ("football", 0.06), ("flag_zombie", 0.12)],
+        [("normal", 0.32), ("conehead", 0.16), ("buckethead", 0.18), ("screen_door", 0.14), ("football", 0.08), ("flag_zombie", 0.12)],
     ]
-    early_tags = ["tag_tutorial", "tag_tutorial", "tag_economy", "tag_rush", "tag_pressure", "tag_armored", "tag_lane_split", "tag_flag_wave"]
-    for i in range(8):
+    world1_tags = ["tag_tutorial", "tag_tutorial", "tag_economy", "tag_pressure", "tag_rush", "tag_armored", "tag_lane_split", "tag_flag_wave", "tag_pressure", "tag_flag_wave"]
+    world1_previews = ["day_intro", "day_pea", "day_sunflower", "day_wallnut", "day_snowpea", "day_repeater", "day_cherry", "day_chomper", "day_flag", "day_bucket"]
+    for stage in range(1, 11):
         add_level(
+            world=1,
+            stage=stage,
             battlefield="day",
-            duration=105 + i * 7,
-            start_sun=300 - i * 8,
-            spawn_base=6.2 - i * 0.20,
-            spawn_min=3.8 - i * 0.08,
-            spawn_acc=0.0034 + i * 0.00035,
-            z_pairs=early_templates[i],
-            cards=cards_early[: min(len(cards_early), 9 + i)],
-            danger=1 + i // 2,
-            tag_key=early_tags[i],
+            start_sun=max(225, 300 - (stage - 1) * 6),
+            spawn_base=6.8 - stage * 0.15,
+            spawn_min=4.5 - stage * 0.07,
+            spawn_acc=0.0028 + stage * 0.00030,
+            z_pairs=world1_zombies[stage - 1],
+            cards=cards_day[: min(len(cards_day), 5 + stage)],
+            danger=min(4, 1 + (stage - 1) // 3),
+            tag_key=world1_tags[stage - 1],
+            preview_theme=world1_previews[stage - 1],
         )
 
-    # Band 2: night mushroom identity (9-16)
-    night_templates = [
-        [("normal", 0.56), ("conehead", 0.24), ("newspaper", 0.20)],
-        [("normal", 0.48), ("conehead", 0.22), ("newspaper", 0.18), ("screen_door", 0.12)],
-        [("normal", 0.42), ("conehead", 0.22), ("newspaper", 0.16), ("football", 0.08), ("flag_zombie", 0.12)],
-        [("normal", 0.38), ("conehead", 0.20), ("buckethead", 0.14), ("screen_door", 0.12), ("dancing", 0.16)],
-        [("normal", 0.34), ("conehead", 0.18), ("buckethead", 0.16), ("dancing", 0.16), ("backup_dancer", 0.16)],
-        [("normal", 0.30), ("conehead", 0.16), ("buckethead", 0.16), ("dancing", 0.16), ("backup_dancer", 0.14), ("jack_in_the_box", 0.08)],
-        [("normal", 0.26), ("conehead", 0.16), ("buckethead", 0.18), ("screen_door", 0.14), ("football", 0.10), ("dancing", 0.16)],
-        [("normal", 0.24), ("conehead", 0.14), ("buckethead", 0.18), ("screen_door", 0.14), ("football", 0.12), ("dancing", 0.10), ("jack_in_the_box", 0.08)],
+    world2_zombies = [
+        [("normal", 0.58), ("conehead", 0.18), ("newspaper", 0.24)],
+        [("normal", 0.52), ("conehead", 0.18), ("newspaper", 0.20), ("screen_door", 0.10)],
+        [("normal", 0.48), ("conehead", 0.18), ("newspaper", 0.18), ("screen_door", 0.10), ("flag_zombie", 0.06)],
+        [("normal", 0.42), ("conehead", 0.16), ("newspaper", 0.16), ("screen_door", 0.10), ("dancing", 0.16)],
+        [("normal", 0.38), ("conehead", 0.16), ("buckethead", 0.12), ("dancing", 0.16), ("backup_dancer", 0.18)],
+        [("normal", 0.34), ("conehead", 0.14), ("buckethead", 0.14), ("dancing", 0.16), ("backup_dancer", 0.16), ("jack_in_the_box", 0.06)],
+        [("normal", 0.30), ("conehead", 0.14), ("buckethead", 0.14), ("screen_door", 0.12), ("dancing", 0.14), ("backup_dancer", 0.10), ("jack_in_the_box", 0.06)],
+        [("normal", 0.28), ("conehead", 0.12), ("buckethead", 0.14), ("screen_door", 0.12), ("football", 0.08), ("dancing", 0.12), ("backup_dancer", 0.08), ("jack_in_the_box", 0.06)],
+        [("normal", 0.24), ("conehead", 0.12), ("buckethead", 0.16), ("screen_door", 0.12), ("football", 0.10), ("dancing", 0.12), ("backup_dancer", 0.08), ("jack_in_the_box", 0.06)],
+        [("normal", 0.22), ("conehead", 0.10), ("buckethead", 0.16), ("screen_door", 0.12), ("football", 0.12), ("dancing", 0.10), ("backup_dancer", 0.08), ("jack_in_the_box", 0.10)],
     ]
-    night_tags = ["tag_night_intro", "tag_night_control", "tag_night_rush", "tag_night_dance", "tag_night_swarm", "tag_night_trick", "tag_night_armor", "tag_night_peak"]
-    for i in range(8):
+    world2_tags = ["tag_night_intro", "tag_night_control", "tag_night_control", "tag_night_dance", "tag_night_swarm", "tag_night_trick", "tag_night_armor", "tag_night_rush", "tag_night_peak", "tag_night_peak"]
+    world2_previews = ["night_intro", "night_puff", "night_fume", "night_grave", "night_dance", "night_scaredy", "night_hypno", "night_screen", "night_football", "night_jack"]
+    for stage in range(1, 11):
         add_level(
+            world=2,
+            stage=stage,
             battlefield="night",
-            duration=122 + i * 8,
-            start_sun=240 - i * 6,
-            spawn_base=5.6 - i * 0.17,
-            spawn_min=3.2 - i * 0.07,
-            spawn_acc=0.0046 + i * 0.00045,
-            z_pairs=night_templates[i],
-            cards=cards_night[: min(len(cards_night), 12 + min(6, i))],
-            danger=2 + i // 2,
-            tag_key=night_tags[i],
+            start_sun=max(180, 245 - (stage - 1) * 5),
+            spawn_base=5.8 - stage * 0.13,
+            spawn_min=3.4 - stage * 0.06,
+            spawn_acc=0.0043 + stage * 0.00036,
+            z_pairs=world2_zombies[stage - 1],
+            cards=cards_night[: min(len(cards_night), 8 + stage)],
+            danger=min(5, 2 + (stage - 1) // 3),
+            tag_key=world2_tags[stage - 1],
+            preview_theme=world2_previews[stage - 1],
         )
 
-    # Band 3: pool control identity (17-24)
-    pool_templates = [
-        [("normal", 0.34), ("conehead", 0.20), ("ducky_tube", 0.28), ("snorkel", 0.18)],
-        [("normal", 0.30), ("conehead", 0.18), ("ducky_tube", 0.30), ("snorkel", 0.18), ("dolphin_rider", 0.04)],
-        [("normal", 0.28), ("conehead", 0.18), ("ducky_tube", 0.28), ("snorkel", 0.16), ("dolphin_rider", 0.10)],
-        [("normal", 0.24), ("conehead", 0.16), ("buckethead", 0.10), ("ducky_tube", 0.26), ("snorkel", 0.14), ("dolphin_rider", 0.10)],
-        [("normal", 0.20), ("conehead", 0.14), ("buckethead", 0.14), ("ducky_tube", 0.24), ("snorkel", 0.14), ("dolphin_rider", 0.10), ("zomboni", 0.04)],
-        [("normal", 0.18), ("conehead", 0.12), ("buckethead", 0.14), ("ducky_tube", 0.22), ("snorkel", 0.14), ("dolphin_rider", 0.10), ("zomboni", 0.10)],
-        [("normal", 0.16), ("conehead", 0.12), ("buckethead", 0.16), ("ducky_tube", 0.18), ("snorkel", 0.14), ("dolphin_rider", 0.12), ("zomboni", 0.12)],
-        [("normal", 0.14), ("conehead", 0.12), ("buckethead", 0.16), ("ducky_tube", 0.16), ("snorkel", 0.14), ("dolphin_rider", 0.12), ("zomboni", 0.10), ("bobsled_team", 0.06)],
+    world3_zombies = [
+        [("normal", 0.34), ("conehead", 0.18), ("ducky_tube", 0.30), ("snorkel", 0.18)],
+        [("normal", 0.30), ("conehead", 0.18), ("ducky_tube", 0.30), ("snorkel", 0.16), ("dolphin_rider", 0.06)],
+        [("normal", 0.28), ("conehead", 0.16), ("ducky_tube", 0.28), ("snorkel", 0.16), ("dolphin_rider", 0.12)],
+        [("normal", 0.24), ("conehead", 0.14), ("buckethead", 0.10), ("ducky_tube", 0.24), ("snorkel", 0.14), ("dolphin_rider", 0.14)],
+        [("normal", 0.22), ("conehead", 0.14), ("buckethead", 0.12), ("ducky_tube", 0.22), ("snorkel", 0.14), ("dolphin_rider", 0.12), ("zomboni", 0.04)],
+        [("normal", 0.18), ("conehead", 0.12), ("buckethead", 0.14), ("ducky_tube", 0.20), ("snorkel", 0.14), ("dolphin_rider", 0.12), ("zomboni", 0.10)],
+        [("normal", 0.16), ("conehead", 0.12), ("buckethead", 0.16), ("ducky_tube", 0.18), ("snorkel", 0.12), ("dolphin_rider", 0.12), ("zomboni", 0.10), ("bobsled_team", 0.04)],
+        [("normal", 0.14), ("conehead", 0.12), ("buckethead", 0.16), ("ducky_tube", 0.16), ("snorkel", 0.12), ("dolphin_rider", 0.12), ("zomboni", 0.10), ("bobsled_team", 0.08)],
+        [("normal", 0.12), ("conehead", 0.10), ("buckethead", 0.16), ("ducky_tube", 0.16), ("snorkel", 0.12), ("dolphin_rider", 0.12), ("zomboni", 0.12), ("bobsled_team", 0.10)],
+        [("normal", 0.10), ("conehead", 0.10), ("buckethead", 0.16), ("ducky_tube", 0.14), ("snorkel", 0.10), ("dolphin_rider", 0.14), ("zomboni", 0.14), ("bobsled_team", 0.12)],
     ]
-    pool_tags = ["tag_pool_intro", "tag_pool_lane", "tag_pool_dolphin", "tag_pool_armor", "tag_pool_vehicle", "tag_pool_pressure", "tag_pool_split", "tag_pool_peak"]
-    for i in range(8):
+    world3_tags = ["tag_pool_intro", "tag_pool_lane", "tag_pool_dolphin", "tag_pool_dolphin", "tag_pool_armor", "tag_pool_vehicle", "tag_pool_pressure", "tag_pool_split", "tag_pool_peak", "tag_pool_peak"]
+    world3_previews = ["pool_intro", "pool_lily", "pool_dolphin", "pool_snorkel", "pool_tallnut", "pool_zomboni", "pool_tangle", "pool_threepeater", "pool_bobsled", "pool_peak"]
+    for stage in range(1, 11):
         add_level(
+            world=3,
+            stage=stage,
             battlefield="pool",
-            duration=130 + i * 8,
-            start_sun=255 - i * 5,
-            spawn_base=5.2 - i * 0.16,
-            spawn_min=3.0 - i * 0.06,
-            spawn_acc=0.0052 + i * 0.00050,
-            z_pairs=pool_templates[i],
-            cards=cards_pool[: min(len(cards_pool), 14 + min(8, i))],
-            danger=3 + i // 2,
-            tag_key=pool_tags[i],
+            start_sun=max(175, 260 - (stage - 1) * 4),
+            spawn_base=5.3 - stage * 0.12,
+            spawn_min=3.1 - stage * 0.05,
+            spawn_acc=0.0049 + stage * 0.00042,
+            z_pairs=world3_zombies[stage - 1],
+            cards=cards_pool[: min(len(cards_pool), 8 + stage)],
+            danger=min(5, 3 + (stage - 1) // 3),
+            tag_key=world3_tags[stage - 1],
+            preview_theme=world3_previews[stage - 1],
         )
 
-    # Band 4: fog vision management (25-32)
-    fog_templates = [
-        [("normal", 0.24), ("conehead", 0.16), ("ducky_tube", 0.18), ("snorkel", 0.10), ("balloon", 0.12), ("ladder", 0.10), ("bungee", 0.10)],
-        [("normal", 0.20), ("conehead", 0.14), ("buckethead", 0.10), ("ducky_tube", 0.16), ("snorkel", 0.10), ("balloon", 0.12), ("bungee", 0.10), ("ladder", 0.08)],
-        [("normal", 0.18), ("conehead", 0.14), ("buckethead", 0.12), ("ducky_tube", 0.14), ("snorkel", 0.10), ("balloon", 0.12), ("bungee", 0.10), ("ladder", 0.10)],
-        [("normal", 0.16), ("conehead", 0.12), ("buckethead", 0.14), ("balloon", 0.14), ("bungee", 0.12), ("ladder", 0.10), ("digger", 0.10), ("pogo", 0.12)],
-        [("normal", 0.14), ("conehead", 0.10), ("buckethead", 0.14), ("screen_door", 0.10), ("balloon", 0.14), ("bungee", 0.10), ("ladder", 0.10), ("digger", 0.08), ("pogo", 0.10)],
-        [("normal", 0.12), ("conehead", 0.10), ("buckethead", 0.14), ("screen_door", 0.10), ("balloon", 0.14), ("bungee", 0.10), ("ladder", 0.10), ("digger", 0.10), ("pogo", 0.10)],
-        [("normal", 0.10), ("conehead", 0.10), ("buckethead", 0.14), ("screen_door", 0.10), ("football", 0.08), ("balloon", 0.14), ("bungee", 0.10), ("ladder", 0.10), ("digger", 0.08), ("pogo", 0.06)],
+    world4_zombies = [
+        [("normal", 0.24), ("conehead", 0.14), ("ducky_tube", 0.16), ("snorkel", 0.10), ("balloon", 0.14), ("bungee", 0.10), ("ladder", 0.12)],
+        [("normal", 0.22), ("conehead", 0.14), ("buckethead", 0.10), ("ducky_tube", 0.14), ("snorkel", 0.10), ("balloon", 0.14), ("bungee", 0.10), ("ladder", 0.06)],
+        [("normal", 0.20), ("conehead", 0.12), ("buckethead", 0.12), ("ducky_tube", 0.14), ("snorkel", 0.10), ("balloon", 0.12), ("bungee", 0.10), ("ladder", 0.10)],
+        [("normal", 0.18), ("conehead", 0.12), ("buckethead", 0.12), ("balloon", 0.14), ("bungee", 0.12), ("ladder", 0.10), ("digger", 0.10), ("pogo", 0.12)],
+        [("normal", 0.16), ("conehead", 0.10), ("buckethead", 0.14), ("screen_door", 0.10), ("balloon", 0.12), ("bungee", 0.10), ("ladder", 0.10), ("digger", 0.08), ("pogo", 0.10)],
+        [("normal", 0.14), ("conehead", 0.10), ("buckethead", 0.14), ("screen_door", 0.10), ("balloon", 0.12), ("bungee", 0.10), ("ladder", 0.10), ("digger", 0.10), ("pogo", 0.10)],
+        [("normal", 0.12), ("conehead", 0.10), ("buckethead", 0.14), ("screen_door", 0.10), ("football", 0.08), ("balloon", 0.12), ("bungee", 0.10), ("ladder", 0.10), ("digger", 0.08), ("pogo", 0.06)],
+        [("normal", 0.10), ("conehead", 0.08), ("buckethead", 0.14), ("screen_door", 0.10), ("football", 0.10), ("balloon", 0.12), ("bungee", 0.10), ("ladder", 0.10), ("digger", 0.08), ("pogo", 0.08)],
         [("normal", 0.08), ("conehead", 0.08), ("buckethead", 0.14), ("screen_door", 0.10), ("football", 0.10), ("balloon", 0.12), ("bungee", 0.10), ("ladder", 0.10), ("digger", 0.10), ("pogo", 0.08)],
+        [("normal", 0.08), ("conehead", 0.08), ("buckethead", 0.12), ("screen_door", 0.10), ("football", 0.10), ("balloon", 0.12), ("bungee", 0.10), ("ladder", 0.10), ("digger", 0.10), ("pogo", 0.10)],
     ]
-    fog_tags = ["tag_fog_intro", "tag_fog_vision", "tag_fog_air", "tag_fog_flank", "tag_fog_combo", "tag_fog_rush", "tag_fog_heavy", "tag_fog_peak"]
-    for i in range(8):
+    world4_tags = ["tag_fog_intro", "tag_fog_vision", "tag_fog_air", "tag_fog_flank", "tag_fog_combo", "tag_fog_rush", "tag_fog_heavy", "tag_fog_peak", "tag_fog_peak", "tag_fog_peak"]
+    world4_previews = ["fog_intro", "fog_plantern", "fog_balloon", "fog_bungee", "fog_digger", "fog_pogo", "fog_ladder", "fog_umbrella", "fog_peak", "fog_peak_plus"]
+    for stage in range(1, 11):
         add_level(
+            world=4,
+            stage=stage,
             battlefield="fog",
-            duration=138 + i * 8,
-            start_sun=245 - i * 4,
-            spawn_base=4.8 - i * 0.15,
-            spawn_min=2.8 - i * 0.06,
-            spawn_acc=0.0060 + i * 0.00055,
-            z_pairs=fog_templates[i],
-            cards=cards_fog[: min(len(cards_fog), 16 + min(10, i))],
-            danger=4 + i // 2,
-            tag_key=fog_tags[i],
+            start_sun=max(170, 250 - (stage - 1) * 4),
+            spawn_base=4.9 - stage * 0.11,
+            spawn_min=2.9 - stage * 0.05,
+            spawn_acc=0.0057 + stage * 0.00048,
+            z_pairs=world4_zombies[stage - 1],
+            cards=cards_fog[: min(len(cards_fog), 10 + stage)],
+            danger=min(6, 4 + (stage - 1) // 3),
+            tag_key=world4_tags[stage - 1],
+            preview_theme=world4_previews[stage - 1],
         )
 
-    # Band 5: roof / lob control (33-40)
-    roof_templates = [
-        [("normal", 0.18), ("conehead", 0.14), ("buckethead", 0.14), ("ladder", 0.12), ("catapult", 0.10), ("pogo", 0.10), ("digger", 0.10), ("screen_door", 0.12)],
-        [("normal", 0.16), ("conehead", 0.12), ("buckethead", 0.14), ("ladder", 0.12), ("catapult", 0.12), ("pogo", 0.10), ("digger", 0.10), ("screen_door", 0.10), ("football", 0.04)],
-        [("normal", 0.14), ("conehead", 0.10), ("buckethead", 0.14), ("ladder", 0.12), ("catapult", 0.12), ("pogo", 0.10), ("digger", 0.10), ("screen_door", 0.10), ("football", 0.08)],
-        [("normal", 0.12), ("conehead", 0.10), ("buckethead", 0.14), ("ladder", 0.12), ("catapult", 0.14), ("pogo", 0.10), ("digger", 0.10), ("screen_door", 0.08), ("football", 0.10)],
-        [("normal", 0.10), ("conehead", 0.10), ("buckethead", 0.14), ("ladder", 0.12), ("catapult", 0.14), ("pogo", 0.10), ("digger", 0.10), ("screen_door", 0.08), ("football", 0.12)],
-        [("normal", 0.08), ("conehead", 0.08), ("buckethead", 0.14), ("ladder", 0.12), ("catapult", 0.16), ("pogo", 0.10), ("digger", 0.10), ("screen_door", 0.08), ("football", 0.14)],
-        [("normal", 0.08), ("conehead", 0.08), ("buckethead", 0.12), ("ladder", 0.12), ("catapult", 0.18), ("pogo", 0.10), ("digger", 0.10), ("screen_door", 0.08), ("football", 0.14)],
-        [("normal", 0.06), ("conehead", 0.08), ("buckethead", 0.12), ("ladder", 0.12), ("catapult", 0.18), ("pogo", 0.12), ("digger", 0.10), ("screen_door", 0.08), ("football", 0.14)],
+    world5_zombies = [
+        [("normal", 0.16), ("conehead", 0.12), ("buckethead", 0.12), ("ladder", 0.12), ("catapult", 0.12), ("screen_door", 0.12), ("pogo", 0.12), ("digger", 0.12)],
+        [("normal", 0.14), ("conehead", 0.10), ("buckethead", 0.12), ("ladder", 0.12), ("catapult", 0.14), ("screen_door", 0.10), ("pogo", 0.10), ("digger", 0.10), ("football", 0.08)],
+        [("normal", 0.12), ("conehead", 0.10), ("buckethead", 0.12), ("ladder", 0.12), ("catapult", 0.14), ("screen_door", 0.10), ("pogo", 0.10), ("digger", 0.10), ("football", 0.10)],
+        [("normal", 0.10), ("conehead", 0.08), ("buckethead", 0.12), ("ladder", 0.12), ("catapult", 0.14), ("screen_door", 0.10), ("pogo", 0.10), ("digger", 0.10), ("football", 0.14)],
+        [("normal", 0.08), ("conehead", 0.08), ("buckethead", 0.12), ("ladder", 0.12), ("catapult", 0.14), ("screen_door", 0.08), ("pogo", 0.10), ("digger", 0.10), ("football", 0.18)],
+        [("normal", 0.08), ("conehead", 0.06), ("buckethead", 0.10), ("ladder", 0.12), ("catapult", 0.16), ("screen_door", 0.08), ("pogo", 0.10), ("digger", 0.10), ("football", 0.12), ("balloon", 0.08)],
+        [("normal", 0.06), ("conehead", 0.06), ("buckethead", 0.10), ("ladder", 0.12), ("catapult", 0.16), ("screen_door", 0.08), ("pogo", 0.10), ("digger", 0.10), ("football", 0.12), ("gargantuar", 0.10)],
+        [("normal", 0.06), ("conehead", 0.06), ("buckethead", 0.10), ("ladder", 0.12), ("catapult", 0.16), ("screen_door", 0.08), ("pogo", 0.10), ("digger", 0.08), ("football", 0.12), ("gargantuar", 0.12)],
+        [("normal", 0.04), ("conehead", 0.06), ("buckethead", 0.10), ("ladder", 0.12), ("catapult", 0.16), ("screen_door", 0.08), ("pogo", 0.10), ("digger", 0.08), ("football", 0.12), ("gargantuar", 0.14)],
+        [("zomboss", 1.0), ("gargantuar", 0.28), ("imp", 0.32), ("catapult", 0.18), ("buckethead", 0.22)],
     ]
-    roof_tags = ["tag_roof_intro", "tag_roof_lob", "tag_roof_ladder", "tag_roof_siege", "tag_roof_pressure", "tag_roof_breaker", "tag_roof_split", "tag_roof_peak"]
-    for i in range(8):
+    world5_tags = ["tag_roof_intro", "tag_roof_lob", "tag_roof_ladder", "tag_roof_siege", "tag_roof_pressure", "tag_roof_breaker", "tag_roof_split", "tag_roof_peak", "tag_roof_peak", "tag_final_boss"]
+    world5_previews = ["roof_intro", "roof_flowerpot", "roof_cabbage", "roof_kernel", "roof_melon", "roof_catapult", "roof_umbrella", "roof_gargantuar", "roof_peak", "roof_boss"]
+    for stage in range(1, 11):
         add_level(
+            world=5,
+            stage=stage,
             battlefield="roof",
-            duration=144 + i * 8,
-            start_sun=240 - i * 4,
-            spawn_base=4.7 - i * 0.14,
-            spawn_min=2.7 - i * 0.06,
-            spawn_acc=0.0064 + i * 0.00060,
-            z_pairs=roof_templates[i],
-            cards=cards_roof[: min(len(cards_roof), 12 + min(9, i))],
-            danger=4 + i // 2,
-            tag_key=roof_tags[i],
+            start_sun=500 if stage == 10 else max(180, 255 - (stage - 1) * 3),
+            spawn_base=3.4 if stage == 10 else (4.8 - stage * 0.10),
+            spawn_min=1.7 if stage == 10 else (2.7 - stage * 0.05),
+            spawn_acc=0.0100 if stage == 10 else (0.0061 + stage * 0.00055),
+            z_pairs=world5_zombies[stage - 1],
+            cards=cards_roof if stage >= 8 else cards_roof[: min(len(cards_roof), 9 + stage)],
+            danger=6 if stage == 10 else min(6, 4 + (stage - 1) // 2),
+            tag_key=world5_tags[stage - 1],
+            preview_theme=world5_previews[stage - 1],
+            boss=stage == 10,
         )
-
-    # Band 6: late mixed pressure (41-49)
-    mixed_templates = [
-        [("buckethead", 0.14), ("football", 0.10), ("ladder", 0.10), ("balloon", 0.08), ("catapult", 0.12), ("digger", 0.08), ("pogo", 0.08), ("zomboni", 0.10), ("dolphin_rider", 0.08), ("gargantuar", 0.06), ("imp", 0.06)],
-        [("buckethead", 0.14), ("football", 0.10), ("ladder", 0.10), ("balloon", 0.08), ("catapult", 0.12), ("digger", 0.08), ("pogo", 0.08), ("zomboni", 0.10), ("bungee", 0.06), ("gargantuar", 0.08), ("imp", 0.06)],
-        [("buckethead", 0.12), ("football", 0.10), ("ladder", 0.10), ("balloon", 0.08), ("catapult", 0.12), ("digger", 0.08), ("pogo", 0.08), ("zomboni", 0.10), ("bungee", 0.06), ("dolphin_rider", 0.06), ("gargantuar", 0.10), ("imp", 0.10)],
-        [("buckethead", 0.12), ("football", 0.10), ("ladder", 0.10), ("screen_door", 0.06), ("balloon", 0.08), ("catapult", 0.12), ("digger", 0.08), ("pogo", 0.08), ("zomboni", 0.08), ("bungee", 0.06), ("gargantuar", 0.12), ("imp", 0.10)],
-        [("buckethead", 0.10), ("football", 0.10), ("ladder", 0.10), ("screen_door", 0.06), ("balloon", 0.08), ("catapult", 0.12), ("digger", 0.08), ("pogo", 0.08), ("zomboni", 0.08), ("bungee", 0.06), ("gargantuar", 0.14), ("imp", 0.10)],
-        [("buckethead", 0.10), ("football", 0.10), ("ladder", 0.10), ("screen_door", 0.06), ("balloon", 0.06), ("catapult", 0.12), ("digger", 0.08), ("pogo", 0.08), ("zomboni", 0.08), ("bungee", 0.06), ("gargantuar", 0.14), ("imp", 0.12)],
-        [("buckethead", 0.10), ("football", 0.10), ("ladder", 0.10), ("screen_door", 0.06), ("balloon", 0.06), ("catapult", 0.12), ("digger", 0.08), ("pogo", 0.08), ("zomboni", 0.08), ("bungee", 0.06), ("gargantuar", 0.14), ("imp", 0.12)],
-        [("buckethead", 0.08), ("football", 0.10), ("ladder", 0.10), ("screen_door", 0.06), ("balloon", 0.06), ("catapult", 0.12), ("digger", 0.08), ("pogo", 0.08), ("zomboni", 0.08), ("bungee", 0.06), ("gargantuar", 0.16), ("imp", 0.12)],
-        [("buckethead", 0.08), ("football", 0.10), ("ladder", 0.10), ("screen_door", 0.06), ("balloon", 0.06), ("catapult", 0.12), ("digger", 0.08), ("pogo", 0.08), ("zomboni", 0.08), ("bungee", 0.06), ("gargantuar", 0.16), ("imp", 0.12)],
-    ]
-    mixed_fields = ["day", "night", "pool", "fog", "roof", "day", "fog", "roof", "pool"]
-    mixed_tags = ["tag_mixed_intro", "tag_mixed_night", "tag_mixed_pool", "tag_mixed_fog", "tag_mixed_roof", "tag_mixed_rush", "tag_mixed_air", "tag_mixed_siege", "tag_mixed_finale"]
-    for i in range(9):
-        add_level(
-            battlefield=mixed_fields[i],
-            duration=156 + i * 7,
-            start_sun=250 + (i % 3) * 35,
-            spawn_base=4.2 - i * 0.11,
-            spawn_min=2.3 - i * 0.05,
-            spawn_acc=0.0073 + i * 0.00070,
-            z_pairs=mixed_templates[i],
-            cards=cards_mixed[: max(20, len(cards_mixed) - 2 + i)],
-            danger=5 + (1 if i >= 5 else 0),
-            tag_key=mixed_tags[i],
-        )
-
-    # Band 7: final boss (50)
-    add_level(
-        battlefield="roof",
-        duration=205,
-        start_sun=500,
-        spawn_base=3.4,
-        spawn_min=1.6,
-        spawn_acc=0.0105,
-        z_pairs=[("zomboss", 1.0), ("gargantuar", 0.38), ("imp", 0.42), ("buckethead", 0.30)],
-        cards=cards_mixed,
-        danger=6,
-        tag_key="tag_final_boss",
-    )
 
     if total <= 0:
         return []
@@ -4799,6 +5290,8 @@ class Game:
         os.makedirs(self.assets_root / "ui" / "modes", exist_ok=True)
         self.image_cache: Dict[Tuple[str, Optional[Tuple[int, int]]], Optional[pygame.Surface]] = {}
         self.mode_thumb_cache: Dict[Tuple[str, Tuple[int, int]], pygame.Surface] = {}
+        self.adventure_preview_cache: Dict[Tuple[str, Tuple[int, int]], pygame.Surface] = {}
+        self.adventure_chapter_cache: Dict[Tuple[int, Tuple[int, int]], pygame.Surface] = {}
         self.logged_loaded_sprites = set()
         self.logged_missing_sprites = set()
         self.download_attempted_keys = set()
@@ -4835,6 +5328,7 @@ class Game:
         self.level_page = 0
         self.page_size = 10
         self.level_idx = 0
+        self.adventure_chapter_selected = 1
         self.pending_level_idx: Optional[int] = None
         self.pending_mode_rules: Optional[Dict[str, object]] = None
         self.current_mode_base_rules: Dict[str, object] = {}
@@ -4846,7 +5340,7 @@ class Game:
         self.survival_resume_sun = 0
         self.plant_select_pool: List[str] = []
         self.plant_select_selected: List[str] = []
-        self.plant_select_return_scene = "select"
+        self.plant_select_return_scene = "adventure_level_select"
         self.default_plant_select_pick_limit = 8
         self.plant_select_pick_limit = self.default_plant_select_pick_limit
         self.plant_select_scroll_y = 0
@@ -7094,19 +7588,57 @@ class Game:
     def draw_mode_thumb_plant(self, surf: pygame.Surface, x: int, y: int, kind: str = "pea", scale: float = 1.0) -> None:
         stem_h = int(10 * scale)
         stem_w = max(2, int(2 * scale))
-        pygame.draw.rect(surf, (58, 132, 62), (x - stem_w // 2, y - stem_h, stem_w, stem_h))
-        pygame.draw.ellipse(surf, (74, 160, 78), (x - int(8 * scale), y - int(6 * scale), int(7 * scale), int(4 * scale)))
-        pygame.draw.ellipse(surf, (74, 160, 78), (x + int(1 * scale), y - int(6 * scale), int(7 * scale), int(4 * scale)))
-        if kind == "sunflower":
+        base_kind = kind
+        if base_kind in {"puff_shroom", "sun_shroom", "fume_shroom", "scaredy_shroom", "hypno_shroom", "ice_shroom", "doom_shroom", "grave_buster", "magnet_shroom", "gloom_shroom"}:
+            base_kind = "mushroom"
+        elif base_kind in {"repeater", "gatling", "split_pea"}:
+            base_kind = "pea_multi"
+        elif base_kind in {"threepeater"}:
+            base_kind = "threepeater"
+        elif base_kind in {"wallnut", "tall_nut"}:
+            base_kind = "wallnut"
+        elif base_kind in {"cabbage_pult"}:
+            base_kind = "cabbage"
+        elif base_kind in {"kernel_pult"}:
+            base_kind = "kernel"
+        elif base_kind in {"melon_pult", "winter_melon"}:
+            base_kind = "melon"
+        elif base_kind in {"cob_cannon"}:
+            base_kind = "cob"
+        elif base_kind in {"umbrella_leaf"}:
+            base_kind = "umbrella"
+        elif base_kind in {"flower_pot"}:
+            base_kind = "flower_pot"
+
+        if base_kind not in {"lily_pad", "tangle_kelp"}:
+            pygame.draw.rect(surf, (58, 132, 62), (x - stem_w // 2, y - stem_h, stem_w, stem_h))
+            pygame.draw.ellipse(surf, (74, 160, 78), (x - int(8 * scale), y - int(6 * scale), int(7 * scale), int(4 * scale)))
+            pygame.draw.ellipse(surf, (74, 160, 78), (x + int(1 * scale), y - int(6 * scale), int(7 * scale), int(4 * scale)))
+        if base_kind == "sunflower":
             pygame.draw.circle(surf, (116, 74, 38), (x, y - stem_h - int(6 * scale)), int(6 * scale))
             for a in range(0, 360, 30):
                 px = x + int(math.cos(math.radians(a)) * 9 * scale)
                 py = y - stem_h - int(6 * scale) + int(math.sin(math.radians(a)) * 9 * scale)
                 pygame.draw.circle(surf, (244, 204, 78), (px, py), max(2, int(3 * scale)))
-        elif kind == "mushroom":
+        elif base_kind == "mushroom":
+            cap_col = (138, 84, 170)
+            if kind == "sun_shroom":
+                cap_col = (242, 176, 82)
+            elif kind == "fume_shroom":
+                cap_col = (120, 70, 158)
+            elif kind == "hypno_shroom":
+                cap_col = (200, 110, 226)
+            elif kind == "ice_shroom":
+                cap_col = (174, 224, 244)
+            elif kind == "doom_shroom":
+                cap_col = (90, 48, 118)
             pygame.draw.rect(surf, (224, 210, 180), (x - int(3 * scale), y - stem_h - int(4 * scale), int(6 * scale), int(6 * scale)), border_radius=3)
-            pygame.draw.ellipse(surf, (138, 84, 170), (x - int(10 * scale), y - stem_h - int(12 * scale), int(20 * scale), int(10 * scale)))
-        elif kind == "star":
+            pygame.draw.ellipse(surf, cap_col, (x - int(10 * scale), y - stem_h - int(12 * scale), int(20 * scale), int(10 * scale)))
+            if kind == "hypno_shroom":
+                pygame.draw.arc(surf, (252, 236, 196), (x - int(5 * scale), y - stem_h - int(11 * scale), int(10 * scale), int(10 * scale)), 0.0, 5.8, 1)
+            elif kind == "doom_shroom":
+                pygame.draw.arc(surf, (238, 104, 104), (x - int(6 * scale), y - stem_h - int(10 * scale), int(12 * scale), int(8 * scale)), 0.1, 3.0, 1)
+        elif base_kind == "star":
             pts = []
             cx = x
             cy = y - stem_h - int(8 * scale)
@@ -7116,8 +7648,104 @@ class Game:
                 pts.append((cx + int(math.cos(ang) * r), cy + int(math.sin(ang) * r)))
             pygame.draw.polygon(surf, (242, 214, 86), pts)
             pygame.draw.polygon(surf, (120, 92, 36), pts, 1)
-        elif kind == "wallnut":
-            self.draw_mode_thumb_wallnut(surf, x, y - stem_h - int(2 * scale), scale=0.92 * scale)
+        elif base_kind == "wallnut":
+            self.draw_mode_thumb_wallnut(surf, x, y - stem_h - int(2 * scale), scale=(1.10 if kind == "tall_nut" else 0.92) * scale, angry=(kind == "tall_nut"))
+        elif kind == "grave_buster":
+            pygame.draw.circle(surf, (118, 110, 130), (x, y - stem_h - int(8 * scale)), int(8 * scale))
+            pygame.draw.circle(surf, (68, 60, 82), (x, y - stem_h - int(8 * scale)), int(8 * scale), 1)
+            pygame.draw.arc(surf, (238, 228, 214), (x - int(6 * scale), y - stem_h - int(10 * scale), int(12 * scale), int(8 * scale)), 0.1, 3.1, 1)
+        elif base_kind == "potato_mine":
+            mound = pygame.Rect(x - int(9 * scale), y - int(10 * scale), int(18 * scale), int(12 * scale))
+            pygame.draw.ellipse(surf, (146, 96, 56), mound)
+            pygame.draw.ellipse(surf, (86, 56, 28), mound, 1)
+            pygame.draw.line(surf, (78, 140, 64), (x, y - int(8 * scale)), (x, y - int(15 * scale)), 2)
+            pygame.draw.circle(surf, (208, 40, 40), (x + int(7 * scale), y - int(14 * scale)), max(1, int(2 * scale)))
+        elif base_kind == "cherrybomb":
+            pygame.draw.circle(surf, (212, 52, 62), (x - int(5 * scale), y - stem_h - int(5 * scale)), int(6 * scale))
+            pygame.draw.circle(surf, (228, 64, 68), (x + int(5 * scale), y - stem_h - int(6 * scale)), int(6 * scale))
+            pygame.draw.line(surf, (72, 120, 54), (x - int(5 * scale), y - stem_h - int(10 * scale)), (x, y - stem_h - int(16 * scale)), 2)
+            pygame.draw.line(surf, (72, 120, 54), (x + int(5 * scale), y - stem_h - int(11 * scale)), (x, y - stem_h - int(16 * scale)), 2)
+        elif base_kind == "chomper":
+            mouth = pygame.Rect(x - int(12 * scale), y - stem_h - int(18 * scale), int(24 * scale), int(18 * scale))
+            pygame.draw.ellipse(surf, (146, 72, 178), mouth)
+            pygame.draw.ellipse(surf, (82, 38, 104), mouth, 2)
+            pygame.draw.arc(surf, (248, 240, 220), (mouth.x + 2, mouth.y + 4, mouth.w - 4, mouth.h - 4), 0.0, 3.14, 2)
+        elif base_kind == "pea_multi":
+            head_col = (86, 192, 96)
+            for ox, oy, rr in ((0, 0, 8), (-int(8 * scale), int(4 * scale), 6), (int(8 * scale), int(2 * scale), 6)):
+                if kind == "repeater" and ox > 0:
+                    continue
+                pygame.draw.circle(surf, head_col, (x + ox, y - stem_h - int(8 * scale) + oy), int(rr * scale))
+                mouth = pygame.Rect(x + ox + int(4 * scale), y - stem_h - int(11 * scale) + oy, int(9 * scale), int(6 * scale))
+                pygame.draw.ellipse(surf, head_col, mouth)
+                pygame.draw.ellipse(surf, (44, 102, 50), mouth, 1)
+        elif base_kind == "threepeater":
+            head_col = (86, 192, 96)
+            for ox, oy in ((-int(8 * scale), 5), (0, 0), (int(8 * scale), -4)):
+                pygame.draw.circle(surf, head_col, (x + ox, y - stem_h - int(8 * scale) + oy), int(6 * scale))
+                mouth = pygame.Rect(x + ox + int(3 * scale), y - stem_h - int(10 * scale) + oy, int(8 * scale), int(5 * scale))
+                pygame.draw.ellipse(surf, head_col, mouth)
+                pygame.draw.ellipse(surf, (44, 102, 50), mouth, 1)
+        elif base_kind == "lily_pad":
+            pygame.draw.ellipse(surf, (74, 170, 104), (x - int(14 * scale), y - int(7 * scale), int(28 * scale), int(10 * scale)))
+            pygame.draw.arc(surf, (48, 116, 72), (x - int(14 * scale), y - int(7 * scale), int(28 * scale), int(10 * scale)), 5.1, 0.6, 2)
+        elif base_kind == "tangle_kelp":
+            for dx in (-5, 0, 5):
+                pygame.draw.arc(surf, (54, 134, 116), (x + int(dx * scale) - int(7 * scale), y - int(16 * scale), int(14 * scale), int(18 * scale)), 0.5, 5.8, 2)
+        elif base_kind == "plantern":
+            pygame.draw.circle(surf, (244, 214, 94), (x, y - stem_h - int(8 * scale)), int(7 * scale))
+            pygame.draw.circle(surf, (132, 88, 38), (x, y - stem_h - int(8 * scale)), int(7 * scale), 2)
+            pygame.draw.arc(surf, (132, 88, 38), (x - int(6 * scale), y - stem_h - int(14 * scale), int(12 * scale), int(10 * scale)), 3.0, 6.3, 1)
+        elif base_kind == "cactus":
+            body = pygame.Rect(x - int(5 * scale), y - stem_h - int(16 * scale), int(10 * scale), int(18 * scale))
+            pygame.draw.rect(surf, (76, 168, 94), body, border_radius=4)
+            pygame.draw.rect(surf, (44, 104, 58), body, 1, border_radius=4)
+            pygame.draw.rect(surf, (76, 168, 94), (body.x - int(6 * scale), body.y + int(6 * scale), int(6 * scale), int(8 * scale)), border_radius=3)
+            pygame.draw.rect(surf, (76, 168, 94), (body.right, body.y + int(4 * scale), int(6 * scale), int(8 * scale)), border_radius=3)
+        elif base_kind == "flower_pot":
+            pot = pygame.Rect(x - int(9 * scale), y - int(10 * scale), int(18 * scale), int(12 * scale))
+            pygame.draw.ellipse(surf, (176, 114, 68), pot)
+            pygame.draw.ellipse(surf, (104, 62, 34), pot, 1)
+            lip = pygame.Rect(x - int(11 * scale), y - int(14 * scale), int(22 * scale), int(6 * scale))
+            pygame.draw.ellipse(surf, (214, 146, 84), lip)
+            pygame.draw.ellipse(surf, (110, 68, 36), lip, 1)
+        elif base_kind == "cabbage":
+            pygame.draw.circle(surf, (118, 176, 92), (x, y - stem_h - int(8 * scale)), int(8 * scale))
+            pygame.draw.circle(surf, (74, 116, 58), (x, y - stem_h - int(8 * scale)), int(8 * scale), 1)
+        elif base_kind == "kernel":
+            cob = pygame.Rect(x - int(4 * scale), y - stem_h - int(14 * scale), int(8 * scale), int(14 * scale))
+            pygame.draw.rect(surf, (244, 214, 96), cob, border_radius=3)
+            pygame.draw.rect(surf, (122, 94, 38), cob, 1, border_radius=3)
+            pygame.draw.arc(surf, (92, 154, 72), (x - int(8 * scale), y - stem_h - int(12 * scale), int(16 * scale), int(16 * scale)), 3.3, 5.8, 2)
+        elif base_kind == "melon":
+            melon_col = (102, 164, 88) if kind != "winter_melon" else (136, 210, 236)
+            pygame.draw.circle(surf, melon_col, (x, y - stem_h - int(9 * scale)), int(8 * scale))
+            pygame.draw.circle(surf, (62, 104, 58), (x, y - stem_h - int(9 * scale)), int(8 * scale), 1)
+        elif base_kind == "cob":
+            left = pygame.Rect(x - int(11 * scale), y - stem_h - int(12 * scale), int(10 * scale), int(12 * scale))
+            right = pygame.Rect(x + int(1 * scale), y - stem_h - int(12 * scale), int(10 * scale), int(12 * scale))
+            pygame.draw.rect(surf, (244, 216, 96), left, border_radius=3)
+            pygame.draw.rect(surf, (244, 216, 96), right, border_radius=3)
+            pygame.draw.rect(surf, (122, 94, 38), left, 1, border_radius=3)
+            pygame.draw.rect(surf, (122, 94, 38), right, 1, border_radius=3)
+            pygame.draw.arc(surf, (96, 150, 72), (x - int(14 * scale), y - stem_h - int(10 * scale), int(28 * scale), int(18 * scale)), 3.2, 6.1, 2)
+        elif base_kind == "torchwood":
+            stump = pygame.Rect(x - int(5 * scale), y - stem_h - int(10 * scale), int(10 * scale), int(12 * scale))
+            pygame.draw.rect(surf, (132, 94, 56), stump, border_radius=3)
+            pygame.draw.rect(surf, (76, 48, 26), stump, 1, border_radius=3)
+            flame = [(x, y - stem_h - int(20 * scale)), (x + int(6 * scale), y - stem_h - int(10 * scale)), (x, y - stem_h - int(4 * scale)), (x - int(6 * scale), y - stem_h - int(10 * scale))]
+            pygame.draw.polygon(surf, (248, 170, 70), flame)
+        elif base_kind == "umbrella":
+            pygame.draw.arc(surf, (114, 176, 106), (x - int(14 * scale), y - stem_h - int(16 * scale), int(28 * scale), int(18 * scale)), 3.2, 6.3, 3)
+            pygame.draw.line(surf, (74, 118, 68), (x, y - stem_h + int(2 * scale)), (x, y - stem_h - int(6 * scale)), 2)
+        elif kind == "jalapeno":
+            body = pygame.Rect(x - int(4 * scale), y - stem_h - int(16 * scale), int(8 * scale), int(18 * scale))
+            pygame.draw.ellipse(surf, (220, 64, 46), body)
+            pygame.draw.ellipse(surf, (124, 34, 26), body, 1)
+            pygame.draw.line(surf, (72, 128, 58), (x, body.y + 2), (x, body.y - int(4 * scale)), 2)
+        elif base_kind == "pumpkin":
+            pygame.draw.circle(surf, (228, 138, 56), (x, y - stem_h - int(8 * scale)), int(8 * scale))
+            pygame.draw.circle(surf, (132, 76, 26), (x, y - stem_h - int(8 * scale)), int(8 * scale), 1)
         else:
             head_col = (86, 192, 96) if kind != "snowpea" else (128, 214, 236)
             pygame.draw.circle(surf, head_col, (x, y - stem_h - int(8 * scale)), int(8 * scale))
@@ -7167,15 +7795,35 @@ class Game:
         pygame.draw.polygon(surf, (168, 114, 52), pts, 1)
 
     def draw_mode_thumb_zombie(self, surf: pygame.Surface, x: int, y: int, kind: str = "normal", scale: float = 1.0) -> None:
-        if kind in {"zomboni", "catapult", "bobsled"}:
+        mapped = kind
+        if mapped == "dancing":
+            mapped = "dancer"
+        elif mapped == "backup_dancer":
+            mapped = "backup_dancer"
+        if mapped in {"zomboni", "catapult", "bobsled", "bobsled_team"}:
             body = pygame.Rect(x - int(16 * scale), y - int(10 * scale), int(34 * scale), int(18 * scale))
             pygame.draw.rect(surf, (124, 132, 150), body, border_radius=4)
             pygame.draw.rect(surf, (64, 70, 84), body, 2, border_radius=4)
             pygame.draw.circle(surf, (42, 44, 50), (body.x + int(6 * scale), body.bottom), int(4 * scale))
             pygame.draw.circle(surf, (42, 44, 50), (body.right - int(6 * scale), body.bottom), int(4 * scale))
-            if kind == "catapult":
+            if mapped == "catapult":
                 arm = [(body.right - int(8 * scale), body.y + 2), (body.right + int(10 * scale), body.y - int(8 * scale))]
                 pygame.draw.line(surf, (88, 66, 40), arm[0], arm[1], 2)
+            elif mapped == "zomboni":
+                pygame.draw.rect(surf, (90, 150, 210), (body.x + int(6 * scale), body.y + int(2 * scale), int(16 * scale), int(8 * scale)), border_radius=2)
+            elif mapped in {"bobsled", "bobsled_team"}:
+                sled = [(body.x + 2, body.bottom - 2), (body.right - 2, body.bottom - 2), (body.right - 8, body.bottom + int(3 * scale)), (body.x + 8, body.bottom + int(3 * scale))]
+                pygame.draw.polygon(surf, (210, 224, 236), sled)
+                pygame.draw.polygon(surf, (92, 98, 110), sled, 1)
+            return
+        if mapped == "zomboss":
+            shell = pygame.Rect(x - int(18 * scale), y - int(28 * scale), int(36 * scale), int(24 * scale))
+            pygame.draw.rect(surf, (132, 142, 162), shell, border_radius=8)
+            pygame.draw.rect(surf, (64, 74, 92), shell, 2, border_radius=8)
+            pygame.draw.circle(surf, (170, 204, 138), (x, y - int(20 * scale)), int(7 * scale))
+            pygame.draw.circle(surf, (226, 92, 76), (x - int(10 * scale), y - int(8 * scale)), int(4 * scale))
+            pygame.draw.circle(surf, (226, 92, 76), (x + int(10 * scale), y - int(8 * scale)), int(4 * scale))
+            pygame.draw.line(surf, (80, 52, 40), (x - int(14 * scale), y - int(24 * scale)), (x + int(14 * scale), y - int(24 * scale)), 2)
             return
 
         head_r = max(3, int(5 * scale))
@@ -7190,41 +7838,81 @@ class Game:
         pygame.draw.circle(surf, (22, 22, 22), (head[0] + max(1, int(2 * scale)), head[1] - 1), 1)
         pygame.draw.line(surf, (48, 38, 32), (head[0] - 1, head[1] + 2), (head[0] + int(4 * scale), head[1] + 3), 1)
 
-        if kind == "conehead":
+        if mapped == "conehead":
             cone = [(x - int(6 * scale), y - int(25 * scale)), (x + int(6 * scale), y - int(25 * scale)), (x, y - int(35 * scale))]
             pygame.draw.polygon(surf, (238, 140, 62), cone)
             pygame.draw.polygon(surf, (122, 74, 28), cone, 1)
-        elif kind == "buckethead":
+        elif mapped == "buckethead":
             buck = pygame.Rect(x - int(7 * scale), y - int(31 * scale), int(14 * scale), int(9 * scale))
             pygame.draw.rect(surf, (166, 174, 188), buck, border_radius=2)
             pygame.draw.rect(surf, (94, 98, 108), buck, 1, border_radius=2)
-        elif kind == "newspaper":
-            paper = pygame.Rect(x - int(14 * scale), y - int(18 * scale), int(16 * scale), int(12 * scale))
+        elif mapped == "newspaper":
+            paper = pygame.Rect(x - int(16 * scale), y - int(18 * scale), int(18 * scale), int(12 * scale))
             pygame.draw.rect(surf, (226, 224, 206), paper, border_radius=2)
             pygame.draw.rect(surf, (122, 118, 102), paper, 1, border_radius=2)
-        elif kind == "football":
+        elif mapped == "screen_door":
+            door = pygame.Rect(x - int(14 * scale), y - int(22 * scale), int(16 * scale), int(22 * scale))
+            pygame.draw.rect(surf, (140, 152, 156), door, border_radius=2)
+            pygame.draw.rect(surf, (86, 96, 102), door, 2, border_radius=2)
+            for yy in range(door.y + 4, door.bottom, max(3, int(4 * scale))):
+                pygame.draw.line(surf, (188, 196, 200), (door.x + 2, yy), (door.right - 2, yy), 1)
+        elif mapped == "flag_zombie":
+            pygame.draw.line(surf, (92, 72, 42), (x + int(6 * scale), y - int(22 * scale)), (x + int(6 * scale), y + int(2 * scale)), 2)
+            pygame.draw.polygon(surf, (188, 42, 44), [(x + int(6 * scale), y - int(22 * scale)), (x + int(16 * scale), y - int(18 * scale)), (x + int(6 * scale), y - int(14 * scale))])
+        elif mapped == "pole_vaulting":
+            pygame.draw.line(surf, (144, 108, 62), (x - int(10 * scale), y - int(26 * scale)), (x + int(18 * scale), y + int(6 * scale)), 2)
+        elif mapped == "football":
             helm = pygame.Rect(x - int(8 * scale), y - int(30 * scale), int(16 * scale), int(10 * scale))
             pygame.draw.rect(surf, (198, 54, 54), helm, border_radius=3)
             pygame.draw.rect(surf, (80, 24, 24), helm, 1, border_radius=3)
             pygame.draw.rect(surf, (178, 42, 42), (torso.x - 1, torso.y, torso.w + 2, torso.h + 2), border_radius=3)
-        elif kind == "dancer":
+        elif mapped == "dancer":
             pygame.draw.rect(surf, (96, 66, 128), (x - int(6 * scale), y - int(16 * scale), int(12 * scale), int(13 * scale)), border_radius=3)
             pygame.draw.line(surf, (70, 38, 106), (x - int(10 * scale), y - int(10 * scale)), (x + int(11 * scale), y - int(14 * scale)), 2)
-        elif kind == "pogo":
+        elif mapped == "backup_dancer":
+            pygame.draw.rect(surf, (122, 88, 156), (x - int(5 * scale), y - int(15 * scale), int(10 * scale), int(12 * scale)), border_radius=3)
+            pygame.draw.line(surf, (86, 56, 116), (x - int(9 * scale), y - int(10 * scale)), (x + int(10 * scale), y - int(14 * scale)), 2)
+        elif mapped == "ducky_tube":
+            pygame.draw.ellipse(surf, (244, 212, 88), (x - int(9 * scale), y - int(10 * scale), int(18 * scale), int(8 * scale)))
+            pygame.draw.ellipse(surf, (146, 104, 42), (x - int(9 * scale), y - int(10 * scale), int(18 * scale), int(8 * scale)), 1)
+        elif mapped == "snorkel":
+            pygame.draw.line(surf, (44, 86, 128), (x + int(4 * scale), y - int(24 * scale)), (x + int(6 * scale), y - int(34 * scale)), 2)
+            pygame.draw.arc(surf, (44, 86, 128), (x + int(2 * scale), y - int(36 * scale), int(10 * scale), int(10 * scale)), 3.4, 5.7, 2)
+        elif mapped == "dolphin_rider":
+            dolphin = [(x + int(6 * scale), y - int(8 * scale)), (x + int(18 * scale), y - int(12 * scale)), (x + int(14 * scale), y - int(6 * scale)), (x + int(20 * scale), y - int(2 * scale))]
+            pygame.draw.lines(surf, (98, 160, 202), False, dolphin, 2)
+        elif mapped == "balloon":
+            pygame.draw.line(surf, (110, 90, 60), (x, y - int(22 * scale)), (x, y - int(38 * scale)), 1)
+            pygame.draw.ellipse(surf, (214, 68, 72), (x - int(6 * scale), y - int(48 * scale), int(12 * scale), int(16 * scale)))
+        elif mapped == "bungee":
+            pygame.draw.line(surf, (206, 206, 196), (x, y - int(42 * scale)), (x, y - int(20 * scale)), 2)
+            pygame.draw.arc(surf, (206, 206, 196), (x - int(4 * scale), y - int(23 * scale), int(8 * scale), int(8 * scale)), 0.0, 3.14, 2)
+        elif mapped == "digger":
+            helmet = pygame.Rect(x - int(6 * scale), y - int(28 * scale), int(12 * scale), int(7 * scale))
+            pygame.draw.rect(surf, (228, 160, 64), helmet, border_radius=2)
+            pygame.draw.rect(surf, (124, 84, 28), helmet, 1, border_radius=2)
+            pygame.draw.line(surf, (122, 86, 50), (x + int(7 * scale), y - int(14 * scale)), (x + int(14 * scale), y - int(2 * scale)), 2)
+        elif mapped == "jack_in_the_box":
+            box = pygame.Rect(x - int(8 * scale), y - int(8 * scale), int(12 * scale), int(10 * scale))
+            pygame.draw.rect(surf, (204, 84, 92), box, border_radius=2)
+            pygame.draw.rect(surf, (110, 44, 52), box, 1, border_radius=2)
+            pygame.draw.line(surf, (226, 212, 118), (box.right, box.y + 4), (box.right + int(6 * scale), box.y + 1), 2)
+        elif mapped == "pogo":
             pygame.draw.line(surf, (188, 162, 122), (x + int(6 * scale), y - int(14 * scale)), (x + int(6 * scale), y + int(10 * scale)), 2)
             pygame.draw.ellipse(surf, (164, 132, 80), (x + int(2 * scale), y + int(10 * scale), int(10 * scale), int(4 * scale)))
-        elif kind == "ladder":
+        elif mapped == "ladder":
             rail = pygame.Rect(x + int(8 * scale), y - int(24 * scale), int(8 * scale), int(26 * scale))
             pygame.draw.rect(surf, (170, 124, 70), rail, border_radius=2)
             pygame.draw.rect(surf, (102, 72, 42), rail, 1, border_radius=2)
             for i in range(4):
                 yy = rail.y + 4 + i * 5
                 pygame.draw.line(surf, (102, 72, 42), (rail.x + 1, yy), (rail.right - 2, yy), 1)
-        elif kind == "gargantuar":
+        elif mapped == "gargantuar":
             big_torso = pygame.Rect(x - int(10 * scale), y - int(18 * scale), int(20 * scale), int(20 * scale))
             pygame.draw.rect(surf, (106, 96, 120), big_torso, border_radius=4)
             pygame.draw.rect(surf, (58, 54, 70), big_torso, 2, border_radius=4)
-        elif kind == "imp":
+            pygame.draw.line(surf, (126, 92, 52), (x + int(10 * scale), y - int(12 * scale)), (x + int(18 * scale), y + int(8 * scale)), 3)
+        elif mapped == "imp":
             pygame.draw.circle(surf, (162, 198, 152), (x, y - int(13 * scale)), int(4 * scale))
             pygame.draw.rect(surf, (118, 84, 74), (x - int(4 * scale), y - int(10 * scale), int(8 * scale), int(9 * scale)), border_radius=2)
 
@@ -7616,10 +8304,377 @@ class Game:
         self.mode_thumb_cache[cache_key] = thumb
         return thumb
 
+    def adventure_chapter_def(self, world: int) -> Dict[str, object]:
+        for chapter in ADVENTURE_CHAPTERS:
+            if int(chapter.get("world", 0)) == int(world):
+                return chapter
+        return ADVENTURE_CHAPTERS[0]
+
+    def adventure_chapter_title(self, world: int) -> str:
+        chapter = self.adventure_chapter_def(world)
+        return self.tr(str(chapter.get("title_key", "chapter_1_title")))
+
+    def adventure_chapter_subtitle(self, world: int) -> str:
+        chapter = self.adventure_chapter_def(world)
+        return self.tr(str(chapter.get("subtitle_key", "chapter_1_subtitle")))
+
+    def adventure_levels_for_world(self, world: int) -> List[LevelConfig]:
+        return [lv for lv in self.levels if lv.world == world]
+
+    def adventure_level_unlocked(self, level: LevelConfig) -> bool:
+        unlocked = int(self.save_data.get("unlocked", 1))
+        return level.idx <= unlocked
+
+    def adventure_chapter_unlocked(self, world: int) -> bool:
+        unlocked = int(self.save_data.get("unlocked", 1))
+        return unlocked >= ((world - 1) * 10 + 1)
+
+    def adventure_chapter_preview_level(self, world: int) -> Optional[LevelConfig]:
+        chapter_levels = self.adventure_levels_for_world(world)
+        if not chapter_levels:
+            return None
+        return chapter_levels[min(4, len(chapter_levels) - 1)]
+
+    def load_adventure_chapter_preview(self, world: int, size: Tuple[int, int]) -> pygame.Surface:
+        target = (max(96, int(size[0])), max(72, int(size[1])))
+        cache_key = (world, target)
+        if cache_key in self.adventure_chapter_cache:
+            return self.adventure_chapter_cache[cache_key]
+        level = self.adventure_chapter_preview_level(world)
+        if level is None:
+            surf = pygame.Surface(target, pygame.SRCALPHA)
+        else:
+            surf = self.load_adventure_level_preview(level, target)
+        self.adventure_chapter_cache[cache_key] = surf
+        return surf
+
+    def load_adventure_level_preview(self, level: LevelConfig, size: Tuple[int, int]) -> pygame.Surface:
+        target = (max(64, int(size[0])), max(48, int(size[1])))
+        cache_key = (level.display_code or str(level.idx), target)
+        if cache_key in self.adventure_preview_cache:
+            return self.adventure_preview_cache[cache_key]
+        path = f"assets/ui/adventure/{level.display_code or level.idx}.png"
+        img = self.load_image(path, size=None)
+        if img is not None:
+            surf = self.scale_surface_cover(img, target)
+        else:
+            surf = self.draw_adventure_level_preview_fallback(level, target)
+        self.adventure_preview_cache[cache_key] = surf
+        return surf
+
+    def adventure_preview_recipe(self, level: LevelConfig) -> Dict[str, object]:
+        recipe = ADVENTURE_PREVIEW_RECIPES.get(level.display_code or "")
+        if recipe:
+            return recipe
+        threat = sorted(level.z_weights.items(), key=lambda item: item[1], reverse=True)
+        main_zombie = threat[0][0] if threat else "normal"
+        lead_plant = "sunflower"
+        if level.battlefield in ("night", "fog"):
+            lead_plant = "puff_shroom"
+        elif level.battlefield == "pool":
+            lead_plant = "lily_pad"
+        elif level.battlefield == "roof":
+            lead_plant = "flower_pot"
+        return adventure_preview_recipe(
+            "boss" if main_zombie == "zomboss" else level.battlefield,
+            plants=[(lead_plant, "front_left", 0.92)],
+            zombies=[(main_zombie, "lane_right", 0.90)],
+            props=[],
+            effects=[],
+        )
+
+    def adventure_preview_slots(self, w: int, h: int) -> Dict[str, Tuple[int, int, float]]:
+        return {
+            "front_left": (int(w * 0.18), int(h * 0.79), 1.00),
+            "center_left": (int(w * 0.34), int(h * 0.77), 0.98),
+            "center": (int(w * 0.50), int(h * 0.76), 0.96),
+            "center_right": (int(w * 0.63), int(h * 0.75), 0.94),
+            "front_right": (int(w * 0.76), int(h * 0.74), 0.92),
+            "lane_right": (int(w * 0.82), int(h * 0.74), 0.94),
+            "far_right": (int(w * 0.91), int(h * 0.72), 0.74),
+            "back_left": (int(w * 0.12), int(h * 0.69), 0.70),
+            "back_mid": (int(w * 0.42), int(h * 0.66), 0.70),
+            "back_right": (int(w * 0.68), int(h * 0.66), 0.70),
+            "pool_left": (int(w * 0.31), int(h * 0.68), 0.92),
+            "pool_mid": (int(w * 0.50), int(h * 0.68), 0.92),
+            "pool_right": (int(w * 0.66), int(h * 0.68), 0.90),
+            "grave_left": (int(w * 0.23), int(h * 0.69), 0.88),
+            "grave_mid": (int(w * 0.48), int(h * 0.70), 0.90),
+            "grave_right": (int(w * 0.72), int(h * 0.69), 0.88),
+            "roof_left": (int(w * 0.18), int(h * 0.80), 0.94),
+            "roof_mid": (int(w * 0.42), int(h * 0.75), 0.92),
+            "roof_mid2": (int(w * 0.60), int(h * 0.71), 0.88),
+            "roof_right": (int(w * 0.80), int(h * 0.68), 0.88),
+            "boss_right": (int(w * 0.78), int(h * 0.62), 1.02),
+            "air_left": (int(w * 0.24), int(h * 0.42), 0.78),
+            "air_mid": (int(w * 0.56), int(h * 0.39), 0.80),
+            "air_right": (int(w * 0.82), int(h * 0.37), 0.82),
+            "sky_left": (int(w * 0.20), int(h * 0.20), 0.76),
+            "sky_mid": (int(w * 0.50), int(h * 0.18), 0.84),
+            "sky_right": (int(w * 0.80), int(h * 0.20), 0.76),
+        }
+
+    def draw_adventure_preview_shadow(self, surf: pygame.Surface, x: int, y: int, scale: float = 1.0) -> None:
+        shadow = pygame.Rect(x - int(12 * scale), y - int(3 * scale), int(24 * scale), int(7 * scale))
+        pygame.draw.ellipse(surf, (24, 18, 12, 54), shadow)
+
+    def draw_adventure_preview_background(self, surf: pygame.Surface, scene: str) -> None:
+        w, h = surf.get_size()
+        if scene == "night":
+            sky_top, sky_bottom = (42, 58, 120), (78, 60, 114)
+        elif scene == "pool":
+            sky_top, sky_bottom = (118, 196, 248), (84, 152, 216)
+        elif scene == "fog":
+            sky_top, sky_bottom = (106, 132, 156), (138, 148, 166)
+        elif scene == "roof":
+            sky_top, sky_bottom = (156, 206, 246), (234, 202, 148)
+        elif scene == "boss":
+            sky_top, sky_bottom = (98, 46, 72), (54, 18, 34)
+        else:
+            sky_top, sky_bottom = (96, 188, 246), (166, 222, 252)
+        self.draw_mode_thumb_gradient(surf, pygame.Rect(0, 0, w, h), sky_top, sky_bottom)
+
+        if scene == "night":
+            pygame.draw.circle(surf, (246, 240, 190), (int(w * 0.16), int(h * 0.20)), max(8, int(h * 0.09)))
+            for sx, sy in ((0.34, 0.14), (0.48, 0.22), (0.76, 0.18), (0.88, 0.28)):
+                pygame.draw.circle(surf, (250, 250, 236), (int(w * sx), int(h * sy)), 1)
+        elif scene == "boss":
+            warn = pygame.Surface((w, h), pygame.SRCALPHA)
+            pygame.draw.ellipse(warn, (224, 74, 84, 32), (-20, -10, w + 40, int(h * 0.42)))
+            surf.blit(warn, (0, 0))
+        else:
+            for cx, cy, cw, ch in ((0.16, 0.16, 0.24, 0.12), (0.42, 0.11, 0.18, 0.09), (0.76, 0.16, 0.22, 0.11)):
+                cloud = pygame.Rect(int(w * cx), int(h * cy), int(w * cw), int(h * ch))
+                pygame.draw.ellipse(surf, (250, 250, 244, 74), cloud)
+
+        if scene in {"pool", "fog"}:
+            horizon = int(h * 0.32)
+            deck_top = int(h * 0.46)
+            self.draw_mode_thumb_gradient(surf, pygame.Rect(0, horizon, w, h - horizon), (106, 180, 100), (72, 130, 74))
+            left_lawn = pygame.Rect(0, deck_top, int(w * 0.28), h - deck_top)
+            right_lawn = pygame.Rect(int(w * 0.72), deck_top, w - int(w * 0.72), h - deck_top)
+            self.draw_mode_thumb_gradient(surf, left_lawn, (124, 198, 102), (72, 136, 70))
+            self.draw_mode_thumb_gradient(surf, right_lawn, (124, 198, 102), (72, 136, 70))
+            pool = pygame.Rect(int(w * 0.28), int(h * 0.46), int(w * 0.44), int(h * 0.38))
+            self.draw_mode_thumb_gradient(surf, pool, (122, 214, 248), (66, 156, 220))
+            pygame.draw.rect(surf, (238, 244, 248), pool, 2, border_radius=8)
+            for yy in range(pool.y + 10, pool.bottom, 10):
+                pygame.draw.line(surf, (196, 236, 250), (pool.x + 5, yy), (pool.right - 5, yy), 1)
+            for yy in (deck_top - 2, pool.bottom + 4):
+                pygame.draw.line(surf, (226, 218, 194), (0, yy), (w, yy), 3)
+            if scene == "fog":
+                fog = pygame.Surface((w, h), pygame.SRCALPHA)
+                for i, alpha in enumerate((66, 48, 36)):
+                    pygame.draw.ellipse(fog, (232, 238, 244, alpha), (-18, int(h * (0.28 + i * 0.16)), w + 36, int(h * 0.24)))
+                surf.blit(fog, (0, 0))
+        elif scene in {"roof", "boss"}:
+            roof = pygame.Surface((w, h), pygame.SRCALPHA)
+            roof_poly = [(0, int(h * 0.56)), (w, int(h * (0.30 if scene == "boss" else 0.36))), (w, h), (0, h)]
+            pygame.draw.polygon(roof, (152, 98, 66) if scene != "boss" else (114, 68, 74), roof_poly)
+            pygame.draw.polygon(roof, (88, 54, 34) if scene != "boss" else (72, 36, 44), roof_poly, 2)
+            surf.blit(roof, (0, 0))
+            for i in range(8):
+                y = int(h * (0.54 + i * 0.065))
+                pygame.draw.line(surf, (206, 164, 122) if scene != "boss" else (168, 108, 116), (0, y), (w, max(0, y - int(h * 0.04))), 2)
+            for i in range(6):
+                x = int(i * w / 6)
+                pygame.draw.line(surf, (124, 84, 56) if scene != "boss" else (96, 52, 60), (x, int(h * 0.55)), (x + int(w * 0.08), h), 1)
+        else:
+            horizon = int(h * 0.34)
+            self.draw_mode_thumb_gradient(surf, pygame.Rect(0, horizon, w, h - horizon), (132, 210, 110), (74, 146, 74))
+            road = [(int(w * 0.62), horizon), (w, horizon), (w, h), (int(w * 0.76), h)]
+            pygame.draw.polygon(surf, (158, 162, 168), road)
+            pygame.draw.polygon(surf, (222, 222, 214), road, 2)
+            for dash in range(4):
+                y0 = horizon + int((h - horizon) * (0.12 + dash * 0.18))
+                pygame.draw.line(surf, (244, 236, 196), (int(w * 0.79), y0), (int(w * 0.84), y0 + 12), 2)
+            fence_y = horizon + 12
+            for fx in range(-10, w + 20, 18):
+                post = pygame.Rect(fx, fence_y, 10, 26)
+                pygame.draw.rect(surf, (244, 240, 226), post, border_radius=2)
+                pygame.draw.rect(surf, (176, 166, 150), post, 1, border_radius=2)
+                pygame.draw.polygon(surf, (250, 248, 236), [(fx, fence_y), (fx + 10, fence_y), (fx + 5, fence_y - 8)])
+            house = pygame.Rect(int(w * 0.05), int(h * 0.40), int(w * 0.22), int(h * 0.26))
+            pygame.draw.rect(surf, (240, 218, 198), house, border_radius=6)
+            pygame.draw.rect(surf, (158, 124, 88), house, 2, border_radius=6)
+            roof_pts = [(house.x - 6, house.y + 4), (house.centerx, house.y - int(h * 0.10)), (house.right + 8, house.y + 8)]
+            pygame.draw.polygon(surf, (212, 126, 92), roof_pts)
+            pygame.draw.polygon(surf, (122, 74, 52), roof_pts, 2)
+            pygame.draw.rect(surf, (186, 132, 96), (house.x + 12, house.y + house.h - 22, 14, 22), border_radius=2)
+
+    def draw_adventure_preview_prop(self, surf: pygame.Surface, kind: str, x: int, y: int, scale: float = 1.0) -> None:
+        if kind == "sun_token":
+            pygame.draw.circle(surf, (252, 228, 94), (x, y), max(6, int(9 * scale)))
+            for angle in range(0, 360, 30):
+                rad = math.radians(angle)
+                sx = x + int(math.cos(rad) * 13 * scale)
+                sy = y + int(math.sin(rad) * 13 * scale)
+                pygame.draw.circle(surf, (246, 212, 84), (sx, sy), max(2, int(3 * scale)))
+            pygame.draw.circle(surf, (140, 104, 34), (x, y), max(6, int(9 * scale)), 1)
+        elif kind == "grave":
+            self.draw_mode_thumb_grave(surf, x, y, scale=scale)
+        elif kind == "dirt_patch":
+            patch = pygame.Rect(x - int(12 * scale), y - int(6 * scale), int(24 * scale), int(10 * scale))
+            pygame.draw.ellipse(surf, (112, 78, 46), patch)
+            pygame.draw.ellipse(surf, (72, 46, 24), patch, 1)
+        elif kind == "crater":
+            outer = pygame.Rect(x - int(16 * scale), y - int(8 * scale), int(32 * scale), int(14 * scale))
+            pygame.draw.ellipse(surf, (68, 48, 34), outer)
+            pygame.draw.ellipse(surf, (26, 18, 14), outer.inflate(-8, -4))
+        elif kind == "chimney":
+            stack = pygame.Rect(x - int(7 * scale), y - int(18 * scale), int(14 * scale), int(18 * scale))
+            pygame.draw.rect(surf, (168, 108, 76), stack, border_radius=2)
+            pygame.draw.rect(surf, (98, 58, 40), stack, 1, border_radius=2)
+            lip = pygame.Rect(x - int(9 * scale), y - int(22 * scale), int(18 * scale), int(5 * scale))
+            pygame.draw.rect(surf, (210, 146, 102), lip, border_radius=2)
+        elif kind == "boss_alert":
+            pygame.draw.circle(surf, (228, 86, 82), (x, y), max(8, int(10 * scale)))
+            pygame.draw.circle(surf, (128, 34, 28), (x, y), max(8, int(10 * scale)), 2)
+            pygame.draw.rect(surf, (250, 242, 214), (x - 2, y - int(7 * scale), 4, int(9 * scale)), border_radius=2)
+            pygame.draw.circle(surf, (250, 242, 214), (x, y + int(5 * scale)), 2)
+
+    def draw_adventure_preview_effect(self, surf: pygame.Surface, kind: str, x: int, y: int, scale: float = 1.0) -> None:
+        w, h = surf.get_size()
+        if kind == "pea_shot":
+            for dx in (0, 10):
+                pygame.draw.circle(surf, (98, 214, 104), (x + dx, y - int(10 * scale)), max(2, int(3 * scale)))
+        elif kind == "double_pea":
+            for dx, dy in ((0, 0), (10, -4), (20, -2)):
+                pygame.draw.circle(surf, (98, 214, 104), (x + dx, y - int((10 + dy) * scale)), max(2, int(3 * scale)))
+        elif kind == "snow_shot":
+            pygame.draw.circle(surf, (196, 242, 252), (x, y - int(12 * scale)), max(2, int(3 * scale)))
+            pygame.draw.circle(surf, (196, 242, 252), (x + 10, y - int(16 * scale)), max(2, int(2 * scale)))
+        elif kind == "fire_pea":
+            pygame.draw.circle(surf, (242, 160, 66), (x + 8, y - int(12 * scale)), max(2, int(4 * scale)))
+            self.draw_mode_thumb_action_burst(surf, x + int(16 * scale), y - int(13 * scale), max(0.55, scale * 0.55))
+        elif kind in {"impact", "explosion"}:
+            self.draw_mode_thumb_action_burst(surf, x, y - int(12 * scale), max(0.75, scale))
+        elif kind == "bite_arc":
+            pygame.draw.arc(surf, (248, 240, 220), (x - int(10 * scale), y - int(20 * scale), int(20 * scale), int(12 * scale)), 0.1, 3.1, 2)
+        elif kind == "fume_cloud":
+            cloud = pygame.Rect(x - int(10 * scale), y - int(20 * scale), int(28 * scale), int(12 * scale))
+            pygame.draw.ellipse(surf, (192, 154, 220), cloud)
+            pygame.draw.ellipse(surf, (118, 84, 150), cloud, 1)
+        elif kind == "mine_blink":
+            pygame.draw.circle(surf, (238, 74, 72), (x + int(8 * scale), y - int(14 * scale)), max(1, int(2 * scale)))
+        elif kind == "pole_line":
+            pygame.draw.line(surf, (148, 112, 64), (x - int(16 * scale), y - int(28 * scale)), (x + int(12 * scale), y + int(4 * scale)), 2)
+        elif kind == "flag_wave":
+            pygame.draw.line(surf, (92, 72, 42), (x - int(2 * scale), y - int(12 * scale)), (x - int(2 * scale), y + int(12 * scale)), 2)
+            pygame.draw.polygon(surf, (196, 48, 52), [(x - int(2 * scale), y - int(12 * scale)), (x + int(14 * scale), y - int(8 * scale)), (x - int(2 * scale), y - int(2 * scale))])
+        elif kind == "big_wave":
+            banner = pygame.Rect(int(w * 0.18), int(h * 0.08), int(w * 0.64), int(h * 0.10))
+            self.draw_mode_thumb_gradient(surf, banner, (192, 48, 48), (146, 26, 26))
+            pygame.draw.rect(surf, (90, 18, 18), banner, 2, border_radius=6)
+            pygame.draw.line(surf, (252, 220, 120), (banner.x + 8, banner.centery), (banner.right - 8, banner.centery), 2)
+        elif kind == "spore":
+            for dx, dy in ((0, 0), (10, -6), (18, 2)):
+                pygame.draw.circle(surf, (224, 210, 250), (x + dx, y - int((16 + dy) * scale)), max(1, int(2 * scale)))
+        elif kind == "moon_glow":
+            glow = pygame.Surface((w, h), pygame.SRCALPHA)
+            pygame.draw.ellipse(glow, (242, 236, 196, 36), (x - int(40 * scale), y - int(24 * scale), int(80 * scale), int(48 * scale)))
+            surf.blit(glow, (0, 0))
+        elif kind == "spiral":
+            pygame.draw.arc(surf, (226, 204, 246), (x - int(8 * scale), y - int(22 * scale), int(16 * scale), int(16 * scale)), 0.0, 5.9, 2)
+            pygame.draw.arc(surf, (164, 116, 214), (x - int(4 * scale), y - int(18 * scale), int(8 * scale), int(8 * scale)), 0.0, 5.9, 1)
+        elif kind == "frost_burst":
+            for ang in range(0, 180, 45):
+                rad = math.radians(ang)
+                dx = int(math.cos(rad) * 12 * scale)
+                dy = int(math.sin(rad) * 12 * scale)
+                pygame.draw.line(surf, (214, 244, 252), (x, y - int(14 * scale)), (x + dx, y - int(14 * scale) - dy), 1)
+        elif kind == "smoke":
+            for ox in (-8, 0, 9):
+                pygame.draw.circle(surf, (120, 108, 110, 120), (x + int(ox * scale), y - int(18 * scale)), max(3, int(5 * scale)))
+        elif kind == "splash":
+            pygame.draw.arc(surf, (228, 248, 252), (x - int(12 * scale), y - int(18 * scale), int(24 * scale), int(20 * scale)), 3.2, 6.0, 2)
+        elif kind == "water_arc":
+            pygame.draw.arc(surf, (182, 230, 250), (x - int(16 * scale), y - int(30 * scale), int(34 * scale), int(24 * scale)), 5.0, 0.8, 2)
+        elif kind == "ice_trail":
+            trail = pygame.Rect(x - int(22 * scale), y + int(2 * scale), int(40 * scale), int(6 * scale))
+            pygame.draw.ellipse(surf, (196, 232, 248), trail)
+        elif kind == "fog_overlay":
+            fog = pygame.Surface((w, h), pygame.SRCALPHA)
+            for i, alpha in enumerate((58, 42, 28)):
+                pygame.draw.ellipse(fog, (230, 236, 244, alpha), (-14, int(h * (0.28 + i * 0.16)), w + 28, int(h * 0.22)))
+            surf.blit(fog, (0, 0))
+        elif kind == "rope_drop":
+            pygame.draw.line(surf, (220, 220, 208), (x, 0), (x, y - int(10 * scale)), 2)
+        elif kind == "pogo_spring":
+            pygame.draw.arc(surf, (222, 192, 146), (x - int(8 * scale), y - int(4 * scale), int(16 * scale), int(10 * scale)), 0.0, 3.14, 2)
+        elif kind == "cabbage_arc":
+            pygame.draw.arc(surf, (214, 228, 170), (x - int(28 * scale), y - int(34 * scale), int(54 * scale), int(26 * scale)), 5.1, 0.8, 2)
+        elif kind == "corn_arc":
+            pygame.draw.arc(surf, (248, 228, 126), (x - int(28 * scale), y - int(34 * scale), int(56 * scale), int(24 * scale)), 5.1, 0.8, 2)
+        elif kind == "melon_arc":
+            pygame.draw.arc(surf, (186, 226, 176), (x - int(32 * scale), y - int(38 * scale), int(64 * scale), int(30 * scale)), 5.1, 0.8, 2)
+        elif kind == "catapult_arc":
+            pygame.draw.arc(surf, (186, 166, 138), (x - int(24 * scale), y - int(34 * scale), int(58 * scale), int(26 * scale)), 2.8, 4.8, 2)
+            pygame.draw.circle(surf, (120, 96, 72), (x - int(18 * scale), y - int(26 * scale)), max(2, int(3 * scale)))
+        elif kind == "cob_arc":
+            pygame.draw.arc(surf, (246, 234, 144), (x - int(34 * scale), y - int(42 * scale), int(68 * scale), int(34 * scale)), 5.1, 0.8, 3)
+        elif kind == "boss_glow":
+            glow = pygame.Surface((w, h), pygame.SRCALPHA)
+            pygame.draw.ellipse(glow, (242, 82, 78, 42), (x - int(54 * scale), y - int(42 * scale), int(108 * scale), int(84 * scale)))
+            surf.blit(glow, (0, 0))
+        elif kind == "flame_lane":
+            for ix in range(-2, 3):
+                flame = [(x + ix * int(10 * scale), y - int(8 * scale)), (x + ix * int(10 * scale) + int(5 * scale), y - int(20 * scale)), (x + ix * int(10 * scale) + int(10 * scale), y - int(8 * scale))]
+                pygame.draw.polygon(surf, (248, 148, 58), flame)
+
+    def draw_adventure_level_preview_fallback(self, level: LevelConfig, size: Tuple[int, int]) -> pygame.Surface:
+        w, h = max(64, int(size[0])), max(48, int(size[1]))
+        surf = pygame.Surface((w, h), pygame.SRCALPHA)
+        recipe = self.adventure_preview_recipe(level)
+        scene = str(recipe.get("scene", level.battlefield))
+        self.draw_adventure_preview_background(surf, scene)
+        slots = self.adventure_preview_slots(w, h)
+        early_props = {"sun_token", "grave", "dirt_patch", "crater", "chimney", "boss_alert"}
+        overlay_effects = {"fog_overlay", "boss_glow", "big_wave"}
+
+        for kind, slot, scale in recipe.get("props", []):
+            px, py, slot_scale = slots.get(slot, slots["center"])
+            if kind in early_props:
+                self.draw_adventure_preview_prop(surf, kind, px, py, scale * slot_scale)
+
+        actors: List[Tuple[int, str, str, int, int, float]] = []
+        for kind, slot, scale in recipe.get("plants", []):
+            px, py, slot_scale = slots.get(slot, slots["center_left"])
+            actors.append((py, "plant", kind, px, py, scale * slot_scale))
+        for kind, slot, scale in recipe.get("zombies", []):
+            px, py, slot_scale = slots.get(slot, slots["lane_right"])
+            actors.append((py, "zombie", kind, px, py, scale * slot_scale))
+        actors.sort(key=lambda item: item[0])
+        for _depth, actor_type, kind, px, py, scale in actors:
+            self.draw_adventure_preview_shadow(surf, px, py, max(0.6, scale * (1.08 if actor_type == "zombie" else 0.92)))
+            if actor_type == "plant":
+                self.draw_mode_thumb_plant(surf, px, py, kind=kind, scale=scale)
+            else:
+                self.draw_mode_thumb_zombie(surf, px, py, kind=kind, scale=scale)
+
+        for kind, slot, scale in recipe.get("effects", []):
+            if kind in overlay_effects:
+                continue
+            px, py, slot_scale = slots.get(slot, slots["center"])
+            self.draw_adventure_preview_effect(surf, kind, px, py, scale * slot_scale)
+        for kind, slot, scale in recipe.get("effects", []):
+            if kind not in overlay_effects:
+                continue
+            px, py, slot_scale = slots.get(slot, slots["center"])
+            self.draw_adventure_preview_effect(surf, kind, px, py, scale * slot_scale)
+
+        vignette = pygame.Surface((w, h), pygame.SRCALPHA)
+        pygame.draw.rect(vignette, (24, 18, 12, 32), (0, 0, w, h), border_radius=10)
+        surf.blit(vignette, (0, 0))
+        pygame.draw.rect(surf, (52, 38, 24), (0, 0, w, h), 2, border_radius=10)
+        pygame.draw.rect(surf, (244, 230, 192), (3, 3, w - 6, h - 6), 1, border_radius=8)
+        return surf
+
     def level_display_name(self, level: LevelConfig) -> str:
+        code = level.display_code or str(level.idx)
         if self.lang == "zh":
-            return f"\u5173\u5361 {level.idx}"
-        return level.name
+            return f"关卡{code}"
+        return f"Level {code}"
 
     def open_plant_select(
         self,
@@ -7628,9 +8683,10 @@ class Game:
         preset_selected: Optional[List[str]] = None,
         pick_limit: Optional[int] = None,
         mode_rules: Optional[Dict[str, object]] = None,
-        return_scene: str = "select",
+        return_scene: str = "adventure_level_select",
     ) -> None:
         self.level_idx = idx
+        self.adventure_chapter_selected = self.levels[idx].world if 0 <= idx < len(self.levels) else self.adventure_chapter_selected
         self.pending_level_idx = idx
         self.plant_select_return_scene = return_scene
         level = self.levels[idx]
@@ -7659,6 +8715,7 @@ class Game:
     ) -> None:
         self.level_idx = idx
         base_rules = dict(mode_rules if mode_rules is not None else (self.pending_mode_rules or {}))
+        base_rules.setdefault("return_scene", self.plant_select_return_scene or "adventure_level_select")
         self.current_mode_base_rules = dict(base_rules)
         active_rules = self.apply_runtime_battle_rules(base_rules)
         self.battle.reset(self.levels[idx], selected_cards=selected_cards, mode_rules=active_rules)
@@ -7667,7 +8724,7 @@ class Game:
         self.pending_mode_rules = None
         self.plant_select_pool = []
         self.plant_select_selected = []
-        self.plant_select_return_scene = "select"
+        self.plant_select_return_scene = "adventure_level_select"
         self.plant_select_pick_limit = self.default_plant_select_pick_limit
         self.plant_select_scroll_y = 0
         self.survival_pending_state = None
@@ -10106,7 +11163,7 @@ class Game:
             self.start_help_btn = layout["help_btn"]
             self.start_quit_btn = layout["quit_btn"]
             if self.start_adventure_btn.collidepoint(p):
-                self.scene = "select"
+                self.scene = "adventure_chapter_select"
             elif self.start_mini_btn.collidepoint(p):
                 self.scene = "mini_select"
                 self.mode_scene_page["mini_select"] = 0
@@ -10135,6 +11192,28 @@ class Game:
                 self.save_mgr.save(self.save_data)
                 pygame.quit()
                 sys.exit()
+            return
+        if self.scene == "adventure_chapter_select":
+            layout = self.adventure_chapter_layout()
+            if layout["back_btn"].collidepoint(p):
+                self.scene = "start"
+                return
+            for world, rect in layout["cards"]:
+                if rect.collidepoint(p) and self.adventure_chapter_unlocked(world):
+                    self.adventure_chapter_selected = world
+                    self.scene = "adventure_level_select"
+                    return
+            return
+        if self.scene == "adventure_level_select":
+            layout = self.adventure_level_layout()
+            if layout["back_btn"].collidepoint(p):
+                self.scene = "adventure_chapter_select"
+                return
+            levels = self.adventure_levels_for_world(self.adventure_chapter_selected)
+            for level, rect in zip(levels, layout["cards"]):
+                if rect.collidepoint(p) and self.adventure_level_unlocked(level):
+                    self.open_plant_select(level.idx - 1, return_scene="adventure_level_select")
+                    return
             return
         if self.scene in ("mini_select", "puzzle_select", "survival_select"):
             layout = self.mode_scene_layout()
@@ -10205,18 +11284,7 @@ class Game:
                 return
             return
         if self.scene == "select":
-            if self.back_btn.collidepoint(p):
-                self.scene = "start"
-                return
-            if self.shop_btn.collidepoint(p):
-                self.shop_return_scene = "select"
-                self.scene = "shop"
-                return
-            unlocked = int(self.save_data.get("unlocked", 1))
-            for idx, rect in self.level_buttons():
-                if rect.collidepoint(p) and idx < unlocked:
-                    self.open_plant_select(idx)
-                    return
+            self.scene = "adventure_chapter_select"
             return
         if self.scene == "plant_select":
             required_pick_count = self.plant_select_required_pick_count()
@@ -10330,8 +11398,8 @@ class Game:
                     self.pending_level_idx = None
                     self.save_mgr.save(self.save_data)
                     destination = str(self.battle.mode_rules.get("return_scene", "select"))
-                    if destination not in ("select", "mini_select", "puzzle_select", "survival_select"):
-                        destination = "select"
+                    if destination not in ("select", "adventure_chapter_select", "adventure_level_select", "mini_select", "puzzle_select", "survival_select"):
+                        destination = "adventure_level_select"
                     self.scene = destination
                     return
                 if self.battle_menu_main_btn.collidepoint(p):
@@ -10419,8 +11487,8 @@ class Game:
         if self.scene == "result":
             if self.result_btn.collidepoint(p):
                 destination = str(self.battle.mode_rules.get("return_scene", "select"))
-                if destination not in ("select", "mini_select", "puzzle_select", "survival_select"):
-                    destination = "select"
+                if destination not in ("select", "adventure_chapter_select", "adventure_level_select", "mini_select", "puzzle_select", "survival_select"):
+                    destination = "adventure_level_select"
                 self.scene = destination
 
     def draw_start(self) -> None:
@@ -10554,50 +11622,196 @@ class Game:
             hover=self.survival_back_btn.collidepoint(mouse),
         )
 
-    def draw_select(self) -> None:
+    def adventure_chapter_layout(self) -> Dict[str, object]:
+        frame = pygame.Rect(38, 34, SCREEN_WIDTH - 76, SCREEN_HEIGHT - 84)
+        sign = pygame.Rect(54, 52, 366, 86)
+        card_w = 298
+        card_h = 196
+        top_y = 176
+        bottom_y = 408
+        top_x = [112, 490, 868]
+        bottom_x = [300, 678]
+        cards = []
+        for world, x in zip((1, 2, 3), top_x):
+            cards.append((world, pygame.Rect(x, top_y, card_w, card_h)))
+        for world, x in zip((4, 5), bottom_x):
+            cards.append((world, pygame.Rect(x, bottom_y, card_w, card_h)))
+        return {
+            "frame": frame,
+            "sign": sign,
+            "cards": cards,
+            "back_btn": pygame.Rect(42, SCREEN_HEIGHT - 62, 124, 42),
+        }
+
+    def adventure_level_layout(self) -> Dict[str, object]:
+        frame = pygame.Rect(34, 28, SCREEN_WIDTH - 68, SCREEN_HEIGHT - 70)
+        sign = pygame.Rect(84, 44, 480, 84)
+        grid = pygame.Rect(74, 150, SCREEN_WIDTH - 148, 488)
+        card_w = 248
+        card_h = 144
+        gap_x = 18
+        gap_y = 18
+        cards: List[pygame.Rect] = []
+        for i in range(10):
+            col = i % 4
+            row = i // 4
+            rect = pygame.Rect(grid.x + col * (card_w + gap_x), grid.y + row * (card_h + gap_y), card_w, card_h)
+            cards.append(rect)
+        return {
+            "frame": frame,
+            "sign": sign,
+            "grid": grid,
+            "cards": cards,
+            "back_btn": pygame.Rect(42, SCREEN_HEIGHT - 58, 156, 40),
+            "chapter_badge": pygame.Rect(SCREEN_WIDTH - 306, SCREEN_HEIGHT - 60, 252, 42),
+        }
+
+    def draw_adventure_lock_icon(self, rect: pygame.Rect) -> None:
+        cx = rect.centerx
+        cy = rect.centery - 4
+        pygame.draw.arc(self.screen, (248, 236, 210), (cx - 12, cy - 18, 24, 22), 3.0, 6.3, 3)
+        pygame.draw.rect(self.screen, (248, 236, 210), (cx - 15, cy - 2, 30, 24), border_radius=6)
+        pygame.draw.rect(self.screen, (108, 82, 44), (cx - 15, cy - 2, 30, 24), 2, border_radius=6)
+        pygame.draw.circle(self.screen, (108, 82, 44), (cx, cy + 8), 3)
+
+    def draw_adventure_chapter_card(self, world: int, rect: pygame.Rect, hover: bool, unlocked: bool) -> None:
+        self.draw_panel_shadow(rect, radius=18, alpha=78, offset=(0, 6))
+        outer = rect.inflate(8, 8)
+        pygame.draw.rect(self.screen, (86, 54, 30), outer, border_radius=22)
+        pygame.draw.rect(self.screen, (46, 28, 18), outer, 3, border_radius=22)
+        card = rect.copy()
+        fill = (246, 226, 188) if unlocked else (194, 184, 170)
+        if hover and unlocked:
+            fill = (252, 236, 206)
+        self.draw_framed_panel(card, fill=fill, border=(126, 88, 46), radius=18, inner=(250, 240, 214))
+        preview_rect = pygame.Rect(card.x + 14, card.y + 34, card.w - 28, card.h - 64)
+        preview = self.load_adventure_chapter_preview(world, preview_rect.size)
+        self.screen.blit(preview, preview_rect)
+        pygame.draw.rect(self.screen, (92, 62, 34), preview_rect, 2, border_radius=10)
+        if hover and unlocked:
+            glow = pygame.Surface(preview_rect.size, pygame.SRCALPHA)
+            glow.fill((255, 255, 255, 26))
+            self.screen.blit(glow, preview_rect.topleft)
+            pygame.draw.rect(self.screen, (255, 220, 126), outer.inflate(6, 6), 2, border_radius=26)
+        title = self.adventure_chapter_title(world)
+        title_shadow = self.fonts["ui"].render(title, True, (40, 24, 12))
+        title_main = self.fonts["ui"].render(title, True, (246, 244, 214))
+        tx = card.centerx - title_main.get_width() // 2
+        self.screen.blit(title_shadow, (tx + 2, card.y + 6))
+        self.screen.blit(title_main, (tx, card.y + 4))
+        sub = self.fonts["small"].render(self.adventure_chapter_subtitle(world), True, (78, 56, 28))
+        self.screen.blit(sub, sub.get_rect(center=(card.centerx, card.bottom - 16)))
+        medal = pygame.Rect(card.x - 28, card.y + 24, 78, 96)
+        ribbon = [(medal.centerx - 12, medal.y + 14), (medal.centerx + 12, medal.y + 14), (medal.centerx + 6, medal.y + 46), (medal.centerx - 6, medal.y + 46)]
+        pygame.draw.polygon(self.screen, (204, 32, 34), ribbon)
+        for angle in range(0, 360, 24):
+            rad = math.radians(angle)
+            px = int(medal.centerx + math.cos(rad) * 22)
+            py = int(medal.centery + math.sin(rad) * 20)
+            pygame.draw.circle(self.screen, (250, 214, 82), (px, py), 6)
+        pygame.draw.circle(self.screen, (254, 226, 102), medal.center, 22)
+        pygame.draw.circle(self.screen, (168, 118, 36), medal.center, 22, 3)
+        if not unlocked:
+            shade = pygame.Surface(card.size, pygame.SRCALPHA)
+            shade.fill((18, 18, 18, 118))
+            self.screen.blit(shade, card.topleft)
+            self.draw_adventure_lock_icon(card)
+
+    def draw_adventure_level_card(self, level: LevelConfig, rect: pygame.Rect, hover: bool) -> None:
+        unlocked = self.adventure_level_unlocked(level)
+        current = self.level_idx == level.idx - 1
+        is_boss = level.display_code == "5-10"
+        outer = rect.inflate(10, 10)
+        self.draw_panel_shadow(outer, radius=18, alpha=74, offset=(0, 5))
+        paper = rect.copy()
+        base = (248, 240, 224) if unlocked else (206, 198, 188)
+        if hover and unlocked:
+            base = (252, 244, 230)
+        border_col = (164, 84, 48) if is_boss and unlocked else (132, 92, 52)
+        self.draw_framed_panel(paper, fill=base, border=border_col, radius=14, inner=(254, 250, 238))
+        pin_xs = (paper.x + 16, paper.right - 16)
+        for px in pin_xs:
+            pygame.draw.circle(self.screen, (214, 54, 48), (px, paper.y + 14), 4)
+            pygame.draw.circle(self.screen, (92, 22, 20), (px, paper.y + 14), 4, 1)
+        ribbon = [(paper.right - 28, paper.y + 8), (paper.right + 12, paper.y + 20), (paper.right - 28, paper.y + 32)]
+        pygame.draw.polygon(self.screen, (188, 36, 38), ribbon)
+        preview_rect = pygame.Rect(paper.x + 10, paper.y + 26, paper.w - 20, 88)
+        preview = self.load_adventure_level_preview(level, preview_rect.size)
+        frame_rect = preview_rect.inflate(6, 6)
+        pygame.draw.rect(self.screen, (86, 58, 32), frame_rect, border_radius=9)
+        self.screen.blit(preview, preview_rect)
+        pygame.draw.rect(self.screen, (246, 238, 218), preview_rect.inflate(2, 2), 1, border_radius=8)
+        pygame.draw.rect(self.screen, (94, 66, 38), preview_rect, 2, border_radius=8)
+        title = self.level_display_name(level)
+        title_shadow = self.fonts["mid"].render(title, True, (40, 28, 18))
+        title_surf = self.fonts["mid"].render(title, True, (82, 144, 54) if unlocked else (116, 110, 98))
+        title_rect = title_surf.get_rect(center=(paper.centerx, paper.y + 12))
+        self.screen.blit(title_shadow, title_rect.move(1, 1))
+        self.screen.blit(title_surf, title_rect)
+        field_badge = pygame.Rect(paper.x + 12, preview_rect.bottom + 6, 84, 16)
+        self.draw_framed_panel(field_badge, fill=(224, 204, 158), border=(130, 96, 48), radius=6, inner=(240, 226, 188))
+        self.screen.blit(self.fonts["tiny"].render(self.tr("field_" + level.battlefield), True, (62, 44, 24)), (field_badge.x + 7, field_badge.y + 2))
+        threat = sorted(level.z_weights.items(), key=lambda item: item[1], reverse=True)
+        threat_name = self.zombie_display_name(threat[0][0]) if threat else self.tr("zombies")
+        info_badge = pygame.Rect(field_badge.right + 8, preview_rect.bottom + 6, paper.right - field_badge.right - 20, 16)
+        self.draw_framed_panel(info_badge, fill=(232, 220, 186), border=(136, 104, 58), radius=6, inner=(244, 236, 208))
+        fit_name = threat_name
+        while fit_name and self.fonts["tiny"].size(fit_name)[0] > info_badge.w - 10:
+            fit_name = fit_name[:-1]
+        if fit_name != threat_name and len(fit_name) >= 2:
+            fit_name = fit_name[:-1] + "…"
+        info = self.fonts["tiny"].render(fit_name, True, (62, 46, 26))
+        self.screen.blit(info, (info_badge.x + 6, info_badge.y + 2))
+        status_rect = pygame.Rect(paper.right - 76, paper.bottom - 20, 64, 11)
+        status_fill = (112, 156, 72) if unlocked else (118, 112, 104)
+        status_inner = (150, 190, 94) if unlocked else (154, 148, 138)
+        self.draw_framed_panel(status_rect, fill=status_fill, border=(76, 96, 50) if unlocked else (90, 86, 80), radius=5, inner=status_inner)
+        status_key = "playable_now" if unlocked else "locked"
+        status_txt = self.fonts["tiny"].render(self.tr(status_key), True, (244, 240, 214))
+        self.screen.blit(status_txt, status_txt.get_rect(center=status_rect.center))
+        if current:
+            pygame.draw.rect(self.screen, (255, 214, 108), outer, 3, border_radius=20)
+        if hover and unlocked:
+            pygame.draw.rect(self.screen, (255, 234, 164), outer.inflate(4, 4), 2, border_radius=22)
+        if is_boss and unlocked:
+            pygame.draw.rect(self.screen, (232, 96, 82), outer.inflate(2, 2), 2, border_radius=22)
+        if not unlocked:
+            shade = pygame.Surface(paper.size, pygame.SRCALPHA)
+            shade.fill((24, 24, 24, 120))
+            self.screen.blit(shade, paper.topleft)
+            self.draw_adventure_lock_icon(paper)
+
+    def draw_adventure_chapter_select(self) -> None:
         mouse = pygame.mouse.get_pos()
+        layout = self.adventure_chapter_layout()
         self.draw_scene_backdrop()
-        frame = pygame.Rect(52, 42, SCREEN_WIDTH - 104, SCREEN_HEIGHT - 102)
-        self.draw_parchment_panel(frame, radius=22)
-        self.draw_wood_sign(pygame.Rect(280, 58, 720, 84), self.tr("level_select"), self.tr("select_a_level"))
-        unlocked = int(self.save_data.get("unlocked", 1))
-        for idx, rect in self.level_buttons():
-            lv = self.levels[idx]
-            ok = idx < unlocked
-            hover = rect.collidepoint(mouse)
-            fill = (246, 236, 206) if ok else (202, 196, 182)
-            if hover and ok:
-                fill = (252, 244, 216)
-            edge = (134, 98, 54) if ok else (118, 112, 102)
-            self.draw_framed_panel(rect, fill=fill, border=edge, radius=14, inner=(252, 247, 230) if ok else (216, 210, 194))
-            field_name = self.tr("field_" + lv.battlefield)
-            level_name = self.level_display_name(lv)
-            self.draw_text_shadow(self.fonts["mid"], level_name, (34, 30, 24), (rect.left + 16, rect.top + 10), shadow=(250, 238, 206), offset=(1, 1))
-            badge = pygame.Rect(rect.left + 14, rect.top + 46, 140, 24)
-            self.draw_framed_panel(badge, fill=(226, 204, 152), border=(124, 90, 46), radius=8, inner=(240, 222, 178))
-            self.screen.blit(self.fonts["tiny"].render(field_name, True, (62, 46, 24)), (badge.x + 10, badge.y + 5))
-            threats = sorted(lv.z_weights.items(), key=lambda item: item[1], reverse=True)
-            threat_label = ", ".join(self.zombie_display_name(k) for k, _ in threats[:2])
-            if len(threats) > 2:
-                threat_label += " ..."
-            info_top = f"{self.tr('danger')}: {lv.danger}/6 | {self.tr('wave_label')}: {lv.total_waves}"
-            info_bottom = f"{self.tr('zombies')}: {threat_label}"
-            info_x = rect.left + 166
-            info_y = rect.top + 45
-            info_w = rect.right - info_x - 14
-            top_lines = self.wrap_text_lines(self.fonts["tiny"], info_top, info_w)[:1]
-            for line in top_lines:
-                self.screen.blit(self.fonts["tiny"].render(line, True, (66, 54, 38)), (info_x, info_y))
-                info_y += 14
-            bottom_lines = self.wrap_text_lines(self.fonts["tiny"], info_bottom, info_w)[:2]
-            for line in bottom_lines:
-                self.screen.blit(self.fonts["tiny"].render(line, True, (66, 54, 38)), (info_x, info_y))
-                info_y += 14
-            if not ok:
-                lock = self.fonts["mid"].render(self.tr("locked"), True, (84, 34, 34))
-                self.screen.blit(lock, lock.get_rect(center=rect.center))
+        self.draw_parchment_panel(layout["frame"], radius=28)
+        self.draw_wood_sign(layout["sign"], self.tr("chapter_select"), self.tr("choose_a_chapter"))
+        for world, rect in layout["cards"]:
+            self.draw_adventure_chapter_card(world, rect, rect.collidepoint(mouse), self.adventure_chapter_unlocked(world))
+        self.back_btn = layout["back_btn"]
         self.draw_secondary_button(self.back_btn, self.tr("back"), hover=self.back_btn.collidepoint(mouse))
-        self.draw_secondary_button(self.shop_btn, self.tr("shop"), hover=self.shop_btn.collidepoint(mouse))
+
+    def draw_adventure_level_select(self) -> None:
+        mouse = pygame.mouse.get_pos()
+        layout = self.adventure_level_layout()
+        world = int(clamp(float(self.adventure_chapter_selected), 1.0, 5.0))
+        levels = self.adventure_levels_for_world(world)
+        self.draw_scene_backdrop()
+        self.draw_parchment_panel(layout["frame"], radius=28)
+        subtitle = f"{self.adventure_chapter_title(world)}  |  {self.adventure_chapter_subtitle(world)}"
+        self.draw_wood_sign(layout["sign"], self.tr("adventure_levels_title"), subtitle)
+        for level, rect in zip(levels, layout["cards"]):
+            self.draw_adventure_level_card(level, rect, rect.collidepoint(mouse))
+        badge = layout["chapter_badge"]
+        self.draw_framed_panel(badge, fill=(136, 98, 54), border=(74, 46, 24), radius=12, inner=(170, 124, 72))
+        badge_txt = self.fonts["small"].render(self.tr("adventure_levels_subtitle"), True, (248, 238, 214))
+        self.screen.blit(badge_txt, badge_txt.get_rect(center=badge.center))
+        self.back_btn = layout["back_btn"]
+        self.draw_secondary_button(self.back_btn, self.tr("back_to_chapters"), hover=self.back_btn.collidepoint(mouse))
+
+    def draw_select(self) -> None:
+        self.draw_adventure_chapter_select()
 
     def draw_plant_select(self) -> None:
         mouse = pygame.mouse.get_pos()
@@ -11101,7 +12315,8 @@ class Game:
         self.lang_en_btn = pygame.Rect(0, 0, 0, 0)
         self.draw_stone_button(self.battle_settings_btn, self.tr("menu_btn"), hover=settings_hover, enabled=True)
 
-        level_text = f"{self.tr('level_label')} {self.battle.level.idx}" if self.battle.level else ""
+        level_code = self.battle.level.display_code if self.battle.level else ""
+        level_text = f"{self.tr('level_label')} {level_code}" if level_code else ""
         mode_name = str(self.battle.mode_rules.get("mode_name", ""))
         if mode_name in CLASSIC_MODE_TITLE_BY_ID:
             mode_text = CLASSIC_MODE_SUBTITLE_BY_ID.get(mode_name, CLASSIC_MODE_TITLE_BY_ID[mode_name]) if self.lang == "zh" else CLASSIC_MODE_TITLE_BY_ID[mode_name]
@@ -11189,6 +12404,10 @@ class Game:
             select_label = self.tr("puzzle")
         elif destination == "survival_select":
             select_label = self.tr("survival")
+        elif destination == "adventure_chapter_select":
+            select_label = self.tr("chapter_select")
+        elif destination == "adventure_level_select":
+            select_label = self.tr("back_to_level_select")
         else:
             select_label = self.tr("back_to_level_select")
 
@@ -11212,6 +12431,10 @@ class Game:
             subtitle = self.tr("puzzle")
         elif destination == "survival_select":
             subtitle = self.tr("survival")
+        elif destination == "adventure_chapter_select":
+            subtitle = self.tr("chapter_select")
+        elif destination == "adventure_level_select":
+            subtitle = self.tr("level_select")
         elif destination == "select":
             subtitle = self.tr("level_select")
         else:
@@ -11805,6 +13028,10 @@ class Game:
             self.lang_en_btn = pygame.Rect(SCREEN_WIDTH - 115, 20, 84, 38)
         if self.scene == "start":
             self.draw_start()
+        elif self.scene == "adventure_chapter_select":
+            self.draw_adventure_chapter_select()
+        elif self.scene == "adventure_level_select":
+            self.draw_adventure_level_select()
         elif self.scene == "mini_select":
             self.draw_mini_select()
         elif self.scene == "puzzle_select":
@@ -11895,6 +13122,10 @@ class Game:
                     if self.scene == "battle" and e.key == pygame.K_r and not self.battle_menu_open and not self.battle_settings_open:
                         selected = list(self.battle.initial_selected_cards) if self.battle.initial_selected_cards else list(self.battle.cards)
                         self.start_level(self.level_idx, selected_cards=selected, mode_rules=dict(self.current_mode_base_rules))
+                    if self.scene == "adventure_chapter_select" and e.key == pygame.K_ESCAPE:
+                        self.scene = "start"
+                    if self.scene == "adventure_level_select" and e.key == pygame.K_ESCAPE:
+                        self.scene = "adventure_chapter_select"
                     if self.scene in ("mini_select", "puzzle_select", "survival_select", "zen_garden", "options_scene", "help_scene") and e.key == pygame.K_ESCAPE:
                         self.scene = "start"
                     if self.scene == "survival_intermission" and e.key == pygame.K_ESCAPE:
@@ -11968,6 +13199,7 @@ class Game:
 
 if __name__ == "__main__":
     Game().run()
+
 
 
 
