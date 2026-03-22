@@ -2945,6 +2945,100 @@ class BattleState:
             return partial_alpha
         return base_alpha
 
+    def balloon_state(self, zombie: Zombie) -> str:
+        return str(zombie.state.get("balloon_state", "airborne"))
+
+    def bungee_state(self, zombie: Zombie) -> str:
+        return str(zombie.state.get("bungee_state", "descending"))
+
+    def digger_state(self, zombie: Zombie) -> str:
+        return str(zombie.state.get("digger_state", "burrow_enter"))
+
+    def ladder_state(self, zombie: Zombie) -> str:
+        return str(zombie.state.get("ladder_state", "carrying"))
+
+    def zomboni_state(self, zombie: Zombie) -> str:
+        return str(zombie.state.get("zomboni_state", "cruise"))
+
+    def catapult_state(self, zombie: Zombie) -> str:
+        return str(zombie.state.get("catapult_state", "walk"))
+
+    def pogo_state(self, zombie: Zombie) -> str:
+        return str(zombie.state.get("pogo_state", "hop_loop"))
+
+    def zombie_targetable(self, zombie: Zombie) -> bool:
+        if zombie.hp <= 0 or float(zombie.state.get("dying_t", 0.0)) > 0.0:
+            return False
+        if zombie.kind == "digger" and self.digger_state(zombie) in {"burrow_enter", "underground_travel"}:
+            return False
+        if zombie.kind == "bungee" and self.bungee_state(zombie) == "exit":
+            return False
+        return True
+
+    def zombie_can_attack_plants(self, zombie: Zombie) -> bool:
+        if zombie.kind == "balloon":
+            return self.balloon_state(zombie) == "grounded"
+        if zombie.kind == "bungee":
+            return False
+        if zombie.kind == "catapult":
+            return False
+        if zombie.kind == "digger" and self.digger_state(zombie) in {"burrow_enter", "underground_travel", "emerge"}:
+            return False
+        if zombie.kind == "pogo" and self.pogo_state(zombie) in {"vault_over", "recover"}:
+            return False
+        if zombie.kind == "ladder" and self.ladder_state(zombie) == "placing":
+            return False
+        if zombie.kind == "zomboni":
+            return False
+        return True
+
+    def plant_damage_stage(self, plant: Plant) -> str:
+        hp_max = max(1.0, float(plant.state.get("hp_max", plant.hp)))
+        ratio = clamp(plant.hp / hp_max, 0.0, 1.0)
+        if ratio <= 0.34:
+            return "heavy_cracked"
+        if ratio <= 0.67:
+            return "cracked"
+        return "healthy"
+
+    def update_plant_visual_state(self, plant: Plant) -> None:
+        if plant.kind in {"wallnut", "tall_nut", "pumpkin"}:
+            plant.state["damage_stage"] = self.plant_damage_stage(plant)
+        if plant.kind == "potato_mine":
+            if plant.state.get("armed", 0.0) > 0.0:
+                plant.state["potato_state"] = "armed"
+            else:
+                arm_t = max(0.0, float(plant.state.get("arm_t", 10.0)))
+                plant.state["potato_state"] = "priming" if arm_t <= 3.2 else "arming"
+        if plant.kind == "imitater":
+            plant.state["imitater_state"] = "morphing" if float(plant.state.get("imitater_morph_t", 0.0)) > 0.0 else "copied"
+
+    def ladderable_plant_at(self, pos: Tuple[int, int]) -> Optional[Plant]:
+        armor = self.armor.get(pos)
+        main = self.main.get(pos)
+        if main and main.kind in {"wallnut", "tall_nut"} and main.hp > 0:
+            return main
+        if armor and armor.kind == "pumpkin" and armor.hp > 0:
+            return armor
+        return None
+
+    def apply_ladder_to_pos(self, pos: Tuple[int, int]) -> bool:
+        applied = False
+        for collection in (self.main, self.armor):
+            plant = collection.get(pos)
+            if plant and plant.hp > 0 and plant.kind in {"wallnut", "tall_nut", "pumpkin"}:
+                plant.state["laddered"] = 1.0
+                plant.state["ladder_flash_t"] = 0.4
+                applied = True
+        return applied
+
+    def zombie_should_ignore_target(self, zombie: Zombie, plant: Optional[Plant]) -> bool:
+        if plant is None:
+            return False
+        if plant.kind in {"wallnut", "tall_nut", "pumpkin"} and float(plant.state.get("laddered", 0.0)) > 0.0:
+            return True
+        return False
+
     def zombie_total_hp(self, zombie: Zombie) -> float:
         if zombie.kind == "newspaper":
             paper_hp = float(zombie.state.get("paper_hp", 0.0))
@@ -3028,9 +3122,232 @@ class BattleState:
                 if pending <= 0.0:
                     zombie.hp = 0.0
 
+    def has_umbrella_cover(self, row: int, col: int) -> bool:
+        return any(
+            p.kind == "umbrella_leaf"
+            and p.hp > 0
+            and abs(p.row - row) <= 1
+            and abs(p.col - col) <= 1
+            for p in self.main.values()
+        )
+
+    def find_lane_plant_target(self, row: int, prefer_leftmost: bool = True) -> Optional[Tuple[Tuple[int, int], Plant]]:
+        candidates: List[Tuple[int, Tuple[int, int], Plant]] = []
+        for collection in (self.armor, self.main, self.support):
+            for pos, plant in collection.items():
+                if plant.row != row or plant.hp <= 0 or not self.is_plant_edible(plant):
+                    continue
+                candidates.append((plant.col, pos, plant))
+        if not candidates:
+            return None
+        candidates.sort(key=lambda item: item[0], reverse=not prefer_leftmost)
+        _col, pos, plant = candidates[0]
+        return pos, plant
+
+    def update_bungee_state(self, zombie: Zombie, dt: float) -> bool:
+        state = self.bungee_state(zombie)
+        phase_t = max(0.0, float(zombie.state.get("bungee_phase_t", 0.0)) - dt)
+        zombie.state["bungee_phase_t"] = phase_t
+        if state == "descending":
+            if phase_t <= 0.0:
+                candidates: List[Tuple[Tuple[int, int], Plant]] = []
+                for collection in (self.armor, self.main, self.support):
+                    for pos, plant in collection.items():
+                        if plant.hp > 0 and self.is_plant_edible(plant):
+                            candidates.append((pos, plant))
+                if not candidates:
+                    zombie.state["bungee_state"] = "exit"
+                    zombie.state["bungee_phase_t"] = 0.30
+                    return True
+                pos, _plant = random.choice(candidates)
+                zombie.state["target_row"] = float(pos[0])
+                zombie.state["target_col"] = float(pos[1])
+                zombie.x = float(self.cell_center(pos[0], pos[1])[0])
+                zombie.row = int(pos[0])
+                zombie.state["bungee_state"] = "lock_target"
+                zombie.state["bungee_phase_t"] = 0.34
+            return True
+        if state == "lock_target":
+            row = int(zombie.state.get("target_row", zombie.row))
+            col = int(zombie.state.get("target_col", 0.0))
+            if self.has_umbrella_cover(row, col):
+                zombie.state["bungee_state"] = "exit"
+                zombie.state["bungee_phase_t"] = 0.26
+                zombie.state["has_loot"] = 0.0
+                zombie.state["hit_flash"] = max(zombie.state.get("hit_flash", 0.0), 0.12)
+                return True
+            if phase_t <= 0.0:
+                pos = (row, col)
+                loot = 0.0
+                if pos in self.armor:
+                    del self.armor[pos]
+                    loot = 1.0
+                elif pos in self.main:
+                    del self.main[pos]
+                    loot = 1.0
+                elif pos in self.support:
+                    del self.support[pos]
+                    loot = 1.0
+                zombie.state["has_loot"] = loot
+                zombie.state["bungee_state"] = "steal_lift"
+                zombie.state["bungee_phase_t"] = 0.36
+            return True
+        if state == "steal_lift":
+            if phase_t <= 0.0:
+                zombie.state["bungee_state"] = "exit"
+                zombie.state["bungee_phase_t"] = 0.30
+            return True
+        if state == "exit":
+            if phase_t <= 0.0:
+                self.slay_zombie(zombie, source="bungee_exit")
+            return True
+        return False
+
+    def update_catapult_state(self, zombie: Zombie, dt: float) -> bool:
+        state = self.catapult_state(zombie)
+        phase_t = max(0.0, float(zombie.state.get("catapult_phase_t", 0.0)) - dt)
+        zombie.state["catapult_phase_t"] = phase_t
+        lane_target = self.find_lane_plant_target(zombie.row, prefer_leftmost=True)
+        if state == "walk":
+            if lane_target and phase_t <= 0.0:
+                pos, _plant = lane_target
+                zombie.state["catapult_target_col"] = float(pos[1])
+                zombie.state["catapult_state"] = "windup"
+                zombie.state["catapult_phase_t"] = 0.42
+                return True
+            return False
+        if state == "windup":
+            if phase_t <= 0.0:
+                target = self.find_lane_plant_target(zombie.row, prefer_leftmost=True)
+                if target:
+                    pos, plant = target
+                    if not self.has_umbrella_cover(pos[0], pos[1]):
+                        plant.hp -= 140
+                        plant.state["hit_flash"] = 0.16
+                        self.hit_sparks.append({"x": float(self.cell_center(pos[0], pos[1])[0]), "y": float(self.row_y(pos[0]) - 10), "t": 0.16, "ttl": 0.16})
+                    if plant.hp <= 0:
+                        self.armor.pop(pos, None)
+                        self.main.pop(pos, None)
+                        self.support.pop(pos, None)
+                zombie.state["catapult_state"] = "recover"
+                zombie.state["catapult_phase_t"] = random.uniform(0.72, 1.04)
+            return True
+        if state == "recover":
+            if phase_t <= 0.0:
+                zombie.state["catapult_state"] = "walk"
+                zombie.state["catapult_phase_t"] = random.uniform(1.7, 2.8)
+            return True
+        return False
+
+    def update_special_zombie_state(self, zombie: Zombie, dt: float) -> bool:
+        if zombie.kind == "balloon":
+            state = self.balloon_state(zombie)
+            if state == "popped_fall":
+                drop_t = max(0.0, float(zombie.state.get("balloon_drop_t", 0.0)) - dt)
+                zombie.state["balloon_drop_t"] = drop_t
+                if drop_t <= 0.0:
+                    if self.is_water(zombie.row):
+                        self.slay_zombie(zombie, source="balloon_water_drop")
+                    else:
+                        zombie.state["balloon_state"] = "grounded"
+                        zombie.speed *= 0.92
+                return True
+            return False
+        if zombie.kind == "bungee":
+            return self.update_bungee_state(zombie, dt)
+        if zombie.kind == "digger":
+            state = self.digger_state(zombie)
+            if state == "burrow_enter":
+                phase_t = max(0.0, float(zombie.state.get("digger_phase_t", 0.0)) - dt)
+                zombie.state["digger_phase_t"] = phase_t
+                if phase_t <= 0.0:
+                    zombie.state["digger_state"] = "underground_travel"
+                return True
+            if state == "underground_travel":
+                zombie.x -= zombie.speed * 1.55 * dt
+                if zombie.x <= float(zombie.state.get("digger_target_x", LAWN_X + CELL_W * 2.2)):
+                    zombie.state["digger_state"] = "emerge"
+                    zombie.state["digger_phase_t"] = 0.52
+                return True
+            if state == "emerge":
+                phase_t = max(0.0, float(zombie.state.get("digger_phase_t", 0.0)) - dt)
+                zombie.state["digger_phase_t"] = phase_t
+                if phase_t <= 0.0:
+                    zombie.state["digger_state"] = "surface_attack"
+                return True
+            return False
+        if zombie.kind == "ladder":
+            state = self.ladder_state(zombie)
+            if state == "placing":
+                phase_t = max(0.0, float(zombie.state.get("ladder_phase_t", 0.0)) - dt)
+                zombie.state["ladder_phase_t"] = phase_t
+                if phase_t <= 0.0:
+                    pos = (zombie.row, int(clamp((zombie.x - LAWN_X) // CELL_W, 0, COLS - 1)))
+                    if self.apply_ladder_to_pos(pos):
+                        zombie.state["ladder_state"] = "placed_attack"
+                        zombie.state["ladder_phase_t"] = 0.34
+                        zombie.speed *= 0.92
+                    else:
+                        zombie.state["ladder_state"] = "carrying"
+                return True
+            if state == "placed_attack":
+                phase_t = max(0.0, float(zombie.state.get("ladder_phase_t", 0.0)) - dt)
+                zombie.state["ladder_phase_t"] = phase_t
+                if phase_t <= 0.0:
+                    zombie.state["ladder_state"] = "carrying"
+                return True
+            return False
+        if zombie.kind == "zomboni":
+            crush_t = max(0.0, float(zombie.state.get("zomboni_crush_t", 0.0)) - dt)
+            zombie.state["zomboni_crush_t"] = crush_t
+            zombie.state["zomboni_state"] = "crush" if crush_t > 0.0 else "cruise"
+            return False
+        if zombie.kind == "catapult":
+            return self.update_catapult_state(zombie, dt)
+        if zombie.kind == "pogo":
+            state = self.pogo_state(zombie)
+            if state == "vault_over":
+                phase_t = max(0.0, float(zombie.state.get("pogo_phase_t", 0.0)) - dt)
+                zombie.state["pogo_phase_t"] = phase_t
+                total = max(0.01, float(zombie.state.get("pogo_total_t", 0.30)))
+                start_x = float(zombie.state.get("pogo_start_x", zombie.x))
+                end_x = float(zombie.state.get("pogo_end_x", zombie.x - CELL_W))
+                progress = clamp(1.0 - phase_t / total, 0.0, 1.0)
+                zombie.x = start_x + (end_x - start_x) * progress
+                if phase_t <= 0.0:
+                    zombie.state["pogo_state"] = "recover"
+                    zombie.state["pogo_phase_t"] = 0.18
+                return True
+            if state == "recover":
+                phase_t = max(0.0, float(zombie.state.get("pogo_phase_t", 0.0)) - dt)
+                zombie.state["pogo_phase_t"] = phase_t
+                if phase_t <= 0.0:
+                    zombie.state["pogo_state"] = "hop_loop"
+                return True
+            return False
+        return False
+
     def damage_zombie(self, zombie: Zombie, amount: float, source: str = "") -> float:
         if zombie.hp <= 0 or amount <= 0:
             return 0.0
+        if zombie.kind == "digger" and self.digger_state(zombie) in {"burrow_enter", "underground_travel"}:
+            return 0.0
+        if zombie.kind == "balloon":
+            state = self.balloon_state(zombie)
+            if state == "airborne" and source == "blover":
+                zombie.hp = 0.0
+                return max(amount, 1.0)
+            if state == "airborne" and source == "projectile":
+                zombie.state["balloon_state"] = "popped_fall"
+                zombie.state["balloon_drop_t"] = 0.52
+                zombie.state["hit_flash"] = max(zombie.state.get("hit_flash", 0.0), 0.18)
+                zombie.state["bite_t"] = 0.0
+                if self.is_water(zombie.row):
+                    self.slay_zombie(zombie, source="balloon_water_drop")
+                    return max(amount, 1.0)
+                return max(amount, 1.0)
+            if state == "airborne":
+                return 0.0
         dealt = 0.0
         if zombie.kind == "newspaper":
             self.ensure_newspaper_state(zombie)
@@ -3295,6 +3612,7 @@ class BattleState:
             plant.cd = 0.0
             plant.state["arm_t"] = 10.0
             plant.state["armed"] = 0.0
+            plant.state["potato_state"] = "arming"
         if kind in ("cherrybomb", "jalapeno", "doom_shroom", "ice_shroom", "blover"):
             plant.cd = 0.8
         if kind == "sunflower":
@@ -3355,6 +3673,11 @@ class BattleState:
         if self.is_bobsled_bonanza_mode() and kind in ("bobsled_team", "zomboni"):
             z.speed *= 1.08 if kind == "bobsled_team" else 1.12
             self.ice_rows[row] = max(float(self.ice_rows.get(row, 0.0)), 9999.0)
+        if kind == "digger":
+            emerge_col = random.randint(1, 3 if not self.field.is_roof else 2)
+            z.state["digger_target_x"] = LAWN_X + emerge_col * CELL_W + CELL_W * 0.48
+        if kind == "catapult":
+            z.state["catapult_phase_t"] = random.uniform(1.6, 2.8)
         return z
 
     def start_next_wave(self) -> None:
@@ -5079,12 +5402,41 @@ class BattleState:
             plant.state["anim_phase"] = random.uniform(0.0, math.tau)
         if "last_hp" not in plant.state:
             plant.state["last_hp"] = plant.hp
+        self.update_plant_visual_state(plant)
 
     def ensure_zombie_anim_state(self, zombie: Zombie) -> None:
         if "anim_phase" not in zombie.state:
             zombie.state["anim_phase"] = random.uniform(0.0, math.tau)
         if "last_hp" not in zombie.state:
             zombie.state["last_hp"] = zombie.hp
+        if zombie.kind == "balloon":
+            zombie.state.setdefault("balloon_state", "airborne")
+            zombie.state.setdefault("balloon_drop_t", 0.0)
+        elif zombie.kind == "bungee":
+            zombie.state.setdefault("bungee_state", "descending")
+            zombie.state.setdefault("bungee_phase_t", 0.68)
+            zombie.state.setdefault("target_row", -1.0)
+            zombie.state.setdefault("target_col", -1.0)
+            zombie.state.setdefault("has_loot", 0.0)
+        elif zombie.kind == "digger":
+            zombie.state.setdefault("digger_state", "burrow_enter")
+            zombie.state.setdefault("digger_phase_t", 0.56)
+            zombie.state.setdefault("digger_target_x", LAWN_X + CELL_W * 2.2)
+        elif zombie.kind == "ladder":
+            zombie.state.setdefault("ladder_state", "carrying")
+            zombie.state.setdefault("ladder_phase_t", 0.0)
+        elif zombie.kind == "zomboni":
+            zombie.state.setdefault("zomboni_state", "cruise")
+            zombie.state.setdefault("zomboni_crush_t", 0.0)
+        elif zombie.kind == "catapult":
+            zombie.state.setdefault("catapult_state", "walk")
+            zombie.state.setdefault("catapult_phase_t", random.uniform(1.7, 3.0))
+            zombie.state.setdefault("catapult_target_col", -1.0)
+        elif zombie.kind == "pogo":
+            zombie.state.setdefault("pogo_state", "hop_loop")
+            zombie.state.setdefault("pogo_phase_t", 0.0)
+            zombie.state.setdefault("pogo_start_x", zombie.x)
+            zombie.state.setdefault("pogo_end_x", zombie.x)
 
     def rows(self) -> int:
         return self.field.rows
@@ -5366,13 +5718,19 @@ class BattleState:
         return cfg.is_mushroom and not plant.awake_override and not self.field.is_night
 
     def z_ahead(self, row: int, x: float) -> bool:
-        return any(z.row == row and z.x > x and not z.hypnotized for z in self.zombies)
+        return any(
+            z.row == row
+            and z.x > x
+            and not z.hypnotized
+            and self.zombie_targetable(z)
+            for z in self.zombies
+        )
 
     def z_near(self, row: int, x: float, r: float) -> Optional[Zombie]:
         near = None
         best = 1e9
         for z in self.zombies:
-            if z.row != row:
+            if z.row != row or not self.zombie_targetable(z):
                 continue
             d = abs(z.x - x)
             if d <= r and d < best:
@@ -5413,6 +5771,8 @@ class BattleState:
 
     def boom(self, x: float, y: float, radius: float, damage: float, slow_t: float = 0.0) -> None:
         for z in self.zombies:
+            if not self.zombie_targetable(z):
+                continue
             if math.hypot(z.x - x, self.row_y(z.row) - y) <= radius:
                 self.damage_zombie(z, damage, source="boom")
                 z.state["hit_flash"] = 0.14
@@ -5514,6 +5874,7 @@ class BattleState:
             p.cd = 0.0
             p.state["arm_t"] = 10.0
             p.state["armed"] = 0.0
+            p.state["potato_state"] = "arming"
         if place_kind in ("cherrybomb", "jalapeno", "doom_shroom", "ice_shroom", "blover"):
             p.cd = 0.8
         if place_kind == "sunflower":
@@ -5527,6 +5888,7 @@ class BattleState:
             p.state["imitater_target"] = place_kind
             p.state["imitater_morph_t"] = 3.2
             p.state["imitater_morph_total"] = 3.2
+            p.state["imitater_state"] = "morphing"
             p.hp = min(p.hp, 75.0)
         if slot == "main":
             self.main[pos] = p
@@ -5728,12 +6090,14 @@ class BattleState:
         for plant in list(self.main.values()) + list(self.support.values()) + list(self.armor.values()):
             cfg = self.plant_types[plant.kind]
             self.ensure_plant_anim_state(plant)
+            self.update_plant_visual_state(plant)
             prev_hp = plant.state.get("last_hp", plant.hp)
             if plant.hp < prev_hp - 0.01:
                 plant.state["hit_flash"] = 0.14
             plant.state["last_hp"] = plant.hp
             plant.state["recoil_t"] = max(0.0, plant.state.get("recoil_t", 0.0) - dt)
             plant.state["hit_flash"] = max(0.0, plant.state.get("hit_flash", 0.0) - dt)
+            plant.state["ladder_flash_t"] = max(0.0, float(plant.state.get("ladder_flash_t", 0.0)) - dt)
             if plant.slot == "armor":
                 continue
             if plant.hp <= 0:
@@ -5744,8 +6108,10 @@ class BattleState:
             if morph_t > 0.0:
                 morph_t = max(0.0, morph_t - dt)
                 plant.state["imitater_morph_t"] = morph_t
+                plant.state["imitater_state"] = "morphing"
                 plant.state["recoil_t"] = max(plant.state.get("recoil_t", 0.0), 0.09)
                 if morph_t <= 0.0:
+                    plant.state["imitater_state"] = "copied"
                     plant.hp = max(plant.hp, float(cfg.hp) * self.plant_hp_scale())
                 continue
             if self.mushroom_sleeping(plant):
@@ -5820,6 +6186,7 @@ class BattleState:
                     plant.state["arm_t"] = max(0.0, plant.state.get("arm_t", 0.0) - dt)
                     if plant.state["arm_t"] <= 0:
                         plant.state["armed"] = 1.0
+                        plant.state["potato_state"] = "armed"
                         plant.state["recoil_t"] = max(plant.state.get("recoil_t", 0.0), 0.10)
                 elif self.z_near(plant.row, cx, 44):
                     self.boom(cx, cy + 8, 95, 9999)
@@ -5972,7 +6339,7 @@ class BattleState:
                 continue
             hit = None
             for z in self.zombies:
-                if z.row == p.row and abs(z.x - p.x) < 24:
+                if z.row == p.row and self.zombie_targetable(z) and abs(z.x - p.x) < 24:
                     if z.kind == "balloon" and p.color not in ((110, 210, 245), (250, 210, 116)):
                         continue
                     hit = z
@@ -6004,7 +6371,7 @@ class BattleState:
             hit_target: Optional[Zombie] = None
             best_x = 10**9
             for z in self.zombies:
-                if z.row != nut.row or z.hp <= 0:
+                if z.row != nut.row or z.hp <= 0 or not self.zombie_targetable(z):
                     continue
                 if abs(z.x - nut.x) <= nut.radius + 18 and z.x < best_x:
                     best_x = z.x
@@ -6095,32 +6462,7 @@ class BattleState:
                 self.boom(z.x, self.row_y(z.row), 135, 9999)
                 self.slay_zombie(z, source="jack_in_the_box")
                 continue
-            if z.kind == "bungee":
-                t = z.state.get("steal_t", 1.6) - dt
-                z.state["steal_t"] = t
-                if t <= 0:
-                    if self.main:
-                        target_pos = random.choice(list(self.main.keys()))
-                        tr, tc = target_pos
-                        umbrella = any(p.kind == "umbrella_leaf" and abs(p.row - tr) <= 1 and abs(p.col - tc) <= 1 for p in self.main.values())
-                        if not umbrella:
-                            del self.main[target_pos]
-                    self.slay_zombie(z, source="bungee_exit")
-                continue
-            if z.kind == "catapult":
-                t = z.state.get("throw_t", 2.5) - dt
-                z.state["throw_t"] = t
-                if t <= 0:
-                    z.state["throw_t"] = random.uniform(2.0, 3.8)
-                    if self.main:
-                        tr, tc = random.choice(list(self.main.keys()))
-                        umbrella = any(p.kind == "umbrella_leaf" and abs(p.row - tr) <= 1 and abs(p.col - tc) <= 1 for p in self.main.values())
-                        if not umbrella:
-                            pos = (tr, tc)
-                            if pos in self.armor:
-                                self.armor[pos].hp -= 140
-                            elif pos in self.main:
-                                self.main[pos].hp -= 140
+            if self.update_special_zombie_state(z, dt):
                 continue
             col = int(clamp((z.x - LAWN_X) // CELL_W, 0, COLS - 1))
             pos = (z.row, col)
@@ -6133,7 +6475,40 @@ class BattleState:
                 support_target = self.support.get(pos)
                 if self.is_plant_edible(support_target):
                     target = support_target
-            if target and z.kind != "balloon":
+            if target and self.zombie_should_ignore_target(z, target):
+                target = None
+            if main_target and self.zombie_should_ignore_target(z, main_target):
+                main_target = None
+            if z.kind == "zomboni" and target is not None:
+                if target.kind in ("spikeweed", "spikerock"):
+                    self.damage_zombie(z, 220 if target.kind == "spikeweed" else 420, source="spike_crush")
+                target.hp -= 9999
+                target.state["hit_flash"] = 0.18
+                z.state["zomboni_state"] = "crush"
+                z.state["zomboni_crush_t"] = 0.24
+                if target.hp <= 0:
+                    self.armor.pop(pos, None)
+                    self.main.pop(pos, None)
+                    self.support.pop(pos, None)
+                target = None
+            if z.kind == "ladder" and self.ladder_state(z) == "carrying":
+                ladder_target = self.ladderable_plant_at(pos)
+                if ladder_target and float(ladder_target.state.get("laddered", 0.0)) <= 0.0:
+                    z.state["ladder_state"] = "placing"
+                    z.state["ladder_phase_t"] = 0.42
+                    z.state["bite_t"] = 0.0
+                    continue
+            if z.kind == "pogo" and self.pogo_state(z) == "hop_loop" and target is not None:
+                blocked_by_tallnut = bool(main_target and main_target.kind == "tall_nut")
+                pogo_target_kind = target.kind if target else ""
+                if (not blocked_by_tallnut) and pogo_target_kind in {"wallnut", "pumpkin", "spikeweed", "spikerock", "garlic"}:
+                    z.state["pogo_state"] = "vault_over"
+                    z.state["pogo_phase_t"] = 0.30
+                    z.state["pogo_total_t"] = 0.30
+                    z.state["pogo_start_x"] = z.x
+                    z.state["pogo_end_x"] = max(LAWN_X - 8.0, z.x - CELL_W * 0.96)
+                    continue
+            if target and self.zombie_can_attack_plants(z):
                 target.hp -= z.dps * dt
                 target.state["hit_flash"] = 0.14
                 z.state["bite_t"] = 0.12
@@ -6549,12 +6924,47 @@ class BattleState:
                     pygame.draw.circle(screen, (252, 228, 116), (draw_cx + 14, draw_cy - 12), 5)
                     for sx in (-16, -8, 0, 8, 16):
                         pygame.draw.line(screen, (72, 62, 50), (draw_cx + sx, draw_cy + 18), (draw_cx + sx, draw_cy + 8), 2)
+                    if int(self.elapsed * 7.0) % 2 == 0:
+                        pygame.draw.circle(screen, (255, 246, 194), (draw_cx + 14, draw_cy - 12), 2)
                 else:
                     arm_t = max(0.0, plant.state.get("arm_t", 0.0))
                     ratio = clamp(1.0 - arm_t / 10.0, 0.0, 1.0)
                     pygame.draw.circle(screen, (190, 110, 58), (draw_cx, draw_cy + 20), 13)
                     pygame.draw.rect(screen, (52, 44, 32), (draw_cx - 18, draw_cy - 26, 36, 5), border_radius=3)
                     pygame.draw.rect(screen, (86, 196, 112), (draw_cx - 18, draw_cy - 26, int(36 * ratio), 5), border_radius=3)
+                    sprout_h = int(6 + ratio * 12)
+                    pygame.draw.line(screen, (74, 156, 78), (draw_cx, draw_cy + 10), (draw_cx, draw_cy + 10 - sprout_h), 3)
+            if plant.kind == "imitater" and float(plant.state.get("imitater_morph_t", 0.0)) > 0.0:
+                swirl_t = clamp(float(plant.state.get("imitater_morph_t", 0.0)) / max(0.1, float(plant.state.get("imitater_morph_total", 3.2))), 0.0, 1.0)
+                for idx in range(3):
+                    radius = int(14 + idx * 6 + (1.0 - swirl_t) * 8)
+                    alpha = int(110 * swirl_t)
+                    swirl = pygame.Surface((radius * 2 + 6, radius * 2 + 6), pygame.SRCALPHA)
+                    pygame.draw.circle(swirl, (214, 214, 224, alpha), (radius + 3, radius + 3), radius, 2)
+                    screen.blit(swirl, (draw_cx - radius - 3, draw_cy - radius - 10))
+            if plant.kind in {"wallnut", "tall_nut", "pumpkin"}:
+                damage_stage = str(plant.state.get("damage_stage", "healthy"))
+                if damage_stage != "healthy":
+                    crack_col = (98, 58, 34) if damage_stage == "cracked" else (82, 44, 26)
+                    pygame.draw.line(screen, crack_col, (draw_cx - 8, draw_cy - 10), (draw_cx + 2, draw_cy + 6), 3)
+                    pygame.draw.line(screen, crack_col, (draw_cx + 2, draw_cy + 6), (draw_cx - 6, draw_cy + 18), 3)
+                    if damage_stage == "heavy_cracked":
+                        pygame.draw.line(screen, crack_col, (draw_cx + 10, draw_cy - 8), (draw_cx - 2, draw_cy + 10), 3)
+                        pygame.draw.line(screen, crack_col, (draw_cx + 4, draw_cy - 18), (draw_cx + 14, draw_cy + 4), 2)
+            if float(plant.state.get("laddered", 0.0)) > 0.0:
+                ladder_x = draw_cx + int(min(18, plant_render_w * 0.18))
+                ladder_y = draw_cy - 26
+                ladder_col = (152, 108, 58)
+                glow = int(80 * clamp(float(plant.state.get("ladder_flash_t", 0.0)) / 0.4, 0.0, 1.0))
+                if glow > 0:
+                    glow_surf = pygame.Surface((30, 56), pygame.SRCALPHA)
+                    pygame.draw.rect(glow_surf, (255, 230, 164, glow), (4, 4, 22, 48), border_radius=8)
+                    screen.blit(glow_surf, (ladder_x - 15, ladder_y - 4))
+                pygame.draw.line(screen, ladder_col, (ladder_x - 8, ladder_y), (ladder_x - 8, ladder_y + 46), 3)
+                pygame.draw.line(screen, ladder_col, (ladder_x + 8, ladder_y), (ladder_x + 8, ladder_y + 46), 3)
+                for step in range(4):
+                    yy = ladder_y + 8 + step * 10
+                    pygame.draw.line(screen, (186, 140, 84), (ladder_x - 7, yy), (ladder_x + 7, yy), 2)
             if show_plant_hp_bars:
                 hp_max = max(1.0, float(plant.state.get("hp_max", cfg.hp)))
                 hp_ratio = clamp(plant.hp / hp_max, 0.0, 1.0)
@@ -6609,15 +7019,48 @@ class BattleState:
                 dx += math.sin(walk_t * 2.2) * 1.2
                 angle += math.sin(walk_t * 7.4) * 2.2
                 scale = 1.12 if kind != "bobsled_team" else 1.17
+                if kind == "zomboni" and self.zomboni_state(z) == "crush":
+                    dy -= 4.0
+                    angle += math.sin(walk_t * 14.0) * 5.0
+                if kind == "catapult":
+                    c_state = self.catapult_state(z)
+                    if c_state == "windup":
+                        dy -= 5.0
+                        angle -= 8.0
+                    elif c_state == "recover":
+                        dy += 3.0
+                        angle += 6.0
             elif kind == "pogo":
-                hop = abs(math.sin(walk_t * 5.0))
-                dy -= 12.0 * hop
-                dx += math.sin(walk_t * 5.0) * 2.2
-                angle += 7.5 * math.sin(walk_t * 5.0)
+                p_state = self.pogo_state(z)
+                if p_state == "vault_over":
+                    vault_t = float(z.state.get("pogo_phase_t", 0.0))
+                    total = max(0.01, float(z.state.get("pogo_total_t", 0.30)))
+                    progress = clamp(1.0 - vault_t / total, 0.0, 1.0)
+                    dy -= 26.0 * math.sin(progress * math.pi)
+                    angle += 14.0 * math.sin(progress * math.pi)
+                elif p_state == "recover":
+                    dy -= 6.0
+                    angle -= 4.0
+                else:
+                    hop = abs(math.sin(walk_t * 5.0))
+                    dy -= 12.0 * hop
+                    dx += math.sin(walk_t * 5.0) * 2.2
+                    angle += 7.5 * math.sin(walk_t * 5.0)
             elif kind == "balloon":
-                dy -= 16.0 + math.sin(walk_t * 2.0) * 6.0
-                angle += math.sin(walk_t * 2.2) * 3.0
-                scale = 0.95 + 0.03 * math.sin(walk_t * 2.0)
+                b_state = self.balloon_state(z)
+                if b_state == "airborne":
+                    dy -= 16.0 + math.sin(walk_t * 2.0) * 6.0
+                    angle += math.sin(walk_t * 2.2) * 3.0
+                    scale = 0.95 + 0.03 * math.sin(walk_t * 2.0)
+                elif b_state == "popped_fall":
+                    fall_t = clamp(float(z.state.get("balloon_drop_t", 0.0)) / 0.52, 0.0, 1.0)
+                    dy -= 12.0 * fall_t
+                    angle += 18.0 * (1.0 - fall_t)
+                    scale = 0.98
+                else:
+                    dy += abs(step) * 2.4
+                    angle += math.sin(walk_t * 4.6) * 1.4
+                    scale = 1.02
             elif kind == "gargantuar":
                 dy += abs(step) * 4.2
                 scale = 1.24
@@ -6643,6 +7086,14 @@ class BattleState:
                 dx += math.sin(walk_t * 3.3) * 0.6
                 angle += math.sin(walk_t * 6.6) * 1.8
                 scale = 1.05
+                if kind == "ladder":
+                    l_state = self.ladder_state(z)
+                    if l_state == "placing":
+                        dy += 4.0
+                        angle -= 9.0
+                    elif l_state == "placed_attack":
+                        dy += 2.0
+                        angle += 3.5
             elif kind == "newspaper":
                 self.ensure_newspaper_state(z)
                 paper_state = str(z.state.get("paper_state", "paper_intact"))
@@ -6663,10 +7114,37 @@ class BattleState:
                 dy += abs(step) * 2.6
                 dx += math.sin(walk_t * 6.0) * 1.4
                 angle += math.sin(walk_t * 5.2) * 2.2
+                if kind == "digger":
+                    d_state = self.digger_state(z)
+                    if d_state == "burrow_enter":
+                        dy += 12.0
+                        angle -= 12.0
+                    elif d_state == "underground_travel":
+                        dy += 18.0
+                        scale = 0.88
+                    elif d_state == "emerge":
+                        rise = clamp(float(z.state.get("digger_phase_t", 0.0)) / 0.52, 0.0, 1.0)
+                        dy += 18.0 * rise
+                        angle += 10.0 * (1.0 - rise)
+                        scale = 0.94
             elif kind in ("snorkel", "ducky_tube", "dolphin_rider"):
                 dy += math.sin(walk_t * 4.8) * 2.2
                 angle += math.sin(walk_t * 4.2) * 1.6
                 dx += math.sin(walk_t * 3.1) * 1.0
+            elif kind == "bungee":
+                b_state = self.bungee_state(z)
+                if b_state == "descending":
+                    phase = clamp(float(z.state.get("bungee_phase_t", 0.0)) / 0.68, 0.0, 1.0)
+                    dy -= 80.0 * phase
+                elif b_state == "lock_target":
+                    dy -= 12.0
+                    angle += math.sin(walk_t * 6.0) * 1.2
+                elif b_state == "steal_lift":
+                    phase = 1.0 - clamp(float(z.state.get("bungee_phase_t", 0.0)) / 0.36, 0.0, 1.0)
+                    dy -= 24.0 + phase * 44.0
+                elif b_state == "exit":
+                    phase = 1.0 - clamp(float(z.state.get("bungee_phase_t", 0.0)) / 0.30, 0.0, 1.0)
+                    dy -= 54.0 + phase * 56.0
             else:
                 dy += abs(step) * 2.4
                 dx += math.sin(walk_t * 3.0) * 0.6
@@ -6685,6 +7163,8 @@ class BattleState:
             if self.is_invisi_ghoul_mode() and not z.hypnotized and dying_t <= 0:
                 invis_alpha = self.invisighoul_alpha(z)
                 alpha *= invis_alpha
+            if kind == "digger" and self.digger_state(z) in {"burrow_enter", "underground_travel"}:
+                alpha *= 0.45
             if z.state.get("whack_popup", 0.0) > 0.0:
                 life = clamp(float(z.state.get("whack_t", 0.0)) / 1.45, 0.0, 1.0)
                 dy += 22.0 * (1.0 - life)
@@ -6728,6 +7208,9 @@ class BattleState:
                 zombie_render_h = h
                 if z.kind == "balloon":
                     pygame.draw.circle(screen, (236, 112, 112), (draw_x, draw_y - 40), 16)
+            if kind == "bungee":
+                rope_top = max(0, draw_y - 118)
+                pygame.draw.line(screen, (86, 70, 54), (draw_x, rope_top), (draw_x, draw_y - 18), 2)
             if kind == "newspaper":
                 self.ensure_newspaper_state(z)
                 paper_state = str(z.state.get("paper_state", "paper_intact"))
@@ -10730,16 +11213,16 @@ class Game:
 
     def battle_hud_layout(self) -> Dict[str, pygame.Rect]:
         special_mode = self.scene == "battle" and self.battle.is_special_hud_mode()
-        hud_h = 90 if special_mode else 102
-        bank_h = 52 if special_mode else 60
+        hud_h = 88 if special_mode else 102
+        bank_h = 50 if special_mode else 60
         hud = pygame.Rect(12, 10, SCREEN_WIDTH - 24, hud_h)
-        sun_box = pygame.Rect(hud.x + 8, hud.y + 7, 90 if special_mode else 104, 46)
+        sun_box = pygame.Rect(hud.x + 8, hud.y + 7, 88 if special_mode else 104, 46)
         shovel_btn = pygame.Rect(hud.x + 10, hud.bottom - 18, 60 if special_mode else 46, 14)
         slot_btn = pygame.Rect(shovel_btn.right + 4, shovel_btn.y, 76 if special_mode else 54, 14)
-        settings_btn = pygame.Rect(hud.right - (56 if special_mode else 68), hud.y + 8, 46 if special_mode else 58, 21)
+        settings_btn = pygame.Rect(hud.right - (52 if special_mode else 68), hud.y + 8, 42 if special_mode else 58, 20)
         seed_bank = pygame.Rect(sun_box.right + 10, hud.y + 8, settings_btn.x - sun_box.right - 18, bank_h)
-        utility_info = pygame.Rect(seed_bank.x, seed_bank.bottom + 2, seed_bank.w - (146 if special_mode else 152), 14)
-        wave_meter = pygame.Rect(utility_info.right + 8, seed_bank.bottom + 1, 132 if special_mode else 144, 17)
+        utility_info = pygame.Rect(seed_bank.x, seed_bank.bottom + 2, seed_bank.w - (138 if special_mode else 152), 13)
+        wave_meter = pygame.Rect(utility_info.right + 8, seed_bank.bottom + 1, 124 if special_mode else 144, 16)
         left_tools = pygame.Rect(sun_box.x - 2, hud.y + 2, sun_box.w + 8, hud.h - 6)
         right_cluster = pygame.Rect(utility_info.x, utility_info.y, utility_info.w, utility_info.h)
         pause_btn = pygame.Rect(0, 0, 0, 0)
@@ -11117,8 +11600,8 @@ class Game:
         if count <= 0:
             return []
         gap = 5
-        card_w = min(70, max(52, (bank.w - 16 - max(0, count - 1) * gap) // count))
-        card_h = min(60, max(52, bank.h - 10))
+        card_w = min(66, max(48, (bank.w - 16 - max(0, count - 1) * gap) // count))
+        card_h = min(58, max(48, bank.h - 10))
         total_w = count * card_w + max(0, count - 1) * gap
         x = bank.x + max(8, (bank.w - total_w) // 2)
         y = bank.y + bank.h - card_h - 3
@@ -11261,17 +11744,17 @@ class Game:
             self.screen.blit(line, (bank.x + 12, bank.y + 8))
     def plant_select_layout(self) -> Dict[str, pygame.Rect]:
         frame = pygame.Rect(16, 12, SCREEN_WIDTH - 32, SCREEN_HEIGHT - 24)
-        title_sign = pygame.Rect(frame.x + 388, frame.y + 10, frame.w - 776, 36)
+        title_sign = pygame.Rect(frame.x + 402, frame.y + 10, frame.w - 804, 34)
         content_gap = 12
-        side_w = 224
+        side_w = 216
         main_w = frame.w - 62 - side_w - content_gap
-        tray_panel = pygame.Rect(frame.x + 30, title_sign.bottom + 6, main_w, 78)
+        tray_panel = pygame.Rect(frame.x + 30, title_sign.bottom + 6, main_w, 72)
         zombie_panel = pygame.Rect(tray_panel.right + content_gap, title_sign.bottom + 4, side_w, frame.h - 112)
         available_panel = pygame.Rect(frame.x + 30, tray_panel.bottom + 6, main_w, frame.bottom - tray_panel.bottom - 54)
         available_viewport = pygame.Rect(available_panel.x + 12, available_panel.y + 30, available_panel.w - 24, available_panel.h - 40)
-        action_panel = pygame.Rect(frame.x + 30, frame.bottom - 40, frame.w - 60, 28)
-        back_btn = pygame.Rect(action_panel.x + 2, action_panel.y - 1, 112, 30)
-        start_btn = pygame.Rect(action_panel.right - 168, action_panel.y - 1, 168, 32)
+        action_panel = pygame.Rect(frame.x + 30, frame.bottom - 38, frame.w - 60, 26)
+        back_btn = pygame.Rect(action_panel.x + 2, action_panel.y - 1, 108, 28)
+        start_btn = pygame.Rect(action_panel.right - 160, action_panel.y - 2, 160, 30)
         return {
             "frame": frame,
             "title_sign": title_sign,
@@ -11286,8 +11769,8 @@ class Game:
 
     def plant_select_grid_metrics(self) -> Dict[str, int]:
         return {
-            "card_w": 90,
-            "card_h": 100,
+            "card_w": 88,
+            "card_h": 98,
             "gap_x": 3,
             "gap_y": 4,
             "pad_x": 1,
