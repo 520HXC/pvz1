@@ -631,22 +631,22 @@ ZOMBOSS_BOSS_RULESETS: Dict[str, Dict[str, object]] = {
         "zombie_speed_scale": 1.0,
         "zombie_dps_scale": 1.0,
         "boss_intro_phase": (
-            {"time": 2.0, "spawns": (("normal", 2),)},
-            {"time": 7.0, "spawns": (("normal", 2), ("conehead", 1))},
-            {"time": 13.5, "spawns": (("conehead", 2),)},
-            {"time": 19.0, "spawns": (("buckethead", 1),)},
+            {"time": 2.4, "spawns": (("normal", 2),)},
+            {"time": 8.2, "spawns": (("normal", 2), ("conehead", 1))},
+            {"time": 14.4, "spawns": (("conehead", 2),)},
+            {"time": 20.6, "spawns": (("buckethead", 1),)},
         ),
-        "boss_attack_cycle": ("fireball", "iceball", "fireball", "rv"),
-        "boss_attack_interval": 10.8,
-        "boss_attack_warning": 1.65,
+        "boss_attack_cycle": ("fireball", "iceball", "fireball", "iceball"),
+        "boss_attack_interval": 11.3,
+        "boss_attack_warning": 1.85,
         "boss_spawn_cycle": {
-            "interval": 6.6,
+            "interval": 7.1,
             "early": (("normal", "normal"), ("normal", "conehead"), ("conehead",)),
             "mid": (("conehead", "buckethead"), ("buckethead", "conehead"), ("buckethead", "imp")),
             "late": (("buckethead", "imp"), ("buckethead", "buckethead"), ("gargantuar",)),
         },
-        "boss_bungee_cycle": {"interval": 18.0, "count": 1},
-        "boss_rv_cycle": {"interval": 27.0, "width": 2},
+        "boss_bungee_cycle": {"interval": 20.5, "count": 1},
+        "boss_rv_cycle": {"interval": 31.0, "width": 2},
         "boss_result_title_key": "zomboss_boss_result_title",
         "boss_result_summary_key": "zomboss_boss_result_summary",
         "boss_fail_title_key": "zomboss_boss_fail_title",
@@ -684,19 +684,19 @@ ZOMBOSS_BOSS_RULESETS: Dict[str, Dict[str, object]] = {
             {"time": 1.8, "spawns": (("normal", 2), ("conehead", 1))},
             {"time": 6.4, "spawns": (("conehead", 2),)},
             {"time": 11.8, "spawns": (("buckethead", 1), ("conehead", 1))},
-            {"time": 16.0, "spawns": (("buckethead", 1), ("screen_door", 1))},
+            {"time": 16.2, "spawns": (("buckethead", 1), ("imp", 1))},
         ),
-        "boss_attack_cycle": ("fireball", "iceball", "rv", "fireball", "bungee", "iceball"),
-        "boss_attack_interval": 9.4,
-        "boss_attack_warning": 1.45,
+        "boss_attack_cycle": ("fireball", "iceball", "fireball", "iceball"),
+        "boss_attack_interval": 10.1,
+        "boss_attack_warning": 1.68,
         "boss_spawn_cycle": {
-            "interval": 5.6,
+            "interval": 6.0,
             "early": (("normal", "conehead"), ("conehead", "conehead"), ("buckethead",)),
             "mid": (("buckethead", "imp"), ("buckethead", "buckethead"), ("conehead", "imp")),
             "late": (("buckethead", "imp"), ("gargantuar", "imp"), ("buckethead", "gargantuar")),
         },
-        "boss_bungee_cycle": {"interval": 14.5, "count": 2},
-        "boss_rv_cycle": {"interval": 21.0, "width": 2},
+        "boss_bungee_cycle": {"interval": 16.5, "count": 2},
+        "boss_rv_cycle": {"interval": 24.5, "width": 2},
         "boss_result_title_key": "zomboss_revenge_result_title",
         "boss_result_summary_key": "zomboss_revenge_result_summary",
         "boss_fail_title_key": "zomboss_revenge_fail_title",
@@ -1218,6 +1218,7 @@ I18N = {
         "back_to_chapters": "Back To Chapters",
         "chapter_range": "Stages {range}",
         "chapter_focus": "Focus: {focus}",
+        "focus_short": "Focus",
         "chapter_1_title": "Front Yard Alert",
         "chapter_1_subtitle": "Day Lawn Basics",
         "chapter_1_focus": "Sun economy and basic walkers",
@@ -1233,6 +1234,11 @@ I18N = {
         "chapter_5_title": "Roof Showdown",
         "chapter_5_subtitle": "Lobbers And Final Boss",
         "chapter_5_focus": "Roof arc shots and boss pressure",
+        "adventure_prepare_hint": "{field} focus: {focus}. Main threat: {tag}.",
+        "adventure_clear_notice": "{field} test cleared!",
+        "adventure_lose_notice": "{field} line collapsed!",
+        "adventure_result_win_summary": "You answered {tag} and kept the {field} defense centered on {focus}.",
+        "adventure_result_lose_summary": "The {field} pressure around {tag} broke the defense before {focus} could settle.",
         "shop": "Shop",
         "daves_shop": "Dave's Shop",
         "back": "Back",
@@ -1606,6 +1612,7 @@ I18N = {
         "back_to_chapters": "返回章节选择",
         "chapter_range": "关卡范围：{range}",
         "chapter_focus": "章节重点：{focus}",
+        "focus_short": "重点",
         "chapter_1_title": "前院告急",
         "chapter_1_subtitle": "白天草坪入门",
         "chapter_1_focus": "阳光经营与基础僵尸",
@@ -1621,6 +1628,11 @@ I18N = {
         "chapter_5_title": "屋顶决战",
         "chapter_5_subtitle": "抛射防线与最终首领",
         "chapter_5_focus": "屋顶抛射与首领决战",
+        "adventure_prepare_hint": "{field}关重点：{focus}；主要威胁：{tag}。",
+        "adventure_clear_notice": "{field}关卡顶住了！",
+        "adventure_lose_notice": "{field}防线被冲垮了！",
+        "adventure_result_win_summary": "你接住了{tag}这层压力，也把整关的{focus}主轴稳稳撑到了最后。",
+        "adventure_result_lose_summary": "{field}这一关围绕{tag}展开的压力先把节奏打散了，{focus}还没完全站稳就被冲开了。",
         "shop": "商店",
         "daves_shop": "疯狂戴夫商店",
         "back": "返回",
@@ -2345,6 +2357,10 @@ def adventure_wave_points_for_level(world: int, stage: int, flags: int, total_wa
         elif world == 2 and stage <= 3:
             score = max(2, score - 1)
         elif world == 3 and stage <= 3:
+            score = max(2, score - 1)
+        if world == 1 and stage <= 4 and wave_idx <= min(2, total_waves):
+            score = max(1, score - 1)
+        if world == 2 and stage <= 3 and wave_idx <= min(3, total_waves):
             score = max(2, score - 1)
         points.append(int(score))
     return tuple(points)
@@ -3551,6 +3567,7 @@ class BattleState:
                         for _ in range(count):
                             self.spawn_zombie(wave_idx=1, forced_kind=kind)
                 self.zomboss_intro_index += 1
+        intro_active = isinstance(intro, (list, tuple)) and self.zomboss_intro_index < len(intro)
         if self.zomboss_pending_attack:
             self.zomboss_pending_attack["t"] = float(self.zomboss_pending_attack.get("t", 0.0)) - dt
             if float(self.zomboss_pending_attack.get("t", 0.0)) <= 0.0:
@@ -3560,44 +3577,45 @@ class BattleState:
             attack_interval = max(4.0, float(rules.get("boss_attack_interval", 10.5)))
             if attack_cycle:
                 self.zomboss_attack_t += dt
-                if self.zomboss_attack_t >= attack_interval:
-                    self.zomboss_attack_t -= attack_interval
+                if not intro_active and self.zomboss_attack_t >= attack_interval:
+                    self.zomboss_attack_t = 0.0
                     next_attack = attack_cycle[self.zomboss_attack_index % len(attack_cycle)]
                     self.zomboss_attack_index += 1
                     self.queue_zomboss_attack(next_attack)
-        spawn_cycle = self.zomboss_spawn_cycle()
-        spawn_interval = max(2.4, float(spawn_cycle.get("interval", 6.0)))
-        self.zomboss_spawn_t += dt
-        if self.zomboss_spawn_t >= spawn_interval:
-            self.zomboss_spawn_t -= spawn_interval
-            active_ground = sum(
-                1
-                for z in self.zombies
-                if z.hp > 0
-                and float(z.state.get("dying_t", 0.0)) <= 0.0
-                and not z.hypnotized
-                and z.kind != "bungee"
-            )
-            active_cap = 6 if self.zomboss_stage_key() == "adventure_zomboss_boss" else 7
-            if active_ground < active_cap:
-                self.spawn_zomboss_pack(self.zomboss_spawn_pack(), wave_idx=1)
-        bungee_cycle = rules.get("boss_bungee_cycle", {})
-        if isinstance(bungee_cycle, dict):
-            self.zomboss_bungee_t += dt
-            bungee_interval = max(8.0, float(bungee_cycle.get("interval", 0.0)))
-            if bungee_interval > 0.0 and self.zomboss_bungee_t >= bungee_interval:
-                self.zomboss_bungee_t -= bungee_interval
-                count = max(1, int(bungee_cycle.get("count", 1)))
-                self.queue_notice_key("zomboss_bungee_notice", color=(172, 74, 58), duration_ms=1100)
-                for _ in range(count):
-                    self.spawn_zombie(wave_idx=1, forced_kind="bungee")
-        rv_cycle = rules.get("boss_rv_cycle", {})
-        if isinstance(rv_cycle, dict):
-            self.zomboss_rv_t += dt
-            rv_interval = max(10.0, float(rv_cycle.get("interval", 0.0)))
-            if rv_interval > 0.0 and self.zomboss_rv_t >= rv_interval and not self.zomboss_pending_attack:
-                self.zomboss_rv_t -= rv_interval
-                self.queue_zomboss_attack("rv")
+        if not intro_active:
+            spawn_cycle = self.zomboss_spawn_cycle()
+            spawn_interval = max(2.4, float(spawn_cycle.get("interval", 6.0)))
+            self.zomboss_spawn_t += dt
+            if self.zomboss_spawn_t >= spawn_interval:
+                self.zomboss_spawn_t -= spawn_interval
+                active_ground = sum(
+                    1
+                    for z in self.zombies
+                    if z.hp > 0
+                    and float(z.state.get("dying_t", 0.0)) <= 0.0
+                    and not z.hypnotized
+                    and z.kind != "bungee"
+                )
+                active_cap = 6 if self.zomboss_stage_key() == "adventure_zomboss_boss" else 7
+                if active_ground < active_cap:
+                    self.spawn_zomboss_pack(self.zomboss_spawn_pack(), wave_idx=1)
+            bungee_cycle = rules.get("boss_bungee_cycle", {})
+            if isinstance(bungee_cycle, dict):
+                self.zomboss_bungee_t += dt
+                bungee_interval = max(8.0, float(bungee_cycle.get("interval", 0.0)))
+                if bungee_interval > 0.0 and self.zomboss_bungee_t >= bungee_interval and not self.zomboss_pending_attack:
+                    self.zomboss_bungee_t -= bungee_interval
+                    count = max(1, int(bungee_cycle.get("count", 1)))
+                    self.queue_notice_key("zomboss_bungee_notice", color=(172, 74, 58), duration_ms=1100)
+                    for _ in range(count):
+                        self.spawn_zombie(wave_idx=1, forced_kind="bungee")
+            rv_cycle = rules.get("boss_rv_cycle", {})
+            if isinstance(rv_cycle, dict):
+                self.zomboss_rv_t += dt
+                rv_interval = max(10.0, float(rv_cycle.get("interval", 0.0)))
+                if rv_interval > 0.0 and self.zomboss_rv_t >= rv_interval and not self.zomboss_pending_attack:
+                    self.zomboss_rv_t -= rv_interval
+                    self.queue_zomboss_attack("rv")
 
     def draw_zomboss_boss_overlay(self, screen: pygame.Surface, zombie_sprite_fn=None, tr_fn=None) -> None:
         if not self.is_zomboss_boss_mode():
@@ -8436,6 +8454,8 @@ class Game:
         self.battle_notice = ""
         self.battle_notice_color = (56, 40, 24)
         self.battle_notice_until_ms = 0
+        self.battle_result_hold_until_ms = 0
+        self.battle_result_hold_result = ""
         self.mode_notice = ""
         self.mode_notice_until_ms = 0
         self.mode_card_selected = {"mini_select": "", "puzzle_select": "", "survival_select": ""}
@@ -12202,6 +12222,8 @@ class Game:
         self.survival_pending_state = None
         self.battle_notice = ""
         self.battle_notice_until_ms = 0
+        self.battle_result_hold_until_ms = 0
+        self.battle_result_hold_result = ""
         hud = self.battle_hud_layout()
         self.pause_btn = hud["pause_btn"]
         self.battle_exit_btn = hud["exit_btn"]
@@ -13484,10 +13506,112 @@ class Game:
             return f"{self.tr('boss_hp_label')}: {ratio}%"
         return ""
 
+    def battle_adventure_level(self) -> Optional[LevelConfig]:
+        if self.battle.is_adventure_mainline():
+            return self.battle.level
+        return None
+
+    def battle_adventure_tag_text(self, level: Optional[LevelConfig] = None) -> str:
+        target = level or self.battle_adventure_level()
+        if target is None:
+            return self.tr("tag_general")
+        return self.tr(str(getattr(target, "tag_key", "tag_general") or "tag_general"))
+
+    def battle_adventure_focus_text(self, level: Optional[LevelConfig] = None) -> str:
+        target = level or self.battle_adventure_level()
+        if target is None:
+            return self.adventure_chapter_focus(1)
+        return self.adventure_chapter_focus(int(getattr(target, "world", 1) or 1))
+
+    def battle_adventure_field_text(self, level: Optional[LevelConfig] = None) -> str:
+        target = level or self.battle_adventure_level()
+        field_key = str(getattr(target, "battlefield", self.battle.field.key if self.battle.field else "day"))
+        return self.tr("field_" + field_key)
+
+    def battle_adventure_prepare_hint(self, level: Optional[LevelConfig] = None) -> str:
+        target = level or self.battle_adventure_level()
+        if target is None:
+            return ""
+        return self.tr("adventure_prepare_hint").format(
+            field=self.battle_adventure_field_text(target),
+            tag=self.battle_adventure_tag_text(target),
+            focus=self.battle_adventure_focus_text(target),
+        )
+
+    def battle_adventure_notice_text(self, level: Optional[LevelConfig], win: bool) -> str:
+        target = level or self.battle_adventure_level()
+        if target is None:
+            return self.tr("win") if win else self.tr("lose")
+        key = "adventure_clear_notice" if win else "adventure_lose_notice"
+        return self.tr(key).format(
+            field=self.battle_adventure_field_text(target),
+            tag=self.battle_adventure_tag_text(target),
+            focus=self.battle_adventure_focus_text(target),
+        )
+
+    def battle_adventure_result_summary_text(self, level: Optional[LevelConfig], win: bool) -> str:
+        target = level or self.battle_adventure_level()
+        if target is None:
+            return self.tr("win") if win else self.tr("lose")
+        key = "adventure_result_win_summary" if win else "adventure_result_lose_summary"
+        return self.tr(key).format(
+            field=self.battle_adventure_field_text(target),
+            tag=self.battle_adventure_tag_text(target),
+            focus=self.battle_adventure_focus_text(target),
+        )
+
+    def battle_result_hold_duration_ms(self, win: bool) -> int:
+        if self.battle.is_special_hud_mode():
+            return 900 if win else 1050
+        if self.battle_adventure_level() is not None:
+            return 720 if win else 880
+        return 560 if win else 680
+
+    def battle_result_hold_active(self) -> bool:
+        return bool(self.battle_result_hold_result) and pygame.time.get_ticks() < int(self.battle_result_hold_until_ms)
+
+    def draw_battle_result_hold_overlay(self) -> None:
+        if not self.battle_result_hold_active():
+            return
+        win = self.battle_result_hold_result == "win"
+        shade = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        shade.fill((16, 12, 10, 116 if win else 132))
+        self.screen.blit(shade, (0, 0))
+        panel = pygame.Rect(0, 0, 620, 234)
+        panel.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 14)
+        self.draw_book_panel(panel)
+        title_text = self.tr("win") if win else self.tr("lose")
+        result_title = self.battle_result_title_text(win)
+        self.draw_wood_sign(pygame.Rect(panel.x + 116, panel.y + 18, panel.w - 232, 70), title_text, result_title)
+        notice_text = self.battle_clear_notice_text() if win else self.battle_lose_notice_text()
+        notice_chip = pygame.Rect(panel.x + 86, panel.y + 102, panel.w - 172, 28)
+        chip_fill = (220, 236, 188) if win else (236, 206, 188)
+        chip_border = (96, 132, 66) if win else (148, 82, 56)
+        chip_inner = (236, 246, 214) if win else (246, 226, 212)
+        self.draw_framed_panel(notice_chip, fill=chip_fill, border=chip_border, radius=11, inner=chip_inner)
+        notice_label = self.fit_label(notice_text, self.fonts["small"], notice_chip.w - 18)
+        self.draw_text_center_shadow(self.fonts["small"], notice_label, (74, 56, 28), notice_chip.center, shadow=(248, 242, 222), offset=(1, 1))
+        summary_box = pygame.Rect(panel.x + 70, panel.y + 142, panel.w - 140, 52)
+        self.draw_framed_panel(summary_box, fill=(244, 234, 206), border=(134, 98, 48), radius=14, inner=(250, 242, 224))
+        summary_text = self.battle_result_summary_text(win)
+        summary_line = self.fit_label(summary_text, self.fonts["small"], summary_box.w - 18)
+        self.draw_text_center_shadow(self.fonts["small"], summary_line, (70, 52, 28), summary_box.center, shadow=(250, 242, 224), offset=(1, 1))
+        progress_lines = self.battle_result_progress_lines(win)
+        if progress_lines:
+            chip_w = max(220, min(272, panel.w - 172))
+            chip = pygame.Rect(0, 0, chip_w, 26)
+            chip.center = (panel.centerx, panel.bottom - 24)
+            self.draw_framed_panel(chip, fill=(228, 214, 176), border=(128, 92, 46), radius=10, inner=(242, 232, 206))
+            chip_text = self.fit_label(progress_lines[0], self.fonts["tiny"], chip.w - 12)
+            self.draw_text_center_shadow(self.fonts["tiny"], chip_text, (68, 48, 24), chip.center, shadow=(250, 242, 220), offset=(1, 1))
+
     def battle_clear_notice_text(self) -> str:
         key = self.battle.special_clear_notice_key()
         if key:
             return self.tr(key)
+        adventure_level = self.battle_adventure_level()
+        if adventure_level is not None:
+            return self.battle_adventure_notice_text(adventure_level, True)
         if self.battle.is_beghouled_mode() or self.battle.is_beghouled_twist_mode():
             return self.tr("beghouled_clear_notice")
         if self.battle.is_seeing_stars_mode():
@@ -13506,6 +13630,9 @@ class Game:
         key = self.battle.special_lose_notice_key()
         if key:
             return self.tr(key)
+        adventure_level = self.battle_adventure_level()
+        if adventure_level is not None:
+            return self.battle_adventure_notice_text(adventure_level, False)
         if self.battle.is_beghouled_twist_mode():
             return self.tr("beghouled_twist_lose_notice")
         if self.battle.is_beghouled_mode():
@@ -13538,6 +13665,9 @@ class Game:
         key = self.battle.special_result_summary_key() if win else self.battle.special_result_fail_summary_key()
         if key:
             return self.tr(key)
+        adventure_level = self.battle_adventure_level()
+        if adventure_level is not None:
+            return self.battle_adventure_result_summary_text(adventure_level, win)
         if self.battle.is_beghouled_twist_mode():
             return self.tr("beghouled_twist_hint" if win else "beghouled_twist_fail_summary")
         if self.battle.is_beghouled_mode():
@@ -13593,6 +13723,11 @@ class Game:
         if self.battle.is_whack_mode():
             lines.append(f"{self.tr('whack_score')}: {self.battle.mode_score}/{self.battle.mode_goal}")
             lines.append(f"{self.tr('whack_miss')}: {self.battle.mode_misses}" if win else self.battle_lose_notice_text())
+            return lines
+        adventure_level = self.battle_adventure_level()
+        if adventure_level is not None:
+            lines.append(f"{self.tr('threat')}: {self.battle_adventure_tag_text(adventure_level)}")
+            lines.append(f"{self.tr('focus_short')}: {self.battle_adventure_focus_text(adventure_level)}")
             return lines
         progress = self.battle_special_progress_text()
         if progress:
@@ -15224,6 +15359,8 @@ class Game:
                     return
             return
         if self.scene == "battle":
+            if self.battle_result_hold_active():
+                return
             if self.battle_settings_open:
                 self.handle_battle_settings_click(p)
                 return
@@ -15845,6 +15982,8 @@ class Game:
         self.draw_text_center_shadow(self.fonts["small"], self.tr("zombie_preview"), (248, 236, 208), z_head.center, shadow=(70, 42, 20), offset=(1, 1))
         preview_hint_key = str((self.pending_mode_rules or {}).get("primary_hint_key", "") or (self.pending_mode_rules or {}).get("special_hint_key", ""))
         preview_hint = self.tr(preview_hint_key) if preview_hint_key else ""
+        if not preview_hint and not pending_mode_name and 1 <= int(getattr(level, "world", 0)) <= 5 and self.stage_style_for_level(level) == "normal_select":
+            preview_hint = self.battle_adventure_prepare_hint(level)
 
         tray_slots = self.plant_select_tray_slots()
         for i, rect in enumerate(tray_slots):
@@ -16352,13 +16491,21 @@ class Game:
         compact_special = self.battle.is_special_hud_mode()
         special_primary_hint, special_secondary_hint = self.battle_special_hint_lines()
         special_progress_text = self.battle_special_progress_text()
+        adventure_level = self.battle_adventure_level()
         utility_parts: List[str] = []
-        if level_text and not compact_special:
+        if adventure_level is not None and not compact_special:
+            utility_parts = [
+                field_text,
+                f"{self.tr('threat')}: {self.battle_adventure_tag_text(adventure_level)}",
+                f"{self.tr('focus_short')}: {self.battle_adventure_focus_text(adventure_level)}",
+            ]
+        elif level_text and not compact_special:
             utility_parts.append(level_text)
         if mode_name and mode_name not in ("", "adventure") and not compact_special:
             utility_parts.append(mode_text)
         elif not compact_special:
-            utility_parts.append(field_text)
+            if adventure_level is None:
+                utility_parts.append(field_text)
         hint_key = self.battle.special_hint_key()
         if hint_key:
             if compact_special:
@@ -16398,7 +16545,7 @@ class Game:
             meter_text = f"{self.tr('time')}: {remain}{self.tr('sec')}"
         if show_next_wave and self.battle.uses_wave_system() and self.battle.total_waves > 0 and self.battle.wave_pause_t > 0 and self.battle.current_wave < self.battle.total_waves and not self.battle.last_stand_in_prep() and not compact_special:
             utility_parts.append(f"{self.tr('next_wave_in')}: {self.battle.wave_pause_t:.1f}{self.tr('sec')}")
-        if not compact_special:
+        if not compact_special and adventure_level is None:
             utility_parts.append(f"{self.tr('kills')}: {self.battle.kills}")
         if str(self.battle.mode_rules.get("mode_family", "")) == "survival":
             s_round = int(self.battle.mode_rules.get("survival_round_index", 1))
@@ -17171,6 +17318,8 @@ class Game:
             )
             self.draw_battle_controls()
             self.draw_almanac()
+            if self.scene == "battle" and self.battle_result_hold_active():
+                self.draw_battle_result_hold_overlay()
             if self.scene == "battle" and self.battle_menu_open:
                 self.draw_battle_menu()
             if self.scene == "battle" and self.battle_settings_open:
@@ -17197,6 +17346,8 @@ class Game:
                         self.image_cache.clear()
                         self.logged_loaded_sprites.clear()
                         self.logged_missing_sprites.clear()
+                    if self.scene == "battle" and self.battle_result_hold_active():
+                        continue
                     if self.scene == "battle" and e.key == pygame.K_o:
                         if self.battle_settings_open:
                             self.close_battle_settings()
@@ -17281,25 +17432,35 @@ class Game:
             if self.scene == "battle":
                 dt_scale = self.battle_speed()
                 sim_dt = dt * dt_scale
-                self.battle.update(sim_dt)
-                notice_text, notice_key, notice_color, notice_duration = self.battle.consume_notice_request()
-                if notice_text or notice_key:
-                    self.show_battle_notice(notice_text or self.tr(notice_key), color=notice_color, duration_ms=max(400, notice_duration))
+                hold_active = self.battle_result_hold_active()
+                if not hold_active and not self.battle.result:
+                    self.battle.update(sim_dt)
+                    notice_text, notice_key, notice_color, notice_duration = self.battle.consume_notice_request()
+                    if notice_text or notice_key:
+                        self.show_battle_notice(notice_text or self.tr(notice_key), color=notice_color, duration_ms=max(400, notice_duration))
                 if self.battle.result:
                     if self.battle.result == "win" and self.is_active_survival_mode():
                         if self.handle_survival_round_win():
                             self.save_mgr.save(self.save_data)
                             self.draw()
                             continue
-                    if self.battle.result == "win" and (self.battle.special_hint_key() or self.battle.special_result_title_key()):
-                        self.show_battle_notice(self.battle_clear_notice_text(), color=(56, 118, 70), duration_ms=2200)
-                    if self.battle.result == "lose" and (self.battle.special_hint_key() or self.battle.special_result_fail_title_key()):
-                        self.show_battle_notice(self.battle_lose_notice_text(), color=(148, 82, 56), duration_ms=2200)
-                    if self.battle.result == "win" and not self.battle.mode_rules.get("mode_name"):
-                        self.mark_adventure_level_cleared(self.battle.level)
-                        self.save_data["unlocked"] = max(int(self.save_data.get("unlocked", 1)), self.level_idx + 2)
-                    self.save_mgr.save(self.save_data)
-                    self.scene = "result"
+                    if not self.battle_result_hold_result:
+                        win = self.battle.result == "win"
+                        self.battle_result_hold_result = self.battle.result
+                        self.battle_result_hold_until_ms = pygame.time.get_ticks() + self.battle_result_hold_duration_ms(win)
+                        self.show_battle_notice(
+                            self.battle_clear_notice_text() if win else self.battle_lose_notice_text(),
+                            color=(56, 118, 70) if win else (148, 82, 56),
+                            duration_ms=self.battle_result_hold_duration_ms(win) + 450,
+                        )
+                    elif not self.battle_result_hold_active():
+                        if self.battle.result == "win" and not self.battle.mode_rules.get("mode_name"):
+                            self.mark_adventure_level_cleared(self.battle.level)
+                            self.save_data["unlocked"] = max(int(self.save_data.get("unlocked", 1)), self.level_idx + 2)
+                        self.save_mgr.save(self.save_data)
+                        self.battle_result_hold_result = ""
+                        self.battle_result_hold_until_ms = 0
+                        self.scene = "result"
             self.draw()
 
 
