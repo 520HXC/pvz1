@@ -306,34 +306,39 @@ PORTAL_COMBAT_LAYOUTS: Dict[str, Tuple[Tuple[Tuple[int, int], Tuple[int, int]], 
 SPECIAL_MINIGAME_RULESETS: Dict[str, Dict[str, object]] = {
     "mini_invisi_ghoul": {
         "field": "fog",
-        "stage_style": "normal_select",
+        "stage_style": "conveyor",
         "forced_pool": ["plantern", "cactus", "split_pea", "starfruit", "pumpkin", "blover", "lily_pad", "tangle_kelp"],
         "pick_limit": 8,
         "mode_rules": {
             "mode_family": "mini_invisi_ghoul",
-            "start_sun_override": 325.0,
+            "start_sun_override": 0.0,
+            "conveyor": True,
+            "conveyor_pool": ["plantern", "cactus", "split_pea", "starfruit", "blover", "pumpkin", "lily_pad", "tangle_kelp"],
+            "conveyor_interval": 1.24,
+            "conveyor_cap": 9,
+            "no_sun_cost": True,
             "no_sky_sun": True,
             "hide_fog_overlay": True,
-            "spawn_rate_mult": 0.98,
-            "zombie_hp_scale": 0.90,
-            "zombie_dps_scale": 0.92,
+            "spawn_rate_mult": 0.92,
+            "zombie_hp_scale": 0.88,
+            "zombie_dps_scale": 0.90,
             "wave_interval": 19.0,
             "total_waves_override": 20.0,
             "large_wave_indices": [10, 20],
             "final_wave_index": 20.0,
             "special_hint_key": "invisi_ghoul_hint",
-            "invisi_base_alpha": 0.10,
-            "invisi_partial_alpha": 0.78,
+            "invisi_base_alpha": 0.08,
+            "invisi_partial_alpha": 0.72,
             "invisi_reveal_alpha": 0.96,
             "forced_zombie_pool": ["normal", "conehead", "buckethead", "ducky_tube", "dolphin_rider", "jack_in_the_box", "zomboni", "flag_zombie"],
             "zombie_weights_override": {
-                "normal": 0.24,
-                "conehead": 0.18,
-                "buckethead": 0.12,
-                "ducky_tube": 0.14,
-                "dolphin_rider": 0.12,
-                "jack_in_the_box": 0.10,
-                "zomboni": 0.06,
+                "normal": 0.26,
+                "conehead": 0.20,
+                "buckethead": 0.10,
+                "ducky_tube": 0.12,
+                "dolphin_rider": 0.10,
+                "jack_in_the_box": 0.08,
+                "zomboni": 0.10,
                 "flag_zombie": 0.04,
             },
         },
@@ -346,9 +351,9 @@ SPECIAL_MINIGAME_RULESETS: Dict[str, Dict[str, object]] = {
         "mode_rules": {
             "mode_family": "mini_zombotany",
             "start_sun_override": 200.0,
-            "spawn_rate_mult": 0.96,
-            "zombie_hp_scale": 0.92,
-            "zombie_dps_scale": 0.92,
+            "spawn_rate_mult": 0.92,
+            "zombie_hp_scale": 0.90,
+            "zombie_dps_scale": 0.90,
             "wave_interval": 20.0,
             "total_waves_override": 20.0,
             "large_wave_indices": [10, 20],
@@ -357,10 +362,10 @@ SPECIAL_MINIGAME_RULESETS: Dict[str, Dict[str, object]] = {
             "forced_zombie_pool": ["normal", "conehead", "buckethead", "flag_zombie"],
             "zombotany_variants": ["peashooter", "wallnut"],
             "zombie_weights_override": {
-                "normal": 0.50,
+                "normal": 0.56,
                 "conehead": 0.24,
-                "buckethead": 0.16,
-                "flag_zombie": 0.10,
+                "buckethead": 0.12,
+                "flag_zombie": 0.08,
             },
         },
     },
@@ -372,9 +377,9 @@ SPECIAL_MINIGAME_RULESETS: Dict[str, Dict[str, object]] = {
         "mode_rules": {
             "mode_family": "mini_zombotany_2",
             "start_sun_override": 225.0,
-            "spawn_rate_mult": 1.04,
-            "zombie_hp_scale": 0.96,
-            "zombie_dps_scale": 0.96,
+            "spawn_rate_mult": 0.98,
+            "zombie_hp_scale": 0.94,
+            "zombie_dps_scale": 0.94,
             "wave_interval": 18.0,
             "total_waves_override": 30.0,
             "large_wave_indices": [10, 20, 30],
@@ -383,25 +388,30 @@ SPECIAL_MINIGAME_RULESETS: Dict[str, Dict[str, object]] = {
             "forced_zombie_pool": ["normal", "conehead", "buckethead", "flag_zombie"],
             "zombotany_variants": ["peashooter", "wallnut", "tall_nut", "squash", "jalapeno", "gatling"],
             "zombie_weights_override": {
-                "normal": 0.38,
+                "normal": 0.34,
                 "conehead": 0.22,
-                "buckethead": 0.24,
-                "flag_zombie": 0.16,
+                "buckethead": 0.22,
+                "flag_zombie": 0.12,
             },
         },
     },
     "mini_portal_combat": {
         "field": "night",
-        "stage_style": "normal_select",
+        "stage_style": "conveyor",
         "forced_pool": ["peashooter", "wallnut", "cherrybomb", "repeater", "torchwood", "cactus"],
         "pick_limit": 6,
         "mode_rules": {
             "mode_family": "mini_portal_combat",
-            "start_sun_override": 350.0,
+            "start_sun_override": 0.0,
+            "conveyor": True,
+            "conveyor_pool": ["peashooter", "wallnut", "cherrybomb", "repeater", "torchwood", "cactus"],
+            "conveyor_interval": 1.18,
+            "conveyor_cap": 8,
+            "no_sun_cost": True,
             "no_sky_sun": True,
-            "spawn_rate_mult": 0.98,
+            "spawn_rate_mult": 0.94,
             "zombie_hp_scale": 0.92,
-            "zombie_speed_scale": 1.00,
+            "zombie_speed_scale": 0.98,
             "zombie_dps_scale": 0.92,
             "wave_interval": 19.0,
             "total_waves_override": 20.0,
@@ -413,10 +423,10 @@ SPECIAL_MINIGAME_RULESETS: Dict[str, Dict[str, object]] = {
             "portal_shuffle_interval": 12.0,
             "forced_zombie_pool": ["normal", "conehead", "buckethead", "pole_vaulting", "balloon", "flag_zombie"],
             "zombie_weights_override": {
-                "normal": 0.30,
+                "normal": 0.34,
                 "conehead": 0.22,
-                "buckethead": 0.14,
-                "pole_vaulting": 0.12,
+                "buckethead": 0.12,
+                "pole_vaulting": 0.10,
                 "balloon": 0.14,
                 "flag_zombie": 0.08,
             },
@@ -444,11 +454,11 @@ SPECIAL_MINIGAME_RULESETS: Dict[str, Dict[str, object]] = {
             "bobsled_burst_cap": 2.0,
             "bobsled_burst_cycle": ["bobsled_team", "zomboni", "bobsled_team"],
             "zombie_weights_override": {
-                "ducky_tube": 0.12,
-                "snorkel": 0.10,
-                "dolphin_rider": 0.12,
-                "zomboni": 0.20,
-                "bobsled_team": 0.46,
+                "ducky_tube": 0.08,
+                "snorkel": 0.08,
+                "dolphin_rider": 0.10,
+                "zomboni": 0.24,
+                "bobsled_team": 0.50,
             },
         },
     },
@@ -472,10 +482,10 @@ SPECIAL_MINIGAME_RULESETS: Dict[str, Dict[str, object]] = {
             "special_hint_key": "nimble_quick_hint",
             "forced_zombie_pool": ["normal", "conehead", "buckethead", "pole_vaulting", "flag_zombie"],
             "zombie_weights_override": {
-                "normal": 0.46,
+                "normal": 0.50,
                 "conehead": 0.26,
-                "buckethead": 0.08,
-                "pole_vaulting": 0.14,
+                "buckethead": 0.06,
+                "pole_vaulting": 0.12,
                 "flag_zombie": 0.06,
             },
         },
@@ -499,9 +509,9 @@ SPECIAL_MINIGAME_RULESETS: Dict[str, Dict[str, object]] = {
             "special_hint_key": "pogo_party_hint",
             "forced_zombie_pool": ["normal", "conehead", "flag_zombie", "pogo"],
             "zombie_weights_override": {
-                "normal": 0.18,
-                "conehead": 0.12,
-                "pogo": 0.62,
+                "normal": 0.14,
+                "conehead": 0.10,
+                "pogo": 0.68,
                 "flag_zombie": 0.08,
             },
         },
@@ -2080,6 +2090,7 @@ class Projectile:
     radius: int = 8
     enemy: bool = False
     teleport_cd: float = 0.0
+    anti_air: bool = False
 
     def update(self, dt: float) -> None:
         self.x += self.speed * dt * self.direction
@@ -3165,14 +3176,14 @@ class BattleState:
                 zombie.x = float(self.cell_center(pos[0], pos[1])[0])
                 zombie.row = int(pos[0])
                 zombie.state["bungee_state"] = "lock_target"
-                zombie.state["bungee_phase_t"] = 0.34
+                zombie.state["bungee_phase_t"] = 0.44
             return True
         if state == "lock_target":
             row = int(zombie.state.get("target_row", zombie.row))
             col = int(zombie.state.get("target_col", 0.0))
             if self.has_umbrella_cover(row, col):
                 zombie.state["bungee_state"] = "exit"
-                zombie.state["bungee_phase_t"] = 0.26
+                zombie.state["bungee_phase_t"] = 0.32
                 zombie.state["has_loot"] = 0.0
                 zombie.state["hit_flash"] = max(zombie.state.get("hit_flash", 0.0), 0.12)
                 return True
@@ -3190,12 +3201,12 @@ class BattleState:
                     loot = 1.0
                 zombie.state["has_loot"] = loot
                 zombie.state["bungee_state"] = "steal_lift"
-                zombie.state["bungee_phase_t"] = 0.36
+                zombie.state["bungee_phase_t"] = 0.44
             return True
         if state == "steal_lift":
             if phase_t <= 0.0:
                 zombie.state["bungee_state"] = "exit"
-                zombie.state["bungee_phase_t"] = 0.30
+                zombie.state["bungee_phase_t"] = 0.34
             return True
         if state == "exit":
             if phase_t <= 0.0:
@@ -3213,7 +3224,7 @@ class BattleState:
                 pos, _plant = lane_target
                 zombie.state["catapult_target_col"] = float(pos[1])
                 zombie.state["catapult_state"] = "windup"
-                zombie.state["catapult_phase_t"] = 0.42
+                zombie.state["catapult_phase_t"] = 0.54
                 return True
             return False
         if state == "windup":
@@ -3230,12 +3241,12 @@ class BattleState:
                         self.main.pop(pos, None)
                         self.support.pop(pos, None)
                 zombie.state["catapult_state"] = "recover"
-                zombie.state["catapult_phase_t"] = random.uniform(0.72, 1.04)
+                zombie.state["catapult_phase_t"] = random.uniform(0.88, 1.16)
             return True
         if state == "recover":
             if phase_t <= 0.0:
                 zombie.state["catapult_state"] = "walk"
-                zombie.state["catapult_phase_t"] = random.uniform(1.7, 2.8)
+                zombie.state["catapult_phase_t"] = random.uniform(1.45, 2.3)
             return True
         return False
 
@@ -3250,8 +3261,18 @@ class BattleState:
                         self.slay_zombie(zombie, source="balloon_water_drop")
                     else:
                         zombie.state["balloon_state"] = "grounded"
-                        zombie.speed *= 0.92
+                        zombie.state["balloon_grounded_t"] = 0.34
+                        zombie.state["balloon_land_wobble_t"] = 0.42
+                        zombie.speed *= 0.88
                 return True
+            if state == "grounded":
+                grounded_t = max(0.0, float(zombie.state.get("balloon_grounded_t", 0.0)) - dt)
+                wobble_t = max(0.0, float(zombie.state.get("balloon_land_wobble_t", 0.0)) - dt)
+                zombie.state["balloon_grounded_t"] = grounded_t
+                zombie.state["balloon_land_wobble_t"] = wobble_t
+                if grounded_t > 0.0:
+                    zombie.state["bite_t"] = 0.0
+                    return True
             return False
         if zombie.kind == "bungee":
             return self.update_bungee_state(zombie, dt)
@@ -3264,10 +3285,10 @@ class BattleState:
                     zombie.state["digger_state"] = "underground_travel"
                 return True
             if state == "underground_travel":
-                zombie.x -= zombie.speed * 1.55 * dt
+                zombie.x -= zombie.speed * 1.72 * dt
                 if zombie.x <= float(zombie.state.get("digger_target_x", LAWN_X + CELL_W * 2.2)):
                     zombie.state["digger_state"] = "emerge"
-                    zombie.state["digger_phase_t"] = 0.52
+                    zombie.state["digger_phase_t"] = 0.60
                 return True
             if state == "emerge":
                 phase_t = max(0.0, float(zombie.state.get("digger_phase_t", 0.0)) - dt)
@@ -3285,8 +3306,7 @@ class BattleState:
                     pos = (zombie.row, int(clamp((zombie.x - LAWN_X) // CELL_W, 0, COLS - 1)))
                     if self.apply_ladder_to_pos(pos):
                         zombie.state["ladder_state"] = "placed_attack"
-                        zombie.state["ladder_phase_t"] = 0.34
-                        zombie.speed *= 0.92
+                        zombie.state["ladder_phase_t"] = 0.42
                     else:
                         zombie.state["ladder_state"] = "carrying"
                 return True
@@ -3309,14 +3329,14 @@ class BattleState:
             if state == "vault_over":
                 phase_t = max(0.0, float(zombie.state.get("pogo_phase_t", 0.0)) - dt)
                 zombie.state["pogo_phase_t"] = phase_t
-                total = max(0.01, float(zombie.state.get("pogo_total_t", 0.30)))
+                total = max(0.01, float(zombie.state.get("pogo_total_t", 0.36)))
                 start_x = float(zombie.state.get("pogo_start_x", zombie.x))
                 end_x = float(zombie.state.get("pogo_end_x", zombie.x - CELL_W))
                 progress = clamp(1.0 - phase_t / total, 0.0, 1.0)
                 zombie.x = start_x + (end_x - start_x) * progress
                 if phase_t <= 0.0:
                     zombie.state["pogo_state"] = "recover"
-                    zombie.state["pogo_phase_t"] = 0.18
+                    zombie.state["pogo_phase_t"] = 0.24
                 return True
             if state == "recover":
                 phase_t = max(0.0, float(zombie.state.get("pogo_phase_t", 0.0)) - dt)
@@ -3337,9 +3357,9 @@ class BattleState:
             if state == "airborne" and source == "blover":
                 zombie.hp = 0.0
                 return max(amount, 1.0)
-            if state == "airborne" and source == "projectile":
+            if state == "airborne" and source == "anti_air_projectile":
                 zombie.state["balloon_state"] = "popped_fall"
-                zombie.state["balloon_drop_t"] = 0.52
+                zombie.state["balloon_drop_t"] = 0.64
                 zombie.state["hit_flash"] = max(zombie.state.get("hit_flash", 0.0), 0.18)
                 zombie.state["bite_t"] = 0.0
                 if self.is_water(zombie.row):
@@ -5412,15 +5432,17 @@ class BattleState:
         if zombie.kind == "balloon":
             zombie.state.setdefault("balloon_state", "airborne")
             zombie.state.setdefault("balloon_drop_t", 0.0)
+            zombie.state.setdefault("balloon_grounded_t", 0.0)
+            zombie.state.setdefault("balloon_land_wobble_t", 0.0)
         elif zombie.kind == "bungee":
             zombie.state.setdefault("bungee_state", "descending")
-            zombie.state.setdefault("bungee_phase_t", 0.68)
+            zombie.state.setdefault("bungee_phase_t", 0.78)
             zombie.state.setdefault("target_row", -1.0)
             zombie.state.setdefault("target_col", -1.0)
             zombie.state.setdefault("has_loot", 0.0)
         elif zombie.kind == "digger":
             zombie.state.setdefault("digger_state", "burrow_enter")
-            zombie.state.setdefault("digger_phase_t", 0.56)
+            zombie.state.setdefault("digger_phase_t", 0.62)
             zombie.state.setdefault("digger_target_x", LAWN_X + CELL_W * 2.2)
         elif zombie.kind == "ladder":
             zombie.state.setdefault("ladder_state", "carrying")
@@ -5430,7 +5452,7 @@ class BattleState:
             zombie.state.setdefault("zomboni_crush_t", 0.0)
         elif zombie.kind == "catapult":
             zombie.state.setdefault("catapult_state", "walk")
-            zombie.state.setdefault("catapult_phase_t", random.uniform(1.7, 3.0))
+            zombie.state.setdefault("catapult_phase_t", random.uniform(1.5, 2.6))
             zombie.state.setdefault("catapult_target_col", -1.0)
         elif zombie.kind == "pogo":
             zombie.state.setdefault("pogo_state", "hop_loop")
@@ -5751,6 +5773,7 @@ class BattleState:
         color: Tuple[int, int, int] = (41, 179, 71),
         outline: Tuple[int, int, int] = (20, 110, 38),
         enemy: bool = False,
+        anti_air: bool = False,
     ) -> None:
         self.projs.append(
             Projectile(
@@ -5766,6 +5789,7 @@ class BattleState:
                 color=color,
                 outline=outline,
                 enemy=enemy,
+                anti_air=anti_air,
             )
         )
 
@@ -6140,7 +6164,7 @@ class BattleState:
                     slow = 2.5 if b == "shoot_slow" else 0.0
                     col = (120, 216, 246) if b == "shoot_slow" else ((110, 210, 245) if b == "shoot_balloon" else (41, 179, 71))
                     out = (56, 122, 150) if b == "shoot_slow" else ((30, 110, 140) if b == "shoot_balloon" else (20, 110, 38))
-                    self.add_projectile(plant.row, cx + 22, cy + oy, dmg, slow=slow, color=col, outline=out)
+                    self.add_projectile(plant.row, cx + 22, cy + oy, dmg, slow=slow, color=col, outline=out, anti_air=(b == "shoot_balloon"))
                 plant.cd = self.scaled_plant_interval(cfg.interval)
                 plant.state["recoil_t"] = 0.15
             elif b == "shoot_short" and plant.cd <= 0:
@@ -6188,6 +6212,8 @@ class BattleState:
                         plant.state["armed"] = 1.0
                         plant.state["potato_state"] = "armed"
                         plant.state["recoil_t"] = max(plant.state.get("recoil_t", 0.0), 0.10)
+                    elif plant.state["arm_t"] <= 1.35:
+                        plant.state["potato_state"] = "priming"
                 elif self.z_near(plant.row, cx, 44):
                     self.boom(cx, cy + 8, 95, 9999)
                     plant.hp = 0
@@ -6273,7 +6299,7 @@ class BattleState:
                 plant.cd = 1.7
             elif b == "cattail" and plant.cd <= 0 and self.zombies:
                 target = min(self.zombies, key=lambda z: abs(z.x - cx))
-                self.add_projectile(target.row, cx + 18, cy - 4, dmg, slow=0.4, color=(250, 210, 116), outline=(120, 80, 20))
+                self.add_projectile(target.row, cx + 18, cy - 4, dmg, slow=0.4, color=(250, 210, 116), outline=(120, 80, 20), anti_air=True)
                 plant.cd = self.scaled_plant_interval(cfg.interval)
                 plant.state["recoil_t"] = 0.13
             elif b == "gold_magnet" and plant.cd <= 0:
@@ -6340,12 +6366,13 @@ class BattleState:
             hit = None
             for z in self.zombies:
                 if z.row == p.row and self.zombie_targetable(z) and abs(z.x - p.x) < 24:
-                    if z.kind == "balloon" and p.color not in ((110, 210, 245), (250, 210, 116)):
+                    if z.kind == "balloon" and not p.anti_air:
                         continue
                     hit = z
                     break
             if hit:
-                self.damage_zombie(hit, p.damage, source="projectile")
+                hit_source = "anti_air_projectile" if p.anti_air else "projectile"
+                self.damage_zombie(hit, p.damage, source=hit_source)
                 hit.state["hit_flash"] = 0.18
                 self.hit_sparks.append({"x": float(hit.x), "y": float(self.row_y(hit.row) - 8), "t": 0.18, "ttl": 0.18})
                 if p.slow > 0:
@@ -6485,7 +6512,7 @@ class BattleState:
                 target.hp -= 9999
                 target.state["hit_flash"] = 0.18
                 z.state["zomboni_state"] = "crush"
-                z.state["zomboni_crush_t"] = 0.24
+                z.state["zomboni_crush_t"] = 0.30
                 if target.hp <= 0:
                     self.armor.pop(pos, None)
                     self.main.pop(pos, None)
@@ -6495,7 +6522,7 @@ class BattleState:
                 ladder_target = self.ladderable_plant_at(pos)
                 if ladder_target and float(ladder_target.state.get("laddered", 0.0)) <= 0.0:
                     z.state["ladder_state"] = "placing"
-                    z.state["ladder_phase_t"] = 0.42
+                    z.state["ladder_phase_t"] = 0.54
                     z.state["bite_t"] = 0.0
                     continue
             if z.kind == "pogo" and self.pogo_state(z) == "hop_loop" and target is not None:
@@ -6503,8 +6530,8 @@ class BattleState:
                 pogo_target_kind = target.kind if target else ""
                 if (not blocked_by_tallnut) and pogo_target_kind in {"wallnut", "pumpkin", "spikeweed", "spikerock", "garlic"}:
                     z.state["pogo_state"] = "vault_over"
-                    z.state["pogo_phase_t"] = 0.30
-                    z.state["pogo_total_t"] = 0.30
+                    z.state["pogo_phase_t"] = 0.36
+                    z.state["pogo_total_t"] = 0.36
                     z.state["pogo_start_x"] = z.x
                     z.state["pogo_end_x"] = max(LAWN_X - 8.0, z.x - CELL_W * 0.96)
                     continue
@@ -6920,6 +6947,7 @@ class BattleState:
                     plant_render_h = rad * 2
             if plant.kind == "potato_mine":
                 armed = plant.state.get("armed", 0.0) > 0.0
+                potato_state = str(plant.state.get("potato_state", "arming"))
                 if armed:
                     pygame.draw.circle(screen, (252, 228, 116), (draw_cx + 14, draw_cy - 12), 5)
                     for sx in (-16, -8, 0, 8, 16):
@@ -6929,11 +6957,16 @@ class BattleState:
                 else:
                     arm_t = max(0.0, plant.state.get("arm_t", 0.0))
                     ratio = clamp(1.0 - arm_t / 10.0, 0.0, 1.0)
-                    pygame.draw.circle(screen, (190, 110, 58), (draw_cx, draw_cy + 20), 13)
+                    bulb_col = (214, 154, 84) if potato_state == "priming" else (190, 110, 58)
+                    stem_col = (98, 176, 90) if potato_state == "priming" else (74, 156, 78)
+                    bar_col = (238, 198, 104) if potato_state == "priming" else (86, 196, 112)
+                    pygame.draw.circle(screen, bulb_col, (draw_cx, draw_cy + 20), 13)
                     pygame.draw.rect(screen, (52, 44, 32), (draw_cx - 18, draw_cy - 26, 36, 5), border_radius=3)
-                    pygame.draw.rect(screen, (86, 196, 112), (draw_cx - 18, draw_cy - 26, int(36 * ratio), 5), border_radius=3)
-                    sprout_h = int(6 + ratio * 12)
-                    pygame.draw.line(screen, (74, 156, 78), (draw_cx, draw_cy + 10), (draw_cx, draw_cy + 10 - sprout_h), 3)
+                    pygame.draw.rect(screen, bar_col, (draw_cx - 18, draw_cy - 26, int(36 * ratio), 5), border_radius=3)
+                    sprout_h = int((8 if potato_state == "priming" else 6) + ratio * 12)
+                    pygame.draw.line(screen, stem_col, (draw_cx, draw_cy + 10), (draw_cx, draw_cy + 10 - sprout_h), 3)
+                    if potato_state == "priming" and int(self.elapsed * 6.0) % 2 == 0:
+                        pygame.draw.circle(screen, (255, 234, 164), (draw_cx + 8, draw_cy + 8), 2)
             if plant.kind == "imitater" and float(plant.state.get("imitater_morph_t", 0.0)) > 0.0:
                 swirl_t = clamp(float(plant.state.get("imitater_morph_t", 0.0)) / max(0.1, float(plant.state.get("imitater_morph_total", 3.2))), 0.0, 1.0)
                 for idx in range(3):
@@ -6942,6 +6975,10 @@ class BattleState:
                     swirl = pygame.Surface((radius * 2 + 6, radius * 2 + 6), pygame.SRCALPHA)
                     pygame.draw.circle(swirl, (214, 214, 224, alpha), (radius + 3, radius + 3), radius, 2)
                     screen.blit(swirl, (draw_cx - radius - 3, draw_cy - radius - 10))
+                if swirl_t < 0.24:
+                    glow = pygame.Surface((58, 58), pygame.SRCALPHA)
+                    pygame.draw.circle(glow, (246, 242, 232, int(150 * (1.0 - swirl_t / 0.24))), (29, 29), 22, 2)
+                    screen.blit(glow, (draw_cx - 29, draw_cy - 30))
             if plant.kind in {"wallnut", "tall_nut", "pumpkin"}:
                 damage_stage = str(plant.state.get("damage_stage", "healthy"))
                 if damage_stage != "healthy":
@@ -6951,6 +6988,7 @@ class BattleState:
                     if damage_stage == "heavy_cracked":
                         pygame.draw.line(screen, crack_col, (draw_cx + 10, draw_cy - 8), (draw_cx - 2, draw_cy + 10), 3)
                         pygame.draw.line(screen, crack_col, (draw_cx + 4, draw_cy - 18), (draw_cx + 14, draw_cy + 4), 2)
+                        pygame.draw.circle(screen, (120, 78, 42), (draw_cx + 15, draw_cy + 14), 3)
             if float(plant.state.get("laddered", 0.0)) > 0.0:
                 ladder_x = draw_cx + int(min(18, plant_render_w * 0.18))
                 ladder_y = draw_cy - 26
@@ -7034,7 +7072,7 @@ class BattleState:
                 p_state = self.pogo_state(z)
                 if p_state == "vault_over":
                     vault_t = float(z.state.get("pogo_phase_t", 0.0))
-                    total = max(0.01, float(z.state.get("pogo_total_t", 0.30)))
+                    total = max(0.01, float(z.state.get("pogo_total_t", 0.36)))
                     progress = clamp(1.0 - vault_t / total, 0.0, 1.0)
                     dy -= 26.0 * math.sin(progress * math.pi)
                     angle += 14.0 * math.sin(progress * math.pi)
@@ -7053,13 +7091,14 @@ class BattleState:
                     angle += math.sin(walk_t * 2.2) * 3.0
                     scale = 0.95 + 0.03 * math.sin(walk_t * 2.0)
                 elif b_state == "popped_fall":
-                    fall_t = clamp(float(z.state.get("balloon_drop_t", 0.0)) / 0.52, 0.0, 1.0)
+                    fall_t = clamp(float(z.state.get("balloon_drop_t", 0.0)) / 0.64, 0.0, 1.0)
                     dy -= 12.0 * fall_t
                     angle += 18.0 * (1.0 - fall_t)
                     scale = 0.98
                 else:
-                    dy += abs(step) * 2.4
-                    angle += math.sin(walk_t * 4.6) * 1.4
+                    wobble_t = clamp(float(z.state.get("balloon_land_wobble_t", 0.0)) / 0.42, 0.0, 1.0)
+                    dy += abs(step) * 2.4 + wobble_t * 4.0
+                    angle += math.sin(walk_t * 4.6) * (1.4 + wobble_t * 4.0)
                     scale = 1.02
             elif kind == "gargantuar":
                 dy += abs(step) * 4.2
@@ -7123,7 +7162,7 @@ class BattleState:
                         dy += 18.0
                         scale = 0.88
                     elif d_state == "emerge":
-                        rise = clamp(float(z.state.get("digger_phase_t", 0.0)) / 0.52, 0.0, 1.0)
+                        rise = clamp(float(z.state.get("digger_phase_t", 0.0)) / 0.60, 0.0, 1.0)
                         dy += 18.0 * rise
                         angle += 10.0 * (1.0 - rise)
                         scale = 0.94
@@ -7134,16 +7173,16 @@ class BattleState:
             elif kind == "bungee":
                 b_state = self.bungee_state(z)
                 if b_state == "descending":
-                    phase = clamp(float(z.state.get("bungee_phase_t", 0.0)) / 0.68, 0.0, 1.0)
+                    phase = clamp(float(z.state.get("bungee_phase_t", 0.0)) / 0.78, 0.0, 1.0)
                     dy -= 80.0 * phase
                 elif b_state == "lock_target":
                     dy -= 12.0
                     angle += math.sin(walk_t * 6.0) * 1.2
                 elif b_state == "steal_lift":
-                    phase = 1.0 - clamp(float(z.state.get("bungee_phase_t", 0.0)) / 0.36, 0.0, 1.0)
+                    phase = 1.0 - clamp(float(z.state.get("bungee_phase_t", 0.0)) / 0.44, 0.0, 1.0)
                     dy -= 24.0 + phase * 44.0
                 elif b_state == "exit":
-                    phase = 1.0 - clamp(float(z.state.get("bungee_phase_t", 0.0)) / 0.30, 0.0, 1.0)
+                    phase = 1.0 - clamp(float(z.state.get("bungee_phase_t", 0.0)) / 0.34, 0.0, 1.0)
                     dy -= 54.0 + phase * 56.0
             else:
                 dy += abs(step) * 2.4
@@ -7169,6 +7208,23 @@ class BattleState:
                 life = clamp(float(z.state.get("whack_t", 0.0)) / 1.45, 0.0, 1.0)
                 dy += 22.0 * (1.0 - life)
                 scale *= 0.82 + 0.18 * life
+            if kind == "bungee":
+                target_row = int(z.state.get("target_row", z.row))
+                target_col = int(z.state.get("target_col", -1.0))
+                if 0 <= target_col < COLS:
+                    tx, ty = self.cell_center(target_row, target_col)
+                    shadow_w = 28 if self.bungee_state(z) == "descending" else 36
+                    pygame.draw.ellipse(screen, (18, 18, 16), (tx - shadow_w // 2, ty + 18, shadow_w, 10))
+                    if self.bungee_state(z) in {"lock_target", "steal_lift"}:
+                        ring = pygame.Surface((54, 22), pygame.SRCALPHA)
+                        pygame.draw.ellipse(ring, (255, 224, 124, 118), (2, 2, 50, 16), 2)
+                        screen.blit(ring, (tx - 27, ty + 11))
+            if kind == "digger" and self.digger_state(z) in {"burrow_enter", "emerge"}:
+                dust = pygame.Surface((42, 20), pygame.SRCALPHA)
+                alpha = 100 if self.digger_state(z) == "emerge" else 68
+                pygame.draw.ellipse(dust, (128, 98, 66, alpha), (4, 8, 34, 8))
+                pygame.draw.ellipse(dust, (182, 154, 110, alpha // 2), (8, 4, 26, 10))
+                screen.blit(dust, (int(z.x) - 21, y + 16))
             draw_x = int(z.x + dx)
             draw_y = int(y - 6 + dy)
             zombie_render_w = 56
@@ -11213,23 +11269,23 @@ class Game:
 
     def battle_hud_layout(self) -> Dict[str, pygame.Rect]:
         special_mode = self.scene == "battle" and self.battle.is_special_hud_mode()
-        hud_h = 88 if special_mode else 102
-        bank_h = 50 if special_mode else 60
+        hud_h = 84 if special_mode else 102
+        bank_h = 46 if special_mode else 60
         hud = pygame.Rect(12, 10, SCREEN_WIDTH - 24, hud_h)
-        sun_box = pygame.Rect(hud.x + 8, hud.y + 7, 88 if special_mode else 104, 46)
-        shovel_btn = pygame.Rect(hud.x + 10, hud.bottom - 18, 60 if special_mode else 46, 14)
-        slot_btn = pygame.Rect(shovel_btn.right + 4, shovel_btn.y, 76 if special_mode else 54, 14)
-        settings_btn = pygame.Rect(hud.right - (52 if special_mode else 68), hud.y + 8, 42 if special_mode else 58, 20)
+        sun_box = pygame.Rect(hud.x + 8, hud.y + 7, 84 if special_mode else 104, 44)
+        shovel_btn = pygame.Rect(hud.x + 10, hud.bottom - 17, 56 if special_mode else 46, 12)
+        slot_btn = pygame.Rect(shovel_btn.right + 4, shovel_btn.y, 70 if special_mode else 54, 12)
+        settings_btn = pygame.Rect(hud.right - (50 if special_mode else 68), hud.y + 8, 40 if special_mode else 58, 18)
         seed_bank = pygame.Rect(sun_box.right + 10, hud.y + 8, settings_btn.x - sun_box.right - 18, bank_h)
-        utility_info = pygame.Rect(seed_bank.x, seed_bank.bottom + 2, seed_bank.w - (138 if special_mode else 152), 13)
-        wave_meter = pygame.Rect(utility_info.right + 8, seed_bank.bottom + 1, 124 if special_mode else 144, 16)
+        utility_info = pygame.Rect(seed_bank.x, seed_bank.bottom + 2, seed_bank.w - (130 if special_mode else 152), 12 if special_mode else 13)
+        wave_meter = pygame.Rect(utility_info.right + 8, seed_bank.bottom + 1, 118 if special_mode else 144, 14 if special_mode else 16)
         left_tools = pygame.Rect(sun_box.x - 2, hud.y + 2, sun_box.w + 8, hud.h - 6)
         right_cluster = pygame.Rect(utility_info.x, utility_info.y, utility_info.w, utility_info.h)
         pause_btn = pygame.Rect(0, 0, 0, 0)
         exit_btn = pygame.Rect(0, 0, 0, 0)
         lang_zh_btn = pygame.Rect(0, 0, 0, 0)
         lang_en_btn = pygame.Rect(0, 0, 0, 0)
-        coin_box = pygame.Rect(20, SCREEN_HEIGHT - 50, 180, 30)
+        coin_box = pygame.Rect(20, SCREEN_HEIGHT - 48, 168 if special_mode else 180, 28 if special_mode else 30)
         return {
             "hud": hud,
             "left_tools": left_tools,
@@ -11599,9 +11655,10 @@ class Game:
         count = len(self.battle.cards)
         if count <= 0:
             return []
-        gap = 5
-        card_w = min(66, max(48, (bank.w - 16 - max(0, count - 1) * gap) // count))
-        card_h = min(58, max(48, bank.h - 10))
+        special_mode = self.scene == "battle" and self.battle.is_special_hud_mode()
+        gap = 4 if special_mode else 5
+        card_w = min(62 if special_mode else 66, max(44 if special_mode else 48, (bank.w - 14 - max(0, count - 1) * gap) // count))
+        card_h = min(54 if special_mode else 58, max(44 if special_mode else 48, bank.h - 8))
         total_w = count * card_w + max(0, count - 1) * gap
         x = bank.x + max(8, (bank.w - total_w) // 2)
         y = bank.y + bank.h - card_h - 3
@@ -11614,6 +11671,11 @@ class Game:
     def draw_seed_bank(self, bank: pygame.Rect, mouse: Tuple[int, int]) -> None:
         conveyor_mode = self.battle.mode_bool("conveyor", False)
         mode_name = str(self.battle.mode_rules.get("mode_name", ""))
+        compact_bank = bank.h <= 48
+        title_font = self.fonts["tiny"] if compact_bank else self.fonts["small"]
+        title_y = bank.y + (4 if compact_bank else 6)
+        hint_y = bank.y + (17 if compact_bank else 24)
+        stat_y = bank.y + (30 if compact_bank else 42)
         bank_label = ""
         if conveyor_mode or self.battle.is_portal_combat_mode() or self.battle.is_bobsled_bonanza_mode() or self.battle.is_invisi_ghoul_mode() or self.battle.is_zombotany_mode() or self.battle.is_nimble_mode() or self.battle.is_pogo_party_mode():
             bank_label = self.battle_mode_display_label(mode_name)
@@ -11621,38 +11683,38 @@ class Game:
         if self.battle.is_beghouled_mode() or self.battle.is_beghouled_twist_mode():
             title_txt = self.battle_mode_display_label(mode_name)
             hint_key = "beghouled_twist_hint" if self.battle.is_beghouled_twist_mode() else "beghouled_hint"
-            line1 = self.fonts["small"].render(title_txt, True, (60, 42, 24))
+            line1 = title_font.render(title_txt, True, (60, 42, 24))
             line2 = self.fonts["tiny"].render(self.tr(hint_key), True, (86, 62, 34))
             line3 = self.fonts["tiny"].render(
                 f"{self.tr('beghouled_score')}: {self.battle.mode_score}  |  {self.tr('beghouled_goal')}: {self.battle.mode_goal}",
                 True,
                 (74, 52, 28),
             )
-            self.screen.blit(line1, (bank.x + 12, bank.y + 6))
-            self.screen.blit(line2, (bank.x + 12, bank.y + 24))
-            self.screen.blit(line3, (bank.x + 12, bank.y + 42))
+            self.screen.blit(line1, (bank.x + 12, title_y))
+            self.screen.blit(line2, (bank.x + 12, hint_y))
+            self.screen.blit(line3, (bank.x + 12, stat_y))
             return
         if self.battle.is_whack_mode():
             title_txt = self.battle_mode_display_label(mode_name)
-            line1 = self.fonts["small"].render(title_txt, True, (60, 42, 24))
+            line1 = title_font.render(title_txt, True, (60, 42, 24))
             line2 = self.fonts["tiny"].render(self.tr("whack_hint"), True, (86, 62, 34))
             line3 = self.fonts["tiny"].render(
                 f"{self.tr('whack_score')}: {self.battle.mode_score}  |  {self.tr('whack_goal')}: {self.battle.mode_goal}  |  {self.tr('whack_miss')}: {self.battle.mode_misses}",
                 True,
                 (74, 52, 28),
             )
-            self.screen.blit(line1, (bank.x + 12, bank.y + 6))
-            self.screen.blit(line2, (bank.x + 12, bank.y + 24))
-            self.screen.blit(line3, (bank.x + 12, bank.y + 42))
+            self.screen.blit(line1, (bank.x + 12, title_y))
+            self.screen.blit(line2, (bank.x + 12, hint_y))
+            self.screen.blit(line3, (bank.x + 12, stat_y))
             return
         if self.battle.is_vasebreaker_mode():
-            title = self.fonts["small"].render(self.tr("puzzle_vasebreaker"), True, (60, 42, 24))
+            title = title_font.render(self.tr("puzzle_vasebreaker"), True, (60, 42, 24))
             hint = self.fonts["tiny"].render(self.tr("vasebreaker_hint"), True, (86, 62, 34))
-            self.screen.blit(title, (bank.x + 12, bank.y + 8))
-            self.screen.blit(hint, (bank.x + 12, bank.y + 24))
+            self.screen.blit(title, (bank.x + 12, title_y + 2))
+            self.screen.blit(hint, (bank.x + 12, hint_y))
             if bool(self.battle.mode_bool("vasebreaker_endless", False)) or self.battle.mode_name() == "puzzle_vasebreaker_endless":
                 round_txt = f"{self.tr('survival_round')} {int(self.battle.mode_float('vasebreaker_round', 1.0))}"
-                self.screen.blit(self.fonts["tiny"].render(round_txt, True, (86, 62, 34)), (bank.x + 12, bank.y + 40))
+                self.screen.blit(self.fonts["tiny"].render(round_txt, True, (86, 62, 34)), (bank.x + 12, stat_y))
             for kind, rect in self.battle_card_buttons():
                 self.draw_seed_packet(
                     rect,
@@ -11665,7 +11727,7 @@ class Game:
                 )
             if not self.battle.cards:
                 empty = self.fonts["tiny"].render(self.tr("vasebreaker_no_cards"), True, (96, 66, 36))
-                self.screen.blit(empty, (bank.x + 12, bank.y + 44))
+                self.screen.blit(empty, (bank.x + 12, stat_y + 1))
             return
         if self.battle.is_i_zombie_mode():
             for kind, rect in self.battle_card_buttons():
@@ -11681,10 +11743,10 @@ class Game:
                     cost=cost,
                     disabled=disabled,
                 )
-            label = self.fonts["tiny"].render(self.tr("puzzle_i_zombie"), True, (60, 42, 24))
-            self.screen.blit(label, (bank.x + 10, bank.y + 4))
+            label = title_font.render(self.tr("puzzle_i_zombie"), True, (60, 42, 24))
+            self.screen.blit(label, (bank.x + 10, title_y))
             objective = self.fonts["tiny"].render(self.tr("i_zombie_objective"), True, (86, 62, 34))
-            self.screen.blit(objective, (bank.x + 10, bank.y + 20))
+            self.screen.blit(objective, (bank.x + 10, hint_y))
             return
         for kind, rect in self.battle_card_buttons():
             sel = kind == self.battle.selected
@@ -11744,17 +11806,17 @@ class Game:
             self.screen.blit(line, (bank.x + 12, bank.y + 8))
     def plant_select_layout(self) -> Dict[str, pygame.Rect]:
         frame = pygame.Rect(16, 12, SCREEN_WIDTH - 32, SCREEN_HEIGHT - 24)
-        title_sign = pygame.Rect(frame.x + 402, frame.y + 10, frame.w - 804, 34)
+        title_sign = pygame.Rect(frame.x + 414, frame.y + 10, frame.w - 828, 30)
         content_gap = 12
-        side_w = 216
+        side_w = 204
         main_w = frame.w - 62 - side_w - content_gap
-        tray_panel = pygame.Rect(frame.x + 30, title_sign.bottom + 6, main_w, 72)
+        tray_panel = pygame.Rect(frame.x + 30, title_sign.bottom + 6, main_w, 66)
         zombie_panel = pygame.Rect(tray_panel.right + content_gap, title_sign.bottom + 4, side_w, frame.h - 112)
         available_panel = pygame.Rect(frame.x + 30, tray_panel.bottom + 6, main_w, frame.bottom - tray_panel.bottom - 54)
         available_viewport = pygame.Rect(available_panel.x + 12, available_panel.y + 30, available_panel.w - 24, available_panel.h - 40)
-        action_panel = pygame.Rect(frame.x + 30, frame.bottom - 38, frame.w - 60, 26)
-        back_btn = pygame.Rect(action_panel.x + 2, action_panel.y - 1, 108, 28)
-        start_btn = pygame.Rect(action_panel.right - 160, action_panel.y - 2, 160, 30)
+        action_panel = pygame.Rect(frame.x + 30, frame.bottom - 36, frame.w - 60, 24)
+        back_btn = pygame.Rect(action_panel.x + 2, action_panel.y - 1, 102, 26)
+        start_btn = pygame.Rect(action_panel.right - 152, action_panel.y - 2, 152, 28)
         return {
             "frame": frame,
             "title_sign": title_sign,
@@ -11769,8 +11831,8 @@ class Game:
 
     def plant_select_grid_metrics(self) -> Dict[str, int]:
         return {
-            "card_w": 88,
-            "card_h": 98,
+            "card_w": 84,
+            "card_h": 94,
             "gap_x": 3,
             "gap_y": 4,
             "pad_x": 1,
@@ -11856,12 +11918,12 @@ class Game:
         slots: List[pygame.Rect] = []
         layout = self.plant_select_layout()
         tray = layout["tray_panel"]
-        slot_w = 76
-        slot_h = 52
-        gap = 4
+        slot_w = 70
+        slot_h = 46
+        gap = 3
         total_w = self.plant_select_pick_limit * slot_w + max(0, self.plant_select_pick_limit - 1) * gap
         x0 = tray.x + max(10, (tray.w - total_w) // 2)
-        y0 = tray.y + 15
+        y0 = tray.y + 12
         for i in range(self.plant_select_pick_limit):
             slots.append(pygame.Rect(x0 + i * (slot_w + gap), y0, slot_w, slot_h))
         return slots
@@ -15167,16 +15229,18 @@ class Game:
         utility_parts: List[str] = []
         if level_text and not compact_special:
             utility_parts.append(level_text)
-        if mode_name and mode_name not in ("", "adventure"):
+        if mode_name and mode_name not in ("", "adventure") and not compact_special:
             utility_parts.append(mode_text)
-        else:
+        elif not compact_special:
             utility_parts.append(field_text)
         hint_key = self.battle.special_hint_key()
         if hint_key:
             if compact_special:
-                utility_parts = [mode_text if mode_name else field_text, self.tr(hint_key)]
+                utility_parts = [self.tr(hint_key)]
             else:
                 utility_parts.append(self.tr(hint_key))
+        elif compact_special and not utility_parts:
+            utility_parts = [mode_text if mode_name else field_text]
         if self.battle.is_last_stand_mode() and self.battle.last_stand_in_prep():
             meter_text = self.tr("last_stand_prepare")
         elif self.battle.is_beghouled_mode() or self.battle.is_beghouled_twist_mode():
