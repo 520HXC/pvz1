@@ -612,6 +612,109 @@ SPECIAL_MINIGAME_RULESETS: Dict[str, Dict[str, object]] = {
     },
 }
 
+ZOMBOSS_BOSS_RULESETS: Dict[str, Dict[str, object]] = {
+    "adventure_zomboss_boss": {
+        "opening_cards": ["cabbage_pult", "jalapeno", "cabbage_pult", "ice_shroom"],
+        "conveyor_pool": ["flower_pot", "cabbage_pult", "kernel_pult", "melon_pult", "jalapeno", "ice_shroom"],
+        "conveyor_weights": {
+            "flower_pot": 0.24,
+            "cabbage_pult": 0.23,
+            "kernel_pult": 0.19,
+            "melon_pult": 0.12,
+            "jalapeno": 0.11,
+            "ice_shroom": 0.11,
+        },
+        "conveyor_interval": 1.12,
+        "conveyor_cap": 10,
+        "zomboss_hp_scale": 1.0,
+        "zombie_hp_scale": 1.0,
+        "zombie_speed_scale": 1.0,
+        "zombie_dps_scale": 1.0,
+        "boss_intro_phase": (
+            {"time": 2.0, "spawns": (("normal", 2),)},
+            {"time": 7.0, "spawns": (("normal", 2), ("conehead", 1))},
+            {"time": 13.5, "spawns": (("conehead", 2),)},
+            {"time": 19.0, "spawns": (("buckethead", 1),)},
+        ),
+        "boss_attack_cycle": ("fireball", "iceball", "fireball", "rv"),
+        "boss_attack_interval": 10.8,
+        "boss_attack_warning": 1.65,
+        "boss_spawn_cycle": {
+            "interval": 6.6,
+            "early": (("normal", "normal"), ("normal", "conehead"), ("conehead",)),
+            "mid": (("conehead", "buckethead"), ("buckethead", "conehead"), ("buckethead", "imp")),
+            "late": (("buckethead", "imp"), ("buckethead", "buckethead"), ("gargantuar",)),
+        },
+        "boss_bungee_cycle": {"interval": 18.0, "count": 1},
+        "boss_rv_cycle": {"interval": 27.0, "width": 2},
+        "boss_result_title_key": "zomboss_boss_result_title",
+        "boss_result_summary_key": "zomboss_boss_result_summary",
+        "boss_fail_title_key": "zomboss_boss_fail_title",
+        "boss_fail_summary_key": "zomboss_boss_fail_summary",
+        "special_hint_key": "zomboss_boss_hint",
+        "primary_hint_key": "zomboss_boss_hint",
+        "secondary_hint_key": "zomboss_boss_hint_2",
+        "result_title_key": "zomboss_boss_result_title",
+        "result_summary_key": "zomboss_boss_result_summary",
+        "result_fail_title_key": "zomboss_boss_fail_title",
+        "result_fail_summary_key": "zomboss_boss_fail_summary",
+        "clear_notice_key": "zomboss_boss_clear_notice",
+        "lose_notice_key": "zomboss_boss_fail_notice",
+        "primary_progress_type": "boss_hp",
+        "duration_override": 9999.0,
+    },
+    "mini_dr_zomboss_revenge": {
+        "opening_cards": ["cabbage_pult", "jalapeno", "cabbage_pult", "ice_shroom"],
+        "conveyor_pool": ["flower_pot", "cabbage_pult", "kernel_pult", "melon_pult", "jalapeno", "ice_shroom"],
+        "conveyor_weights": {
+            "flower_pot": 0.21,
+            "cabbage_pult": 0.22,
+            "kernel_pult": 0.19,
+            "melon_pult": 0.15,
+            "jalapeno": 0.12,
+            "ice_shroom": 0.11,
+        },
+        "conveyor_interval": 1.00,
+        "conveyor_cap": 10,
+        "zomboss_hp_scale": 1.3,
+        "zombie_hp_scale": 1.12,
+        "zombie_speed_scale": 1.06,
+        "zombie_dps_scale": 1.08,
+        "boss_intro_phase": (
+            {"time": 1.8, "spawns": (("normal", 2), ("conehead", 1))},
+            {"time": 6.4, "spawns": (("conehead", 2),)},
+            {"time": 11.8, "spawns": (("buckethead", 1), ("conehead", 1))},
+            {"time": 16.0, "spawns": (("buckethead", 1), ("screen_door", 1))},
+        ),
+        "boss_attack_cycle": ("fireball", "iceball", "rv", "fireball", "bungee", "iceball"),
+        "boss_attack_interval": 9.4,
+        "boss_attack_warning": 1.45,
+        "boss_spawn_cycle": {
+            "interval": 5.6,
+            "early": (("normal", "conehead"), ("conehead", "conehead"), ("buckethead",)),
+            "mid": (("buckethead", "imp"), ("buckethead", "buckethead"), ("conehead", "imp")),
+            "late": (("buckethead", "imp"), ("gargantuar", "imp"), ("buckethead", "gargantuar")),
+        },
+        "boss_bungee_cycle": {"interval": 14.5, "count": 2},
+        "boss_rv_cycle": {"interval": 21.0, "width": 2},
+        "boss_result_title_key": "zomboss_revenge_result_title",
+        "boss_result_summary_key": "zomboss_revenge_result_summary",
+        "boss_fail_title_key": "zomboss_revenge_fail_title",
+        "boss_fail_summary_key": "zomboss_revenge_fail_summary",
+        "special_hint_key": "zomboss_revenge_hint",
+        "primary_hint_key": "zomboss_revenge_hint",
+        "secondary_hint_key": "zomboss_revenge_hint_2",
+        "result_title_key": "zomboss_revenge_result_title",
+        "result_summary_key": "zomboss_revenge_result_summary",
+        "result_fail_title_key": "zomboss_revenge_fail_title",
+        "result_fail_summary_key": "zomboss_revenge_fail_summary",
+        "clear_notice_key": "zomboss_revenge_clear_notice",
+        "lose_notice_key": "zomboss_revenge_fail_notice",
+        "primary_progress_type": "boss_hp",
+        "duration_override": 9999.0,
+    },
+}
+
 ADVENTURE_CHAPTERS: List[Dict[str, object]] = [
     {
         "world": 1,
@@ -1281,6 +1384,29 @@ I18N = {
         "seeing_stars_goal": "Fill all stars with Starfruit.",
         "seeing_stars_done": "Stars Completed",
         "seeing_stars_hint": "Only Starfruit planted on marked stars counts.",
+"zomboss_boss_hint": "Save Ice-shroom for fireballs and Jalapeno for iceballs.",
+"zomboss_boss_hint_2": "Spread Melon-pult and Kernel-pult so one smash does not wipe the roof.",
+"zomboss_boss_result_title": "Dr. Zomboss Defeated",
+"zomboss_boss_result_summary": "The roof held long enough for your pults, Ice-shroom, and Jalapeno timing to break the boss machine.",
+"zomboss_boss_fail_title": "The Roof Boss Won",
+"zomboss_boss_fail_summary": "The boss cycle forced the roof out of rhythm before the pults and counters could finish Dr. Zomboss.",
+"zomboss_boss_clear_notice": "Dr. Zomboss is down!",
+"zomboss_boss_fail_notice": "Dr. Zomboss crushed the roof!",
+"zomboss_revenge_hint": "This rematch is tighter: hold Ice-shroom and Jalapeno for the next boss volley.",
+"zomboss_revenge_hint_2": "Keep Flower Pots healthy and spread your pults before the revenge cycle speeds up.",
+"zomboss_revenge_result_title": "Dr. Zomboss's Revenge Cleared",
+"zomboss_revenge_result_summary": "The harder rematch still fell once your roof pults and counter cards stayed on cycle.",
+"zomboss_revenge_fail_title": "The Revenge Cycle Overwhelmed The Roof",
+"zomboss_revenge_fail_summary": "The rematch tightened too quickly, and the roof never found enough breathing room to finish the boss.",
+"zomboss_revenge_clear_notice": "Revenge cycle broken!",
+"zomboss_revenge_fail_notice": "The revenge cycle broke the roof!",
+"zomboss_fireball_notice": "Fireball incoming - save Ice-shroom!",
+"zomboss_iceball_notice": "Iceball incoming - save Jalapeno!",
+"zomboss_rv_notice": "Boss smash incoming!",
+"zomboss_bungee_notice": "Bungee raid incoming!",
+"zomboss_counter_fireball": "Fireball extinguished!",
+"zomboss_counter_iceball": "Ice trail melted!",
+"boss_hp_label": "Boss",
 "invisi_ghoul_hint": "Use Plantern coverage to expose invisible zombies.",
 "invisi_ghoul_hint_2": "Front-lane and damaged zombies reveal themselves briefly.",
 "portal_combat_hint": "Portals shift lanes for peas and zombies.",
@@ -1646,6 +1772,29 @@ I18N = {
         "seeing_stars_goal": "把所有星位种上杨桃。",
         "seeing_stars_done": "星位完成",
         "seeing_stars_hint": "只有种在星位上的活杨桃才会计数。",
+"zomboss_boss_hint": "把寒冰菇留给火球，把火爆辣椒留给冰球。",
+"zomboss_boss_hint_2": "西瓜和玉米投手要分散摆，别让一次砸车把整片屋顶带走。",
+"zomboss_boss_result_title": "僵王博士被击退了",
+"zomboss_boss_result_summary": "屋顶投手、寒冰菇和火爆辣椒的节奏接住了僵王循环，最终把首领机器拆了下来。",
+"zomboss_boss_fail_title": "屋顶首领战失守了",
+"zomboss_boss_fail_summary": "僵王的攻击循环先把屋顶节奏打乱了，投手和对策卡还没滚起来就被压穿了。",
+"zomboss_boss_clear_notice": "僵王博士倒下了！",
+"zomboss_boss_fail_notice": "僵王博士碾穿了屋顶！",
+"zomboss_revenge_hint": "复仇战节奏更紧，寒冰菇和火爆辣椒要专门留给下一次冰火球。",
+"zomboss_revenge_hint_2": "先把花盆和投手分散站稳，再去接更快的复仇循环。",
+"zomboss_revenge_result_title": "僵王复仇战打赢了",
+"zomboss_revenge_result_summary": "更紧的复仇循环还是被你顶住了，屋顶投手和对策卡始终没有断拍。",
+"zomboss_revenge_fail_title": "僵王复仇战压垮了屋顶",
+"zomboss_revenge_fail_summary": "复仇战的循环收得太紧，屋顶还没缓过来，首领攻势就先把线路连根打散了。",
+"zomboss_revenge_clear_notice": "复仇循环被拆掉了！",
+"zomboss_revenge_fail_notice": "复仇循环压垮了屋顶！",
+"zomboss_fireball_notice": "火球要来了，留好寒冰菇！",
+"zomboss_iceball_notice": "冰球要来了，留好火爆辣椒！",
+"zomboss_rv_notice": "僵王砸车要落下来了！",
+"zomboss_bungee_notice": "蹦极空投要来了！",
+"zomboss_counter_fireball": "火球被寒冰菇压住了！",
+"zomboss_counter_iceball": "冰道被火爆辣椒融掉了！",
+"boss_hp_label": "首领",
 "invisi_ghoul_hint": "用路灯花照出隐形僵尸，盯住突然逼近的线路。",
 "invisi_ghoul_hint_2": "靠近前场或刚受击的僵尸会短暂显形。",
 "portal_combat_hint": "传送门会把豌豆和僵尸送到别的线路。",
@@ -2053,7 +2202,7 @@ ADVENTURE_CONVEYOR_POOLS: Dict[str, Tuple[str, ...]] = {
     "3-10": ("lily_pad", "tangle_kelp", "threepeater", "repeater", "torchwood", "wallnut", "jalapeno", "tall_nut"),
     "4-10": ("lily_pad", "sea_shroom", "plantern", "blover", "starfruit", "pumpkin", "cactus", "jalapeno"),
     "5-5": ("flower_pot", "chomper", "pumpkin", "cherrybomb"),
-    "5-10": ("flower_pot", "cabbage_pult", "kernel_pult", "melon_pult", "umbrella_leaf", "jalapeno", "cherrybomb", "wallnut", "tall_nut"),
+    "5-10": ("flower_pot", "cabbage_pult", "kernel_pult", "melon_pult", "jalapeno", "ice_shroom"),
 }
 
 MODE_ENTRY_STYLES: Dict[str, str] = {
@@ -3031,6 +3180,24 @@ class BattleState:
         self.portal_shift_notice_t = 0.0
         self.bobsled_burst_t = 0.0
         self.bobsled_burst_cycle_index = 0
+        self.conveyor_opening_queue: List[str] = []
+        self.conveyor_weights: Dict[str, float] = {}
+        self.notice_request_text = ""
+        self.notice_request_key = ""
+        self.notice_request_color: Tuple[int, int, int] = (58, 42, 24)
+        self.notice_request_duration_ms = 0
+        self.zomboss_hp = 0.0
+        self.zomboss_hp_max = 0.0
+        self.zomboss_intro_elapsed = 0.0
+        self.zomboss_intro_index = 0
+        self.zomboss_attack_t = 0.0
+        self.zomboss_attack_index = 0
+        self.zomboss_spawn_t = 0.0
+        self.zomboss_spawn_index = 0
+        self.zomboss_bungee_t = 0.0
+        self.zomboss_rv_t = 0.0
+        self.zomboss_pending_attack: Dict[str, object] = {}
+        self.zomboss_night_tint = 0.0
 
     def mode_bool(self, key: str, default: bool = False) -> bool:
         val = self.mode_rules.get(key, default)
@@ -3144,6 +3311,15 @@ class BattleState:
             or self.is_pogo_party_mode()
         )
 
+    def is_zomboss_boss_mode(self) -> bool:
+        return self.mode_name() in ZOMBOSS_BOSS_RULESETS
+
+    def zomboss_ruleset(self) -> Dict[str, object]:
+        mode_name = self.mode_name()
+        if mode_name in ZOMBOSS_BOSS_RULESETS:
+            return dict(ZOMBOSS_BOSS_RULESETS[mode_name])
+        return dict(ZOMBOSS_BOSS_RULESETS["adventure_zomboss_boss"])
+
     def beghouled_rules(self) -> Dict[str, object]:
         mode_id = "mini_beghouled_twist" if self.is_beghouled_twist_mode() else "mini_beghouled"
         return BEGHOULDED_SCORE_RULES.get(mode_id, BEGHOULDED_SCORE_RULES["mini_beghouled"])
@@ -3178,6 +3354,287 @@ class BattleState:
 
     def special_progress_type(self) -> str:
         return str(self.mode_rules.get("primary_progress_type", ""))
+
+    def zomboss_stage_key(self) -> str:
+        return self.mode_name() if self.mode_name() in ZOMBOSS_BOSS_RULESETS else "adventure_zomboss_boss"
+
+    def queue_notice(self, text: str, color: Tuple[int, int, int] = (58, 42, 24), duration_ms: int = 1500) -> None:
+        if not text:
+            return
+        self.notice_request_key = ""
+        self.notice_request_text = text
+        self.notice_request_color = color
+        self.notice_request_duration_ms = max(400, int(duration_ms))
+
+    def queue_notice_key(self, key: str, color: Tuple[int, int, int] = (58, 42, 24), duration_ms: int = 1500) -> None:
+        if not key:
+            return
+        self.notice_request_text = ""
+        self.notice_request_key = key
+        self.notice_request_color = color
+        self.notice_request_duration_ms = max(400, int(duration_ms))
+
+    def consume_notice_request(self) -> Tuple[str, str, Tuple[int, int, int], int]:
+        text = self.notice_request_text
+        key = self.notice_request_key
+        color = self.notice_request_color
+        duration = self.notice_request_duration_ms
+        self.notice_request_text = ""
+        self.notice_request_key = ""
+        self.notice_request_duration_ms = 0
+        return text, key, color, duration
+
+    def zomboss_progress_ratio(self) -> float:
+        if self.zomboss_hp_max <= 0.0:
+            return 1.0
+        return clamp(self.zomboss_hp / max(1.0, self.zomboss_hp_max), 0.0, 1.0)
+
+    def zomboss_spawn_phase_key(self) -> str:
+        ratio = self.zomboss_progress_ratio()
+        if ratio > 0.68:
+            return "early"
+        if ratio > 0.34:
+            return "mid"
+        return "late"
+
+    def zomboss_spawn_cycle(self) -> Dict[str, object]:
+        raw = self.zomboss_ruleset().get("boss_spawn_cycle", {})
+        return dict(raw) if isinstance(raw, dict) else {}
+
+    def zomboss_spawn_pack(self) -> Tuple[str, ...]:
+        cycle = self.zomboss_spawn_cycle()
+        phase_key = self.zomboss_spawn_phase_key()
+        packs = cycle.get(phase_key, ())
+        if not isinstance(packs, (list, tuple)) or not packs:
+            return ()
+        pack = packs[self.zomboss_spawn_index % len(packs)]
+        self.zomboss_spawn_index += 1
+        if not isinstance(pack, (list, tuple)):
+            return ()
+        return tuple(str(kind) for kind in pack if str(kind) in self.zombie_types)
+
+    def spawn_zomboss_pack(self, pack: Tuple[str, ...], wave_idx: int = 1) -> None:
+        for kind in pack:
+            self.spawn_zombie(wave_idx=wave_idx, forced_kind=kind)
+
+    def damage_zomboss(self, amount: float) -> None:
+        if self.zomboss_hp_max <= 0.0 or self.result:
+            return
+        self.zomboss_hp = max(0.0, self.zomboss_hp - max(0.0, amount))
+        if self.zomboss_hp <= 0.0:
+            self.zomboss_pending_attack = {}
+            for z in self.zombies:
+                z.hp = 0.0
+                z.state["dying_t"] = 0.24
+            self.result = "win"
+
+    def setup_zomboss_boss_mode(self) -> None:
+        rules = self.zomboss_ruleset()
+        self.zomboss_hp_max = 2600.0 * max(0.4, float(rules.get("zomboss_hp_scale", 1.0)))
+        self.zomboss_hp = self.zomboss_hp_max
+        self.zomboss_intro_elapsed = 0.0
+        self.zomboss_intro_index = 0
+        self.zomboss_attack_t = 0.0
+        self.zomboss_attack_index = 0
+        self.zomboss_spawn_t = 0.0
+        self.zomboss_spawn_index = 0
+        self.zomboss_bungee_t = 0.0
+        self.zomboss_rv_t = 0.0
+        self.zomboss_pending_attack = {}
+        self.zomboss_night_tint = 1.0
+        self.total_waves = 0
+        self.large_wave_indices = ()
+        self.final_wave_index = 0
+        self.wave_budgets = []
+        self.wave_spawn_queue = []
+        self.wave_spawn_total = 0
+        self.wave_spawn_remaining = 0
+        self.current_wave = 0
+        self.next_wave = 0.0
+        self.wave_pause_t = 0.0
+        self.spawn_t = 0.0
+        self.grave_t = 0.0
+        self.sky_t = 0.0
+        self.cleaners = [True for _ in range(self.rows())]
+
+    def queue_zomboss_attack(self, kind: str) -> None:
+        if self.zomboss_pending_attack or self.result:
+            return
+        warning = max(0.35, self.mode_float("boss_attack_warning", 1.55))
+        payload: Dict[str, object] = {"kind": kind, "t": warning, "total": warning}
+        if kind in {"fireball", "iceball"}:
+            payload["row"] = float(random.randrange(self.rows()))
+            payload["col"] = float(random.randint(5, 7 if COLS >= 8 else COLS - 1))
+        elif kind == "rv":
+            payload["col"] = float(random.randint(5, 6 if COLS >= 8 else max(4, COLS - 2)))
+            payload["width"] = float(max(2, int(self.zomboss_ruleset().get("boss_rv_cycle", {}).get("width", 2))))
+        self.zomboss_pending_attack = payload
+        notice_map = {
+            "fireball": "zomboss_fireball_notice",
+            "iceball": "zomboss_iceball_notice",
+            "rv": "zomboss_rv_notice",
+            "bungee": "zomboss_bungee_notice",
+        }
+        if kind in notice_map:
+            self.queue_notice_key(notice_map[kind], color=(176, 74, 46), duration_ms=max(1200, int(warning * 1000)))
+
+    def cancel_zomboss_pending_attack(self, counter_kind: str) -> bool:
+        if not self.zomboss_pending_attack:
+            return False
+        kind = str(self.zomboss_pending_attack.get("kind", ""))
+        if kind == "fireball" and counter_kind == "ice_shroom":
+            self.zomboss_pending_attack = {}
+            self.queue_notice_key("zomboss_counter_fireball", color=(68, 112, 188), duration_ms=1350)
+            return True
+        if kind == "iceball" and counter_kind == "jalapeno":
+            self.zomboss_pending_attack = {}
+            self.ice_rows.clear()
+            self.queue_notice_key("zomboss_counter_iceball", color=(196, 92, 40), duration_ms=1350)
+            return True
+        return False
+
+    def damage_zomboss_cells(self, row: int, col_start: int, col_end: int, damage: float, flash_t: float = 0.18) -> None:
+        for rr in range(max(0, row - 1), min(self.rows(), row + 2)):
+            for cc in range(max(0, col_start), min(COLS, col_end + 1)):
+                pos = (rr, cc)
+                for collection in (self.armor, self.main, self.support):
+                    plant = collection.get(pos)
+                    if plant is None or plant.hp <= 0:
+                        continue
+                    plant.hp -= damage
+                    plant.state["hit_flash"] = max(float(plant.state.get("hit_flash", 0.0)), flash_t)
+                    plant.state["recoil_t"] = max(float(plant.state.get("recoil_t", 0.0)), 0.16)
+                    if plant.hp <= 0:
+                        collection.pop(pos, None)
+
+    def resolve_zomboss_pending_attack(self) -> None:
+        if not self.zomboss_pending_attack:
+            return
+        kind = str(self.zomboss_pending_attack.get("kind", ""))
+        if kind == "fireball":
+            row = int(self.zomboss_pending_attack.get("row", random.randrange(self.rows())))
+            col = int(self.zomboss_pending_attack.get("col", 6))
+            self.damage_zomboss_cells(row, col - 1, col + 1, 9999.0, flash_t=0.22)
+        elif kind == "iceball":
+            row = int(self.zomboss_pending_attack.get("row", random.randrange(self.rows())))
+            col = int(self.zomboss_pending_attack.get("col", 6))
+            self.damage_zomboss_cells(row, col - 1, col + 1, 150.0, flash_t=0.18)
+            self.ice_rows[row] = max(float(self.ice_rows.get(row, 0.0)), 9999.0)
+        elif kind == "rv":
+            col = int(self.zomboss_pending_attack.get("col", 5))
+            width = max(2, int(float(self.zomboss_pending_attack.get("width", 2.0))))
+            for row in range(self.rows()):
+                self.damage_zomboss_cells(row, col, col + width - 1, 9999.0, flash_t=0.26)
+            self.spawn_zombie(wave_idx=1, forced_kind="imp")
+        elif kind == "bungee":
+            count = max(1, int(self.zomboss_ruleset().get("boss_bungee_cycle", {}).get("count", 1)))
+            for _ in range(count):
+                self.spawn_zombie(wave_idx=1, forced_kind="bungee")
+        self.zomboss_pending_attack = {}
+
+    def update_zomboss_boss_mode(self, dt: float) -> None:
+        rules = self.zomboss_ruleset()
+        intro = rules.get("boss_intro_phase", ())
+        if isinstance(intro, (list, tuple)) and self.zomboss_intro_index < len(intro):
+            self.zomboss_intro_elapsed += dt
+            while self.zomboss_intro_index < len(intro):
+                phase = intro[self.zomboss_intro_index]
+                if not isinstance(phase, dict) or self.zomboss_intro_elapsed < float(phase.get("time", 0.0)):
+                    break
+                spawns = phase.get("spawns", ())
+                if isinstance(spawns, (list, tuple)):
+                    for entry in spawns:
+                        if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+                            continue
+                        kind = str(entry[0])
+                        count = max(1, int(entry[1]))
+                        for _ in range(count):
+                            self.spawn_zombie(wave_idx=1, forced_kind=kind)
+                self.zomboss_intro_index += 1
+        if self.zomboss_pending_attack:
+            self.zomboss_pending_attack["t"] = float(self.zomboss_pending_attack.get("t", 0.0)) - dt
+            if float(self.zomboss_pending_attack.get("t", 0.0)) <= 0.0:
+                self.resolve_zomboss_pending_attack()
+        else:
+            attack_cycle = [str(kind) for kind in rules.get("boss_attack_cycle", ()) if str(kind)]
+            attack_interval = max(4.0, float(rules.get("boss_attack_interval", 10.5)))
+            if attack_cycle:
+                self.zomboss_attack_t += dt
+                if self.zomboss_attack_t >= attack_interval:
+                    self.zomboss_attack_t -= attack_interval
+                    next_attack = attack_cycle[self.zomboss_attack_index % len(attack_cycle)]
+                    self.zomboss_attack_index += 1
+                    self.queue_zomboss_attack(next_attack)
+        spawn_cycle = self.zomboss_spawn_cycle()
+        spawn_interval = max(2.4, float(spawn_cycle.get("interval", 6.0)))
+        self.zomboss_spawn_t += dt
+        if self.zomboss_spawn_t >= spawn_interval:
+            self.zomboss_spawn_t -= spawn_interval
+            active_ground = sum(
+                1
+                for z in self.zombies
+                if z.hp > 0
+                and float(z.state.get("dying_t", 0.0)) <= 0.0
+                and not z.hypnotized
+                and z.kind != "bungee"
+            )
+            active_cap = 6 if self.zomboss_stage_key() == "adventure_zomboss_boss" else 7
+            if active_ground < active_cap:
+                self.spawn_zomboss_pack(self.zomboss_spawn_pack(), wave_idx=1)
+        bungee_cycle = rules.get("boss_bungee_cycle", {})
+        if isinstance(bungee_cycle, dict):
+            self.zomboss_bungee_t += dt
+            bungee_interval = max(8.0, float(bungee_cycle.get("interval", 0.0)))
+            if bungee_interval > 0.0 and self.zomboss_bungee_t >= bungee_interval:
+                self.zomboss_bungee_t -= bungee_interval
+                count = max(1, int(bungee_cycle.get("count", 1)))
+                self.queue_notice_key("zomboss_bungee_notice", color=(172, 74, 58), duration_ms=1100)
+                for _ in range(count):
+                    self.spawn_zombie(wave_idx=1, forced_kind="bungee")
+        rv_cycle = rules.get("boss_rv_cycle", {})
+        if isinstance(rv_cycle, dict):
+            self.zomboss_rv_t += dt
+            rv_interval = max(10.0, float(rv_cycle.get("interval", 0.0)))
+            if rv_interval > 0.0 and self.zomboss_rv_t >= rv_interval and not self.zomboss_pending_attack:
+                self.zomboss_rv_t -= rv_interval
+                self.queue_zomboss_attack("rv")
+
+    def draw_zomboss_boss_overlay(self, screen: pygame.Surface, zombie_sprite_fn=None, tr_fn=None) -> None:
+        if not self.is_zomboss_boss_mode():
+            return
+        lawn_rect = pygame.Rect(LAWN_X, 0, COLS * CELL_W, LAWN_Y + self.lawn_h())
+        tint = pygame.Surface((lawn_rect.w, lawn_rect.h), pygame.SRCALPHA)
+        tint.fill((18, 24, 42, 78))
+        screen.blit(tint, lawn_rect.topleft)
+        moon = pygame.Surface((148, 148), pygame.SRCALPHA)
+        for radius, alpha in ((48, 18), (38, 28), (28, 44)):
+            pygame.draw.circle(moon, (224, 234, 252, alpha), (74, 74), radius)
+        screen.blit(moon, (SCREEN_WIDTH - 246, 74))
+        boss_rect = pygame.Rect(self.lawn_right() - 94, LAWN_Y + 18, 82, 94)
+        pygame.draw.rect(screen, (68, 54, 66), boss_rect, border_radius=12)
+        pygame.draw.rect(screen, (162, 126, 92), boss_rect, 3, border_radius=12)
+        if callable(zombie_sprite_fn):
+            spr = zombie_sprite_fn("zomboss")
+            if spr is not None:
+                scaled = pygame.transform.smoothscale(spr, (68, 68))
+                screen.blit(scaled, scaled.get_rect(center=(boss_rect.centerx, boss_rect.y + 38)))
+        hp_track = pygame.Rect(boss_rect.x + 8, boss_rect.bottom - 18, boss_rect.w - 16, 8)
+        pygame.draw.rect(screen, (42, 26, 20), hp_track, border_radius=4)
+        hp_fill = hp_track.inflate(-2, -2)
+        fill_w = int(hp_fill.w * self.zomboss_progress_ratio())
+        if fill_w > 0:
+            fill_rect = pygame.Rect(hp_fill.x, hp_fill.y, fill_w, hp_fill.h)
+            pygame.draw.rect(screen, (192, 52, 42), fill_rect, border_radius=3)
+        if self.zomboss_pending_attack:
+            kind = str(self.zomboss_pending_attack.get("kind", ""))
+            cue = pygame.Rect(boss_rect.x - 4, boss_rect.bottom + 4, boss_rect.w + 8, 16)
+            fill = (170, 64, 52) if kind in {"fireball", "rv"} else (72, 108, 172)
+            pygame.draw.rect(screen, fill, cue, border_radius=8)
+            pygame.draw.rect(screen, (244, 228, 198), cue, 2, border_radius=8)
+            label_key = "zomboss_fireball_notice" if kind == "fireball" else ("zomboss_iceball_notice" if kind == "iceball" else ("zomboss_rv_notice" if kind == "rv" else "zomboss_bungee_notice"))
+            label_text = tr_fn(label_key) if callable(tr_fn) else label_key
+            label = pygame.font.Font(None, 16).render(label_text, True, (248, 240, 222))
+            screen.blit(label, label.get_rect(center=cue.center))
 
     def special_active_cap(self) -> int:
         cap = max(0, int(self.mode_float("active_cap", 0.0)))
@@ -3788,6 +4245,7 @@ class BattleState:
             or self.is_zombiquarium_mode()
             or self.is_bungee_blitz_mode()
             or self.is_whack_mode()
+            or self.is_zomboss_boss_mode()
         )
 
     def resolve_card_kind(self, card_kind: str) -> str:
@@ -5507,6 +5965,8 @@ class BattleState:
         self.portal_shift_notice_t = 0.0
         self.bobsled_burst_t = 0.0
         self.bobsled_burst_cycle_index = 0
+        if self.is_zomboss_boss_mode():
+            self.setup_zomboss_boss_mode()
         if self.is_seeing_stars_mode():
             self.setup_seeing_stars_mode()
         if self.is_portal_combat_mode():
@@ -5535,6 +5995,8 @@ class BattleState:
             self.cleaners = [False for _ in range(self.rows())]
 
     def update_special_minigame_mode(self, dt: float) -> None:
+        if self.is_zomboss_boss_mode():
+            self.update_zomboss_boss_mode(dt)
         if self.is_portal_combat_mode():
             raw_layouts = self.mode_rules.get("portal_layouts", [])
             interval = self.mode_float("portal_shuffle_interval", 0.0)
@@ -5569,7 +6031,9 @@ class BattleState:
                     self.spawn_zombie(self.current_wave or 1, forced_kind=kind)
                     active_specials += 1
 
-    def draw_special_minigame_overlay(self, screen: pygame.Surface, plant_sprite_fn) -> None:
+    def draw_special_minigame_overlay(self, screen: pygame.Surface, plant_sprite_fn, zombie_sprite_fn=None, tr_fn=None) -> None:
+        if self.is_zomboss_boss_mode():
+            self.draw_zomboss_boss_overlay(screen, zombie_sprite_fn, tr_fn)
         if self.is_portal_combat_mode():
             self.draw_portal_combat_overlay(screen)
             if self.portal_shift_notice_t > 0.0:
@@ -6045,9 +6509,33 @@ class BattleState:
         self.portal_shift_notice_t = 0.0
         self.bobsled_burst_t = 0.0
         self.bobsled_burst_cycle_index = 0
+        self.conveyor_opening_queue = []
+        self.conveyor_weights = {}
+        self.notice_request_text = ""
+        self.notice_request_duration_ms = 0
+        self.zomboss_hp = 0.0
+        self.zomboss_hp_max = 0.0
+        self.zomboss_intro_elapsed = 0.0
+        self.zomboss_intro_index = 0
+        self.zomboss_attack_t = 0.0
+        self.zomboss_attack_index = 0
+        self.zomboss_spawn_t = 0.0
+        self.zomboss_spawn_index = 0
+        self.zomboss_bungee_t = 0.0
+        self.zomboss_rv_t = 0.0
+        self.zomboss_pending_attack = {}
+        self.zomboss_night_tint = 0.0
         if self.mode_bool("conveyor", False):
             self.conveyor_pool = [k for k in self.mode_list("conveyor_pool") if k in self.plant_types] or list(available)
             self.conveyor_cap = max(4, int(self.mode_float("conveyor_cap", 8.0)))
+            raw_weights = self.mode_rules.get("conveyor_weights", {})
+            if isinstance(raw_weights, dict):
+                self.conveyor_weights = {
+                    str(kind): float(weight)
+                    for kind, weight in raw_weights.items()
+                    if str(kind) in self.plant_types and float(weight) > 0.0
+                }
+            self.conveyor_opening_queue = [kind for kind in self.mode_list("opening_cards") if kind in self.plant_types]
             self.cards = []
             self.initial_selected_cards = []
             self.card_timer = {}
@@ -6157,6 +6645,8 @@ class BattleState:
 
     def mushroom_sleeping(self, plant: Plant) -> bool:
         cfg = self.plant_types[plant.kind]
+        if self.is_zomboss_boss_mode() or self.mode_bool("night_roof_palette", False):
+            return False
         return cfg.is_mushroom and not plant.awake_override and not self.field.is_night
 
     def z_ahead(self, row: int, x: float) -> bool:
@@ -6535,7 +7025,16 @@ class BattleState:
             self.conveyor_t -= interval
             if len(self.cards) >= self.conveyor_cap:
                 continue
-            choice = random.choice(self.conveyor_pool)
+            if self.conveyor_opening_queue:
+                choice = self.conveyor_opening_queue.pop(0)
+            elif self.conveyor_weights:
+                weighted_pool = [(kind, weight) for kind, weight in self.conveyor_weights.items() if kind in self.conveyor_pool and weight > 0.0]
+                if weighted_pool:
+                    choice = random.choices([kind for kind, _ in weighted_pool], weights=[weight for _, weight in weighted_pool], k=1)[0]
+                else:
+                    choice = random.choice(self.conveyor_pool)
+            else:
+                choice = random.choice(self.conveyor_pool)
             self.cards.append(choice)
             if self.selected not in self.cards:
                 self.selected = self.cards[0]
@@ -6673,6 +7172,8 @@ class BattleState:
                         plant.cd = self.scaled_plant_interval(cfg.interval)
                         plant.state["recoil_t"] = 0.12
             elif b == "ice" and plant.cd <= 0:
+                if self.is_zomboss_boss_mode():
+                    self.cancel_zomboss_pending_attack("ice_shroom")
                 for z in self.zombies:
                     z.stunned_t = max(z.stunned_t, 2.5)
                     z.slow_t = max(z.slow_t, 4.5)
@@ -6691,6 +7192,9 @@ class BattleState:
                     self.slay_zombie(z, source="kelp")
                     plant.hp = 0
             elif b == "row_blast" and plant.cd <= 0:
+                if self.is_zomboss_boss_mode() and plant.kind == "jalapeno":
+                    self.cancel_zomboss_pending_attack("jalapeno")
+                    self.ice_rows.clear()
                 for z in self.zombies:
                     if z.row == plant.row:
                         self.slay_zombie(z, source="row_blast")
@@ -6756,6 +7260,10 @@ class BattleState:
             p.update(dt)
             if self.is_portal_combat_mode():
                 p.row, p.x, p.teleport_cd = self.apply_portal_transfer(p.row, p.x, p.direction, p.teleport_cd)
+            if self.is_zomboss_boss_mode() and p.direction > 0 and p.lobbed and p.x >= self.lawn_right() + 18:
+                self.damage_zomboss(p.damage * 4.0)
+                self.projs.remove(p)
+                continue
             if p.x < LAWN_X - 60 or p.x > SCREEN_WIDTH + 40:
                 self.projs.remove(p)
                 continue
@@ -7107,7 +7615,7 @@ class BattleState:
                 alpha = int(clamp((x / max(1, fog.get_width()) - 0.26) / 0.74, 0.0, 1.0) * 190)
                 pygame.draw.line(fog, (170, 178, 190, alpha), (x, 0), (x, fog.get_height()))
             screen.blit(fog, (LAWN_X, LAWN_Y))
-        if self.is_bobsled_bonanza_mode():
+        if self.is_bobsled_bonanza_mode() or self.is_zomboss_boss_mode():
             for row, ttl in self.ice_rows.items():
                 if ttl <= 0.0:
                     continue
@@ -7125,7 +7633,7 @@ class BattleState:
                 screen.blit(ice, row_rect.topleft)
                 for yy in range(row_rect.y + 6, row_rect.bottom - 6, 8):
                     pygame.draw.line(screen, (214, 238, 252), (row_rect.x + 10, yy), (row_rect.right - 10, yy), 1)
-        self.draw_special_minigame_overlay(screen, plant_sprite_fn)
+        self.draw_special_minigame_overlay(screen, plant_sprite_fn, zombie_sprite_fn, tr)
         if self.is_whack_mode():
             for row in range(self.rows()):
                 for col in range(2, COLS):
@@ -11453,6 +11961,20 @@ class Game:
         fallback = [k for k in self.battle.level_available_cards(level) if k not in {"sunflower", "sun_shroom", "marigold", "imitater"}]
         return list(dict.fromkeys(fallback or self.battle.level_available_cards(level)))
 
+    def zomboss_boss_mode_rules(self, mode_name: str, return_scene: str) -> Dict[str, object]:
+        raw = dict(ZOMBOSS_BOSS_RULESETS.get(mode_name, ZOMBOSS_BOSS_RULESETS["adventure_zomboss_boss"]))
+        rules = {
+            "mode_name": mode_name,
+            "mode_family": "boss_conveyor",
+            "return_scene": return_scene,
+            "conveyor": True,
+            "no_sun_cost": True,
+            "no_sky_sun": True,
+            "night_roof_palette": True,
+        }
+        rules.update(raw)
+        return rules
+
     def adventure_stage_mode_rules(self, level: LevelConfig) -> Dict[str, object]:
         style = self.stage_style_for_level(level)
         if style == "normal_select":
@@ -11558,23 +12080,7 @@ class Game:
                 "wave_interval": max(17.0, 21.0 - level.world),
             }
         if style == "boss_conveyor":
-            return {
-                "mode_name": preset_id or "adventure_zomboss_boss",
-                "mode_family": "boss_conveyor",
-                "return_scene": "adventure_level_select",
-                "conveyor": True,
-                "conveyor_pool": self.adventure_conveyor_pool(level),
-                "conveyor_interval": 1.16,
-                "conveyor_cap": 10,
-                "no_sun_cost": True,
-                "no_sky_sun": True,
-                "spawn_rate_mult": 1.12,
-                "zombie_hp_scale": 1.02,
-                "zombie_speed_scale": 1.02,
-                "zombie_dps_scale": 1.02,
-                "wave_interval": 16.0,
-                "rhythm_cycle": 17.0,
-            }
+            return self.zomboss_boss_mode_rules(preset_id or "adventure_zomboss_boss", "adventure_level_select")
         return {}
 
     def launch_level_or_mode(
@@ -12973,6 +13479,9 @@ class Game:
                 if z.kind == 'pogo' and z.hp > 0 and float(z.state.get('dying_t', 0.0)) <= 0.0 and not z.hypnotized
             )
             return f"{self.tr('pogo_label')}: {pogo_alive}"
+        if progress_type == "boss_hp":
+            ratio = int(round(self.battle.zomboss_progress_ratio() * 100.0))
+            return f"{self.tr('boss_hp_label')}: {ratio}%"
         return ""
 
     def battle_clear_notice_text(self) -> str:
@@ -13994,25 +14503,7 @@ class Game:
                 return
             if entry_id == "mini_dr_zomboss_revenge":
                 idx = max(0, len(self.levels) - 1)
-                rules = {
-                    "mode_name": entry_id,
-                    "mode_family": "boss_conveyor",
-                    "return_scene": scene,
-                    "conveyor": True,
-                    "conveyor_pool": self.adventure_conveyor_pool(self.levels[idx]),
-                    "conveyor_interval": 1.08,
-                    "conveyor_cap": 10,
-                    "no_sun_cost": True,
-                    "no_sky_sun": True,
-                    "spawn_rate_mult": 1.26,
-                    "zombie_hp_scale": 1.12,
-                    "zombie_speed_scale": 1.06,
-                    "zombie_dps_scale": 1.08,
-                    "wave_interval": 16.0,
-                    "total_waves_override": 18.0,
-                    "large_wave_indices": [6, 12, 16, 18],
-                    "final_wave_index": 18.0,
-                }
+                rules = self.zomboss_boss_mode_rules(entry_id, scene)
                 self.launch_level_or_mode(idx, stage_style="boss_conveyor", selected_cards=[], mode_rules=rules, return_scene=scene)
                 return
             self.show_mode_notice("mode_not_available")
@@ -16791,6 +17282,9 @@ class Game:
                 dt_scale = self.battle_speed()
                 sim_dt = dt * dt_scale
                 self.battle.update(sim_dt)
+                notice_text, notice_key, notice_color, notice_duration = self.battle.consume_notice_request()
+                if notice_text or notice_key:
+                    self.show_battle_notice(notice_text or self.tr(notice_key), color=notice_color, duration_ms=max(400, notice_duration))
                 if self.battle.result:
                     if self.battle.result == "win" and self.is_active_survival_mode():
                         if self.handle_survival_round_win():
