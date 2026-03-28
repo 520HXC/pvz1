@@ -1,6 +1,6 @@
 {
   "battle_settings": {
-    "game_speed": 3.0,
+    "game_speed": 1.0,
     "auto_collect_sun": true,
     "auto_collect_coins": true,
     "show_zombie_hp_bars": true,

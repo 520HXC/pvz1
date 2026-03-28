@@ -1,12 +1,16 @@
 {
   "unlocked": 50,
-  "coins": 485,
-  "upgrades": {},
+  "coins": 135,
+  "upgrades": {
+    "twin_sunflower": true
+  },
+  "cleared_levels": [],
   "options_music": true,
   "options_sfx": true,
   "zen_growth": {
     "sunflower": 5,
     "peashooter": 5,
-    "wallnut": 5
+    "wallnut": 5,
+    "twin_sunflower": 5
   }
 }
