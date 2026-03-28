@@ -1,0 +1,296 @@
+{
+  "anchor": [
+    99,
+    99
+  ],
+  "clips": {
+    "burrow_enter": {
+      "frames": [
+        {
+          "surface_path": "burrow_enter_00.png",
+          "duration_ms": 80,
+          "content_bbox": [
+            49,
+            4,
+            135,
+            185
+          ],
+          "anchor": [
+            99,
+            99
+          ]
+        },
+        {
+          "surface_path": "burrow_enter_01.png",
+          "duration_ms": 86,
+          "content_bbox": [
+            45,
+            11,
+            140,
+            187
+          ],
+          "anchor": [
+            99,
+            99
+          ]
+        },
+        {
+          "surface_path": "burrow_enter_02.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            42,
+            16,
+            145,
+            182
+          ],
+          "anchor": [
+            99,
+            99
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "underground_travel",
+      "event_markers": [],
+      "hold_last_frame_ms": 110,
+      "impact_marker": "burrow",
+      "lock_until_end": true
+    },
+    "underground_travel": {
+      "frames": [
+        {
+          "surface_path": "underground_travel_00.png",
+          "duration_ms": 94,
+          "content_bbox": [
+            58,
+            30,
+            126,
+            168
+          ],
+          "anchor": [
+            99,
+            99
+          ]
+        },
+        {
+          "surface_path": "underground_travel_01.png",
+          "duration_ms": 94,
+          "content_bbox": [
+            62,
+            32,
+            124,
+            166
+          ],
+          "anchor": [
+            99,
+            99
+          ]
+        },
+        {
+          "surface_path": "underground_travel_02.png",
+          "duration_ms": 94,
+          "content_bbox": [
+            59,
+            30,
+            125,
+            168
+          ],
+          "anchor": [
+            99,
+            99
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "emerge": {
+      "frames": [
+        {
+          "surface_path": "emerge_00.png",
+          "duration_ms": 82,
+          "content_bbox": [
+            58,
+            22,
+            126,
+            175
+          ],
+          "anchor": [
+            99,
+            99
+          ]
+        },
+        {
+          "surface_path": "emerge_01.png",
+          "duration_ms": 86,
+          "content_bbox": [
+            50,
+            11,
+            137,
+            181
+          ],
+          "anchor": [
+            99,
+            99
+          ]
+        },
+        {
+          "surface_path": "emerge_02.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            56,
+            5,
+            131,
+            180
+          ],
+          "anchor": [
+            99,
+            99
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "surface_attack",
+      "event_markers": [],
+      "hold_last_frame_ms": 110,
+      "impact_marker": "emerge",
+      "lock_until_end": true
+    },
+    "surface_attack": {
+      "frames": [
+        {
+          "surface_path": "surface_attack_00.png",
+          "duration_ms": 84,
+          "content_bbox": [
+            50,
+            4,
+            137,
+            181
+          ],
+          "anchor": [
+            99,
+            99
+          ]
+        },
+        {
+          "surface_path": "surface_attack_01.png",
+          "duration_ms": 84,
+          "content_bbox": [
+            58,
+            4,
+            129,
+            179
+          ],
+          "anchor": [
+            99,
+            99
+          ]
+        },
+        {
+          "surface_path": "surface_attack_02.png",
+          "duration_ms": 84,
+          "content_bbox": [
+            60,
+            3,
+            128,
+            183
+          ],
+          "anchor": [
+            99,
+            99
+          ]
+        },
+        {
+          "surface_path": "surface_attack_03.png",
+          "duration_ms": 84,
+          "content_bbox": [
+            63,
+            4,
+            124,
+            179
+          ],
+          "anchor": [
+            99,
+            99
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "death": {
+      "frames": [
+        {
+          "surface_path": "death_00.png",
+          "duration_ms": 78,
+          "content_bbox": [
+            51,
+            4,
+            141,
+            182
+          ],
+          "anchor": [
+            99,
+            99
+          ]
+        },
+        {
+          "surface_path": "death_01.png",
+          "duration_ms": 82,
+          "content_bbox": [
+            48,
+            6,
+            150,
+            189
+          ],
+          "anchor": [
+            99,
+            99
+          ]
+        },
+        {
+          "surface_path": "death_02.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            47,
+            9,
+            151,
+            189
+          ],
+          "anchor": [
+            99,
+            99
+          ]
+        },
+        {
+          "surface_path": "death_03.png",
+          "duration_ms": 104,
+          "content_bbox": [
+            48,
+            14,
+            150,
+            184
+          ],
+          "anchor": [
+            99,
+            99
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 220,
+      "impact_marker": "death",
+      "lock_until_end": true
+    }
+  }
+}

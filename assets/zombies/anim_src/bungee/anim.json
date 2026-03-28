@@ -1,0 +1,899 @@
+{
+  "source_sprite": "assets/zombies/bungee.png",
+  "output_size": [
+    236,
+    236
+  ],
+  "anchor": [
+    118,
+    118
+  ],
+  "parts": {
+    "head": {
+      "file": "head.png",
+      "source_rect": [
+        111,
+        31,
+        84,
+        74
+      ],
+      "z_index": 5
+    },
+    "torso": {
+      "file": "torso.png",
+      "source_rect": [
+        108,
+        84,
+        90,
+        94
+      ],
+      "z_index": 4
+    },
+    "left_arm": {
+      "file": "left_arm.png",
+      "source_rect": [
+        91,
+        87,
+        34,
+        80
+      ],
+      "z_index": 3
+    },
+    "right_arm": {
+      "file": "right_arm.png",
+      "source_rect": [
+        184,
+        82,
+        40,
+        84
+      ],
+      "z_index": 3
+    },
+    "legs": {
+      "file": "legs.png",
+      "source_rect": [
+        118,
+        172,
+        76,
+        81
+      ],
+      "z_index": 2
+    }
+  },
+  "clips": {
+    "descending": {
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false,
+      "frames": [
+        {
+          "duration_ms": 88,
+          "parts": {
+            "head": {
+              "offset": [
+                0,
+                -42
+              ],
+              "scale": 1.0,
+              "angle": -1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                0,
+                -38
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -2,
+                -42
+              ],
+              "scale": 1.0,
+              "angle": -10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                2,
+                -42
+              ],
+              "scale": 1.0,
+              "angle": 10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "legs": {
+              "offset": [
+                0,
+                -34
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 88,
+          "parts": {
+            "head": {
+              "offset": [
+                0,
+                -18
+              ],
+              "scale": 1.0,
+              "angle": -1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                0,
+                -14
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -2,
+                -18
+              ],
+              "scale": 1.0,
+              "angle": -8.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                2,
+                -18
+              ],
+              "scale": 1.0,
+              "angle": 8.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "legs": {
+              "offset": [
+                0,
+                -10
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 92,
+          "parts": {
+            "head": {
+              "offset": [
+                0,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -1,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": -4.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                1,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": 4.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "legs": {
+              "offset": [
+                0,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "lock_target": {
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false,
+      "frames": [
+        {
+          "duration_ms": 96,
+          "parts": {
+            "head": {
+              "offset": [
+                0,
+                -6
+              ],
+              "scale": 1.0,
+              "angle": -2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                0,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -4,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -24.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                4,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 24.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "legs": {
+              "offset": [
+                0,
+                4
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 96,
+          "parts": {
+            "head": {
+              "offset": [
+                0,
+                -8
+              ],
+              "scale": 1.0,
+              "angle": 2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                0,
+                -6
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -2,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                2,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "legs": {
+              "offset": [
+                0,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "steal_lift": {
+      "loop": false,
+      "next_clip": "exit",
+      "event_markers": [],
+      "hold_last_frame_ms": 110,
+      "impact_marker": "steal",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 78,
+          "parts": {
+            "head": {
+              "offset": [
+                0,
+                -10
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                0,
+                -8
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -6,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": -34.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                6,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": 34.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "legs": {
+              "offset": [
+                0,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 88,
+          "parts": {
+            "head": {
+              "offset": [
+                0,
+                -28
+              ],
+              "scale": 1.0,
+              "angle": -1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                0,
+                -24
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -4,
+                -22
+              ],
+              "scale": 1.0,
+              "angle": -18.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                4,
+                -22
+              ],
+              "scale": 1.0,
+              "angle": 18.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "legs": {
+              "offset": [
+                0,
+                -18
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 88,
+          "parts": {
+            "head": {
+              "offset": [
+                0,
+                -48
+              ],
+              "scale": 1.0,
+              "angle": -1.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                0,
+                -44
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -2,
+                -42
+              ],
+              "scale": 1.0,
+              "angle": -8.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                2,
+                -42
+              ],
+              "scale": 1.0,
+              "angle": 8.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "legs": {
+              "offset": [
+                0,
+                -38
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 220,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "exit": {
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 120,
+      "impact_marker": "exit",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 88,
+          "parts": {
+            "head": {
+              "offset": [
+                0,
+                -54
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                0,
+                -50
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -2,
+                -52
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                2,
+                -52
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "legs": {
+              "offset": [
+                0,
+                -46
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 220,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 96,
+          "parts": {
+            "head": {
+              "offset": [
+                0,
+                -86
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 150,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                0,
+                -82
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 150,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -2,
+                -84
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 150,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                2,
+                -84
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 150,
+              "z_index": null
+            },
+            "legs": {
+              "offset": [
+                0,
+                -78
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 150,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 100,
+          "parts": {
+            "head": {
+              "offset": [
+                0,
+                -116
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 80,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                0,
+                -112
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 80,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -2,
+                -112
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 80,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                2,
+                -112
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 80,
+              "z_index": null
+            },
+            "legs": {
+              "offset": [
+                0,
+                -106
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 80,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "blocked_exit": {
+      "loop": false,
+      "next_clip": "exit",
+      "event_markers": [],
+      "hold_last_frame_ms": 120,
+      "impact_marker": "blocked",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 86,
+          "parts": {
+            "head": {
+              "offset": [
+                0,
+                -8
+              ],
+              "scale": 1.0,
+              "angle": -4.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                0,
+                -6
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -6,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -34.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                6,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 34.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "legs": {
+              "offset": [
+                0,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 92,
+          "parts": {
+            "head": {
+              "offset": [
+                0,
+                -42
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 210,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                0,
+                -38
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 210,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -3,
+                -36
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 210,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                3,
+                -36
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 210,
+              "z_index": null
+            },
+            "legs": {
+              "offset": [
+                0,
+                -30
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 210,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 100,
+          "parts": {
+            "head": {
+              "offset": [
+                0,
+                -80
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 120,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                0,
+                -76
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 120,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -2,
+                -74
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 120,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                2,
+                -74
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 120,
+              "z_index": null
+            },
+            "legs": {
+              "offset": [
+                0,
+                -68
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 120,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    }
+  }
+}

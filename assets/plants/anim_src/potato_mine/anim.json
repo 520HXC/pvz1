@@ -1,0 +1,439 @@
+{
+  "source_sprite": "assets/plants/potato_mine.png",
+  "output_size": [
+    156,
+    156
+  ],
+  "anchor": [
+    78,
+    78
+  ],
+  "parts": {
+    "body": {
+      "file": "body.png",
+      "source_rect": [
+        103,
+        143,
+        116,
+        103
+      ],
+      "z_index": 2
+    },
+    "tip": {
+      "file": "tip.png",
+      "source_rect": [
+        149,
+        234,
+        20,
+        21
+      ],
+      "z_index": 1
+    }
+  },
+  "clips": {
+    "arming": {
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false,
+      "frames": [
+        {
+          "duration_ms": 150,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                11
+              ],
+              "scale": 0.64,
+              "angle": -2.0,
+              "alpha": 210,
+              "z_index": null
+            },
+            "tip": {
+              "offset": [
+                0,
+                14
+              ],
+              "scale": 0.55,
+              "angle": 0.0,
+              "alpha": 190,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 150,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                12
+              ],
+              "scale": 0.7,
+              "angle": -1.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "tip": {
+              "offset": [
+                0,
+                14
+              ],
+              "scale": 0.62,
+              "angle": 0.0,
+              "alpha": 200,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "priming": {
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false,
+      "frames": [
+        {
+          "duration_ms": 88,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                7
+              ],
+              "scale": 0.82,
+              "angle": -1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "tip": {
+              "offset": [
+                0,
+                10
+              ],
+              "scale": 0.74,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 92,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                3
+              ],
+              "scale": 0.94,
+              "angle": 0.6,
+              "alpha": 255,
+              "z_index": null
+            },
+            "tip": {
+              "offset": [
+                0,
+                6
+              ],
+              "scale": 0.86,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 96,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.04,
+              "angle": 1.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "tip": {
+              "offset": [
+                0,
+                1
+              ],
+              "scale": 0.96,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 92,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                2
+              ],
+              "scale": 0.98,
+              "angle": 0.4,
+              "alpha": 255,
+              "z_index": null
+            },
+            "tip": {
+              "offset": [
+                0,
+                3
+              ],
+              "scale": 0.9,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "armed_idle": {
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false,
+      "frames": [
+        {
+          "duration_ms": 96,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -0.6,
+              "alpha": 255,
+              "z_index": null
+            },
+            "tip": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 100,
+          "parts": {
+            "body": {
+              "offset": [
+                1,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 0.4,
+              "alpha": 255,
+              "z_index": null
+            },
+            "tip": {
+              "offset": [
+                1,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 96,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                -3
+              ],
+              "scale": 1.0,
+              "angle": 0.8,
+              "alpha": 255,
+              "z_index": null
+            },
+            "tip": {
+              "offset": [
+                0,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 100,
+          "parts": {
+            "body": {
+              "offset": [
+                -1,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "tip": {
+              "offset": [
+                -1,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "detonate": {
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 150,
+      "impact_marker": "detonate",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 54,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                -4
+              ],
+              "scale": 1.06,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "tip": {
+              "offset": [
+                0,
+                -4
+              ],
+              "scale": 1.04,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 62,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                -8
+              ],
+              "scale": 1.2,
+              "angle": 0.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "tip": {
+              "offset": [
+                0,
+                -8
+              ],
+              "scale": 1.18,
+              "angle": 0.0,
+              "alpha": 220,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 70,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                -14
+              ],
+              "scale": 1.38,
+              "angle": 0.0,
+              "alpha": 144,
+              "z_index": null
+            },
+            "tip": {
+              "offset": [
+                0,
+                -14
+              ],
+              "scale": 1.3,
+              "angle": 0.0,
+              "alpha": 144,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 82,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                -18
+              ],
+              "scale": 1.54,
+              "angle": 0.0,
+              "alpha": 80,
+              "z_index": null
+            },
+            "tip": {
+              "offset": [
+                0,
+                -18
+              ],
+              "scale": 1.44,
+              "angle": 0.0,
+              "alpha": 80,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    }
+  }
+}

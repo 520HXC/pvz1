@@ -1,0 +1,230 @@
+{
+  "anchor": [
+    123,
+    123
+  ],
+  "clips": {
+    "cruise": {
+      "frames": [
+        {
+          "surface_path": "cruise_00.png",
+          "duration_ms": 94,
+          "content_bbox": [
+            14,
+            63,
+            209,
+            162
+          ],
+          "anchor": [
+            123,
+            123
+          ]
+        },
+        {
+          "surface_path": "cruise_01.png",
+          "duration_ms": 94,
+          "content_bbox": [
+            16,
+            63,
+            207,
+            163
+          ],
+          "anchor": [
+            123,
+            123
+          ]
+        },
+        {
+          "surface_path": "cruise_02.png",
+          "duration_ms": 94,
+          "content_bbox": [
+            16,
+            63,
+            207,
+            162
+          ],
+          "anchor": [
+            123,
+            123
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "crush": {
+      "frames": [
+        {
+          "surface_path": "crush_00.png",
+          "duration_ms": 74,
+          "content_bbox": [
+            18,
+            60,
+            213,
+            167
+          ],
+          "anchor": [
+            123,
+            123
+          ]
+        },
+        {
+          "surface_path": "crush_01.png",
+          "duration_ms": 82,
+          "content_bbox": [
+            23,
+            60,
+            213,
+            170
+          ],
+          "anchor": [
+            123,
+            123
+          ]
+        },
+        {
+          "surface_path": "crush_02.png",
+          "duration_ms": 90,
+          "content_bbox": [
+            19,
+            63,
+            208,
+            162
+          ],
+          "anchor": [
+            123,
+            123
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "hit": {
+      "frames": [
+        {
+          "surface_path": "hit_00.png",
+          "duration_ms": 78,
+          "content_bbox": [
+            26,
+            62,
+            207,
+            168
+          ],
+          "anchor": [
+            123,
+            123
+          ]
+        },
+        {
+          "surface_path": "hit_01.png",
+          "duration_ms": 90,
+          "content_bbox": [
+            21,
+            63,
+            207,
+            163
+          ],
+          "anchor": [
+            123,
+            123
+          ]
+        },
+        {
+          "surface_path": "hit_02.png",
+          "duration_ms": 102,
+          "content_bbox": [
+            18,
+            63,
+            206,
+            160
+          ],
+          "anchor": [
+            123,
+            123
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "cruise",
+      "event_markers": [],
+      "hold_last_frame_ms": 116,
+      "impact_marker": "hit",
+      "lock_until_end": true
+    },
+    "death": {
+      "frames": [
+        {
+          "surface_path": "death_00.png",
+          "duration_ms": 82,
+          "content_bbox": [
+            24,
+            63,
+            207,
+            174
+          ],
+          "anchor": [
+            123,
+            123
+          ]
+        },
+        {
+          "surface_path": "death_01.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            28,
+            68,
+            212,
+            178
+          ],
+          "anchor": [
+            123,
+            123
+          ]
+        },
+        {
+          "surface_path": "death_02.png",
+          "duration_ms": 104,
+          "content_bbox": [
+            36,
+            73,
+            210,
+            173
+          ],
+          "anchor": [
+            123,
+            123
+          ]
+        },
+        {
+          "surface_path": "death_03.png",
+          "duration_ms": 116,
+          "content_bbox": [
+            41,
+            79,
+            205,
+            167
+          ],
+          "anchor": [
+            123,
+            123
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 220,
+      "impact_marker": "death",
+      "lock_until_end": true
+    }
+  }
+}

@@ -1,0 +1,310 @@
+{
+  "anchor": [
+    102,
+    102
+  ],
+  "clips": {
+    "airborne": {
+      "frames": [
+        {
+          "surface_path": "airborne_00.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            57,
+            0,
+            98,
+            158
+          ],
+          "anchor": [
+            102,
+            102
+          ]
+        },
+        {
+          "surface_path": "airborne_01.png",
+          "duration_ms": 96,
+          "content_bbox": [
+            57,
+            0,
+            99,
+            155
+          ],
+          "anchor": [
+            102,
+            102
+          ]
+        },
+        {
+          "surface_path": "airborne_02.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            57,
+            0,
+            98,
+            159
+          ],
+          "anchor": [
+            102,
+            102
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "popped_fall": {
+      "frames": [
+        {
+          "surface_path": "popped_fall_00.png",
+          "duration_ms": 74,
+          "content_bbox": [
+            59,
+            0,
+            112,
+            166
+          ],
+          "anchor": [
+            102,
+            102
+          ]
+        },
+        {
+          "surface_path": "popped_fall_01.png",
+          "duration_ms": 82,
+          "content_bbox": [
+            57,
+            0,
+            121,
+            176
+          ],
+          "anchor": [
+            102,
+            102
+          ]
+        },
+        {
+          "surface_path": "popped_fall_02.png",
+          "duration_ms": 90,
+          "content_bbox": [
+            56,
+            2,
+            122,
+            185
+          ],
+          "anchor": [
+            102,
+            102
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "grounded_walk",
+      "event_markers": [],
+      "hold_last_frame_ms": 140,
+      "impact_marker": "fall",
+      "lock_until_end": true
+    },
+    "grounded_walk": {
+      "frames": [
+        {
+          "surface_path": "grounded_walk_00.png",
+          "duration_ms": 86,
+          "content_bbox": [
+            58,
+            0,
+            96,
+            166
+          ],
+          "anchor": [
+            102,
+            102
+          ]
+        },
+        {
+          "surface_path": "grounded_walk_01.png",
+          "duration_ms": 86,
+          "content_bbox": [
+            58,
+            0,
+            96,
+            163
+          ],
+          "anchor": [
+            102,
+            102
+          ]
+        },
+        {
+          "surface_path": "grounded_walk_02.png",
+          "duration_ms": 86,
+          "content_bbox": [
+            58,
+            0,
+            96,
+            166
+          ],
+          "anchor": [
+            102,
+            102
+          ]
+        },
+        {
+          "surface_path": "grounded_walk_03.png",
+          "duration_ms": 86,
+          "content_bbox": [
+            57,
+            0,
+            97,
+            163
+          ],
+          "anchor": [
+            102,
+            102
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "eat": {
+      "frames": [
+        {
+          "surface_path": "eat_00.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            58,
+            0,
+            96,
+            163
+          ],
+          "anchor": [
+            102,
+            102
+          ]
+        },
+        {
+          "surface_path": "eat_01.png",
+          "duration_ms": 101,
+          "content_bbox": [
+            54,
+            0,
+            100,
+            162
+          ],
+          "anchor": [
+            102,
+            102
+          ]
+        },
+        {
+          "surface_path": "eat_02.png",
+          "duration_ms": 87,
+          "content_bbox": [
+            58,
+            0,
+            96,
+            162
+          ],
+          "anchor": [
+            102,
+            102
+          ]
+        },
+        {
+          "surface_path": "eat_03.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            58,
+            0,
+            96,
+            162
+          ],
+          "anchor": [
+            102,
+            102
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "death": {
+      "frames": [
+        {
+          "surface_path": "death_00.png",
+          "duration_ms": 78,
+          "content_bbox": [
+            58,
+            0,
+            96,
+            167
+          ],
+          "anchor": [
+            102,
+            102
+          ]
+        },
+        {
+          "surface_path": "death_01.png",
+          "duration_ms": 82,
+          "content_bbox": [
+            61,
+            0,
+            93,
+            175
+          ],
+          "anchor": [
+            102,
+            102
+          ]
+        },
+        {
+          "surface_path": "death_02.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            63,
+            0,
+            91,
+            190
+          ],
+          "anchor": [
+            102,
+            102
+          ]
+        },
+        {
+          "surface_path": "death_03.png",
+          "duration_ms": 104,
+          "content_bbox": [
+            65,
+            0,
+            97,
+            200
+          ],
+          "anchor": [
+            102,
+            102
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 220,
+      "impact_marker": "death",
+      "lock_until_end": true
+    }
+  }
+}

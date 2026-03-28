@@ -1,0 +1,296 @@
+{
+  "anchor": [
+    82,
+    82
+  ],
+  "clips": {
+    "idle_healthy": {
+      "frames": [
+        {
+          "surface_path": "idle_healthy_00.png",
+          "duration_ms": 140,
+          "content_bbox": [
+            38,
+            16,
+            89,
+            123
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "idle_healthy_01.png",
+          "duration_ms": 148,
+          "content_bbox": [
+            39,
+            16,
+            88,
+            122
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "idle_healthy_02.png",
+          "duration_ms": 140,
+          "content_bbox": [
+            38,
+            16,
+            89,
+            123
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "idle_healthy_03.png",
+          "duration_ms": 148,
+          "content_bbox": [
+            38,
+            17,
+            88,
+            122
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "idle_cracked": {
+      "frames": [
+        {
+          "surface_path": "idle_cracked_00.png",
+          "duration_ms": 140,
+          "content_bbox": [
+            38,
+            17,
+            89,
+            123
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "idle_cracked_01.png",
+          "duration_ms": 148,
+          "content_bbox": [
+            38,
+            16,
+            90,
+            123
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "idle_cracked_02.png",
+          "duration_ms": 140,
+          "content_bbox": [
+            38,
+            17,
+            89,
+            123
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "idle_cracked_03.png",
+          "duration_ms": 148,
+          "content_bbox": [
+            38,
+            17,
+            88,
+            122
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "idle_heavy_cracked": {
+      "frames": [
+        {
+          "surface_path": "idle_heavy_cracked_00.png",
+          "duration_ms": 150,
+          "content_bbox": [
+            38,
+            17,
+            89,
+            123
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "idle_heavy_cracked_01.png",
+          "duration_ms": 154,
+          "content_bbox": [
+            39,
+            18,
+            88,
+            122
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "idle_heavy_cracked_02.png",
+          "duration_ms": 150,
+          "content_bbox": [
+            38,
+            17,
+            89,
+            123
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "idle_heavy_cracked_03.png",
+          "duration_ms": 154,
+          "content_bbox": [
+            37,
+            17,
+            90,
+            123
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "hit": {
+      "frames": [
+        {
+          "surface_path": "hit_00.png",
+          "duration_ms": 88,
+          "content_bbox": [
+            40,
+            17,
+            90,
+            124
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "hit_01.png",
+          "duration_ms": 104,
+          "content_bbox": [
+            39,
+            17,
+            89,
+            123
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "idle_healthy",
+      "event_markers": [],
+      "hold_last_frame_ms": 100,
+      "impact_marker": "hit",
+      "lock_until_end": true
+    },
+    "death": {
+      "frames": [
+        {
+          "surface_path": "death_00.png",
+          "duration_ms": 90,
+          "content_bbox": [
+            39,
+            22,
+            91,
+            121
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "death_01.png",
+          "duration_ms": 96,
+          "content_bbox": [
+            41,
+            28,
+            96,
+            118
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "death_02.png",
+          "duration_ms": 112,
+          "content_bbox": [
+            42,
+            32,
+            103,
+            118
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 180,
+      "impact_marker": "death",
+      "lock_until_end": true
+    }
+  }
+}

@@ -1,0 +1,216 @@
+{
+  "anchor": [
+    82,
+    82
+  ],
+  "clips": {
+    "morphing": {
+      "frames": [
+        {
+          "surface_path": "morphing_00.png",
+          "duration_ms": 86,
+          "content_bbox": [
+            43,
+            29,
+            78,
+            120
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "morphing_01.png",
+          "duration_ms": 86,
+          "content_bbox": [
+            44,
+            28,
+            84,
+            119
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "morphing_02.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            43,
+            29,
+            77,
+            116
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "copied_idle": {
+      "frames": [
+        {
+          "surface_path": "copied_idle_00.png",
+          "duration_ms": 100,
+          "content_bbox": [
+            44,
+            31,
+            77,
+            116
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "copied_idle_01.png",
+          "duration_ms": 104,
+          "content_bbox": [
+            45,
+            30,
+            75,
+            114
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "copied_idle_02.png",
+          "duration_ms": 100,
+          "content_bbox": [
+            45,
+            28,
+            74,
+            114
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "copied_idle_03.png",
+          "duration_ms": 104,
+          "content_bbox": [
+            44,
+            30,
+            76,
+            113
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "hit": {
+      "frames": [
+        {
+          "surface_path": "hit_00.png",
+          "duration_ms": 86,
+          "content_bbox": [
+            45,
+            31,
+            81,
+            115
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "hit_01.png",
+          "duration_ms": 100,
+          "content_bbox": [
+            45,
+            31,
+            75,
+            113
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "copied_idle",
+      "event_markers": [],
+      "hold_last_frame_ms": 100,
+      "impact_marker": "hit",
+      "lock_until_end": true
+    },
+    "death": {
+      "frames": [
+        {
+          "surface_path": "death_00.png",
+          "duration_ms": 88,
+          "content_bbox": [
+            44,
+            33,
+            87,
+            122
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "death_01.png",
+          "duration_ms": 96,
+          "content_bbox": [
+            43,
+            36,
+            102,
+            125
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        },
+        {
+          "surface_path": "death_02.png",
+          "duration_ms": 112,
+          "content_bbox": [
+            43,
+            36,
+            112,
+            128
+          ],
+          "anchor": [
+            82,
+            82
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 180,
+      "impact_marker": "death",
+      "lock_until_end": true
+    }
+  }
+}

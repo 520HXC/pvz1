@@ -1,0 +1,306 @@
+{
+  "anchor": [
+    114,
+    114
+  ],
+  "clips": {
+    "walk": {
+      "frames": [
+        {
+          "surface_path": "walk_00.png",
+          "duration_ms": 100,
+          "content_bbox": [
+            35,
+            66,
+            158,
+            139
+          ],
+          "anchor": [
+            114,
+            114
+          ]
+        },
+        {
+          "surface_path": "walk_01.png",
+          "duration_ms": 100,
+          "content_bbox": [
+            36,
+            63,
+            158,
+            142
+          ],
+          "anchor": [
+            114,
+            114
+          ]
+        },
+        {
+          "surface_path": "walk_02.png",
+          "duration_ms": 100,
+          "content_bbox": [
+            35,
+            66,
+            158,
+            139
+          ],
+          "anchor": [
+            114,
+            114
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "windup": {
+      "frames": [
+        {
+          "surface_path": "windup_00.png",
+          "duration_ms": 88,
+          "content_bbox": [
+            35,
+            59,
+            158,
+            146
+          ],
+          "anchor": [
+            114,
+            114
+          ]
+        },
+        {
+          "surface_path": "windup_01.png",
+          "duration_ms": 96,
+          "content_bbox": [
+            35,
+            52,
+            158,
+            153
+          ],
+          "anchor": [
+            114,
+            114
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "lob": {
+      "frames": [
+        {
+          "surface_path": "lob_00.png",
+          "duration_ms": 70,
+          "content_bbox": [
+            35,
+            57,
+            166,
+            148
+          ],
+          "anchor": [
+            114,
+            114
+          ]
+        },
+        {
+          "surface_path": "lob_01.png",
+          "duration_ms": 80,
+          "content_bbox": [
+            35,
+            59,
+            175,
+            146
+          ],
+          "anchor": [
+            114,
+            114
+          ]
+        },
+        {
+          "surface_path": "lob_02.png",
+          "duration_ms": 94,
+          "content_bbox": [
+            35,
+            63,
+            166,
+            142
+          ],
+          "anchor": [
+            114,
+            114
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "recover",
+      "event_markers": [],
+      "hold_last_frame_ms": 120,
+      "impact_marker": "lob",
+      "lock_until_end": true
+    },
+    "recover": {
+      "frames": [
+        {
+          "surface_path": "recover_00.png",
+          "duration_ms": 90,
+          "content_bbox": [
+            35,
+            64,
+            158,
+            141
+          ],
+          "anchor": [
+            114,
+            114
+          ]
+        },
+        {
+          "surface_path": "recover_01.png",
+          "duration_ms": 98,
+          "content_bbox": [
+            35,
+            65,
+            158,
+            140
+          ],
+          "anchor": [
+            114,
+            114
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "walk",
+      "event_markers": [],
+      "hold_last_frame_ms": 100,
+      "impact_marker": "recover",
+      "lock_until_end": true
+    },
+    "hit": {
+      "frames": [
+        {
+          "surface_path": "hit_00.png",
+          "duration_ms": 78,
+          "content_bbox": [
+            44,
+            67,
+            157,
+            147
+          ],
+          "anchor": [
+            114,
+            114
+          ]
+        },
+        {
+          "surface_path": "hit_01.png",
+          "duration_ms": 90,
+          "content_bbox": [
+            39,
+            67,
+            158,
+            142
+          ],
+          "anchor": [
+            114,
+            114
+          ]
+        },
+        {
+          "surface_path": "hit_02.png",
+          "duration_ms": 102,
+          "content_bbox": [
+            36,
+            66,
+            158,
+            140
+          ],
+          "anchor": [
+            114,
+            114
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "walk",
+      "event_markers": [],
+      "hold_last_frame_ms": 116,
+      "impact_marker": "hit",
+      "lock_until_end": true
+    },
+    "death": {
+      "frames": [
+        {
+          "surface_path": "death_00.png",
+          "duration_ms": 82,
+          "content_bbox": [
+            43,
+            69,
+            157,
+            151
+          ],
+          "anchor": [
+            114,
+            114
+          ]
+        },
+        {
+          "surface_path": "death_01.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            53,
+            76,
+            156,
+            152
+          ],
+          "anchor": [
+            114,
+            114
+          ]
+        },
+        {
+          "surface_path": "death_02.png",
+          "duration_ms": 104,
+          "content_bbox": [
+            65,
+            83,
+            151,
+            145
+          ],
+          "anchor": [
+            114,
+            114
+          ]
+        },
+        {
+          "surface_path": "death_03.png",
+          "duration_ms": 116,
+          "content_bbox": [
+            74,
+            90,
+            149,
+            138
+          ],
+          "anchor": [
+            114,
+            114
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 220,
+      "impact_marker": "death",
+      "lock_until_end": true
+    }
+  }
+}

@@ -1,0 +1,282 @@
+{
+  "anchor": [
+    104,
+    104
+  ],
+  "clips": {
+    "hop_loop": {
+      "frames": [
+        {
+          "surface_path": "hop_loop_00.png",
+          "duration_ms": 80,
+          "content_bbox": [
+            34,
+            0,
+            121,
+            183
+          ],
+          "anchor": [
+            104,
+            104
+          ]
+        },
+        {
+          "surface_path": "hop_loop_01.png",
+          "duration_ms": 82,
+          "content_bbox": [
+            35,
+            6,
+            121,
+            191
+          ],
+          "anchor": [
+            104,
+            104
+          ]
+        },
+        {
+          "surface_path": "hop_loop_02.png",
+          "duration_ms": 80,
+          "content_bbox": [
+            35,
+            1,
+            120,
+            185
+          ],
+          "anchor": [
+            104,
+            104
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "vault_over": {
+      "frames": [
+        {
+          "surface_path": "vault_over_00.png",
+          "duration_ms": 72,
+          "content_bbox": [
+            30,
+            1,
+            126,
+            186
+          ],
+          "anchor": [
+            104,
+            104
+          ]
+        },
+        {
+          "surface_path": "vault_over_01.png",
+          "duration_ms": 78,
+          "content_bbox": [
+            34,
+            0,
+            127,
+            186
+          ],
+          "anchor": [
+            104,
+            104
+          ]
+        },
+        {
+          "surface_path": "vault_over_02.png",
+          "duration_ms": 90,
+          "content_bbox": [
+            37,
+            4,
+            120,
+            186
+          ],
+          "anchor": [
+            104,
+            104
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "recover",
+      "event_markers": [],
+      "hold_last_frame_ms": 120,
+      "impact_marker": "vault",
+      "lock_until_end": true
+    },
+    "recover": {
+      "frames": [
+        {
+          "surface_path": "recover_00.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            35,
+            5,
+            121,
+            190
+          ],
+          "anchor": [
+            104,
+            104
+          ]
+        },
+        {
+          "surface_path": "recover_01.png",
+          "duration_ms": 98,
+          "content_bbox": [
+            37,
+            3,
+            118,
+            185
+          ],
+          "anchor": [
+            104,
+            104
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "hop_loop",
+      "event_markers": [],
+      "hold_last_frame_ms": 110,
+      "impact_marker": "recover",
+      "lock_until_end": true
+    },
+    "eat": {
+      "frames": [
+        {
+          "surface_path": "eat_00.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            31,
+            4,
+            123,
+            186
+          ],
+          "anchor": [
+            104,
+            104
+          ]
+        },
+        {
+          "surface_path": "eat_01.png",
+          "duration_ms": 101,
+          "content_bbox": [
+            27,
+            4,
+            126,
+            185
+          ],
+          "anchor": [
+            104,
+            104
+          ]
+        },
+        {
+          "surface_path": "eat_02.png",
+          "duration_ms": 87,
+          "content_bbox": [
+            30,
+            4,
+            124,
+            185
+          ],
+          "anchor": [
+            104,
+            104
+          ]
+        },
+        {
+          "surface_path": "eat_03.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            34,
+            4,
+            121,
+            185
+          ],
+          "anchor": [
+            104,
+            104
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "death": {
+      "frames": [
+        {
+          "surface_path": "death_00.png",
+          "duration_ms": 78,
+          "content_bbox": [
+            33,
+            1,
+            124,
+            193
+          ],
+          "anchor": [
+            104,
+            104
+          ]
+        },
+        {
+          "surface_path": "death_01.png",
+          "duration_ms": 82,
+          "content_bbox": [
+            33,
+            4,
+            128,
+            199
+          ],
+          "anchor": [
+            104,
+            104
+          ]
+        },
+        {
+          "surface_path": "death_02.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            37,
+            11,
+            137,
+            197
+          ],
+          "anchor": [
+            104,
+            104
+          ]
+        },
+        {
+          "surface_path": "death_03.png",
+          "duration_ms": 104,
+          "content_bbox": [
+            41,
+            17,
+            142,
+            191
+          ],
+          "anchor": [
+            104,
+            104
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 220,
+      "impact_marker": "death",
+      "lock_until_end": true
+    }
+  }
+}

@@ -1,0 +1,1077 @@
+{
+  "source_sprite": "assets/zombies/catapult.png",
+  "output_size": [
+    228,
+    228
+  ],
+  "anchor": [
+    114,
+    114
+  ],
+  "parts": {
+    "cart": {
+      "file": "cart.png",
+      "source_rect": [
+        50,
+        155,
+        233,
+        132
+      ],
+      "z_index": 2
+    },
+    "driver_head": {
+      "file": "driver_head.png",
+      "source_rect": [
+        125,
+        94,
+        63,
+        60
+      ],
+      "z_index": 5
+    },
+    "driver_body": {
+      "file": "driver_body.png",
+      "source_rect": [
+        117,
+        136,
+        82,
+        66
+      ],
+      "z_index": 4
+    },
+    "arm": {
+      "file": "arm.png",
+      "source_rect": [
+        167,
+        106,
+        92,
+        104
+      ],
+      "z_index": 3
+    },
+    "bucket": {
+      "file": "bucket.png",
+      "source_rect": [
+        210,
+        95,
+        58,
+        54
+      ],
+      "z_index": 4
+    }
+  },
+  "clips": {
+    "walk": {
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false,
+      "frames": [
+        {
+          "duration_ms": 100,
+          "parts": {
+            "cart": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_head": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_body": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "arm": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "bucket": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -3.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 100,
+          "parts": {
+            "cart": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_head": {
+              "offset": [
+                1,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_body": {
+              "offset": [
+                1,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "arm": {
+              "offset": [
+                2,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 4.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "bucket": {
+              "offset": [
+                2,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 100,
+          "parts": {
+            "cart": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_head": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_body": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "arm": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "bucket": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -3.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "windup": {
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false,
+      "frames": [
+        {
+          "duration_ms": 88,
+          "parts": {
+            "cart": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_head": {
+              "offset": [
+                -1,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_body": {
+              "offset": [
+                -1,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "arm": {
+              "offset": [
+                -8,
+                -6
+              ],
+              "scale": 1.0,
+              "angle": -22.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "bucket": {
+              "offset": [
+                -10,
+                -10
+              ],
+              "scale": 1.0,
+              "angle": -28.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 96,
+          "parts": {
+            "cart": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_head": {
+              "offset": [
+                -2,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": -5.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_body": {
+              "offset": [
+                -2,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "arm": {
+              "offset": [
+                -16,
+                -10
+              ],
+              "scale": 1.0,
+              "angle": -40.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "bucket": {
+              "offset": [
+                -18,
+                -16
+              ],
+              "scale": 1.0,
+              "angle": -48.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "lob": {
+      "loop": false,
+      "next_clip": "recover",
+      "event_markers": [],
+      "hold_last_frame_ms": 120,
+      "impact_marker": "lob",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 70,
+          "parts": {
+            "cart": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_head": {
+              "offset": [
+                1,
+                -3
+              ],
+              "scale": 1.0,
+              "angle": 2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_body": {
+              "offset": [
+                1,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "arm": {
+              "offset": [
+                4,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": 14.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "bucket": {
+              "offset": [
+                10,
+                -10
+              ],
+              "scale": 1.0,
+              "angle": 18.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 80,
+          "parts": {
+            "cart": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_head": {
+              "offset": [
+                2,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 4.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_body": {
+              "offset": [
+                2,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "arm": {
+              "offset": [
+                16,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 34.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "bucket": {
+              "offset": [
+                24,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 44.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 94,
+          "parts": {
+            "cart": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_head": {
+              "offset": [
+                1,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_body": {
+              "offset": [
+                1,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "arm": {
+              "offset": [
+                6,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "bucket": {
+              "offset": [
+                10,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 14.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "recover": {
+      "loop": false,
+      "next_clip": "walk",
+      "event_markers": [],
+      "hold_last_frame_ms": 100,
+      "impact_marker": "recover",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 90,
+          "parts": {
+            "cart": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_head": {
+              "offset": [
+                -1,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_body": {
+              "offset": [
+                -1,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "arm": {
+              "offset": [
+                -4,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "bucket": {
+              "offset": [
+                -6,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": -12.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 98,
+          "parts": {
+            "cart": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_head": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -0.5,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_body": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "arm": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "bucket": {
+              "offset": [
+                0,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -2.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "hit": {
+      "loop": false,
+      "next_clip": "walk",
+      "event_markers": [],
+      "hold_last_frame_ms": 116,
+      "impact_marker": "hit",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 78,
+          "parts": {
+            "cart": {
+              "offset": [
+                8,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_head": {
+              "offset": [
+                8,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_body": {
+              "offset": [
+                8,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "arm": {
+              "offset": [
+                8,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "bucket": {
+              "offset": [
+                8,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 90,
+          "parts": {
+            "cart": {
+              "offset": [
+                4,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_head": {
+              "offset": [
+                4,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_body": {
+              "offset": [
+                4,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "arm": {
+              "offset": [
+                4,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "bucket": {
+              "offset": [
+                4,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 3.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 102,
+          "parts": {
+            "cart": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_head": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "driver_body": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "arm": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "bucket": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "death": {
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 220,
+      "impact_marker": "death",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 82,
+          "parts": {
+            "cart": {
+              "offset": [
+                3,
+                6
+              ],
+              "scale": 1.0,
+              "angle": 10.0,
+              "alpha": 228,
+              "z_index": null
+            },
+            "driver_head": {
+              "offset": [
+                3,
+                6
+              ],
+              "scale": 1.0,
+              "angle": 10.0,
+              "alpha": 228,
+              "z_index": null
+            },
+            "driver_body": {
+              "offset": [
+                3,
+                6
+              ],
+              "scale": 1.0,
+              "angle": 10.0,
+              "alpha": 228,
+              "z_index": null
+            },
+            "arm": {
+              "offset": [
+                3,
+                6
+              ],
+              "scale": 1.0,
+              "angle": 10.0,
+              "alpha": 228,
+              "z_index": null
+            },
+            "bucket": {
+              "offset": [
+                3,
+                6
+              ],
+              "scale": 1.0,
+              "angle": 10.0,
+              "alpha": 228,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 92,
+          "parts": {
+            "cart": {
+              "offset": [
+                12,
+                18
+              ],
+              "scale": 1.0,
+              "angle": 22.0,
+              "alpha": 176,
+              "z_index": null
+            },
+            "driver_head": {
+              "offset": [
+                12,
+                18
+              ],
+              "scale": 1.0,
+              "angle": 22.0,
+              "alpha": 176,
+              "z_index": null
+            },
+            "driver_body": {
+              "offset": [
+                12,
+                18
+              ],
+              "scale": 1.0,
+              "angle": 22.0,
+              "alpha": 176,
+              "z_index": null
+            },
+            "arm": {
+              "offset": [
+                12,
+                18
+              ],
+              "scale": 1.0,
+              "angle": 22.0,
+              "alpha": 176,
+              "z_index": null
+            },
+            "bucket": {
+              "offset": [
+                12,
+                18
+              ],
+              "scale": 1.0,
+              "angle": 22.0,
+              "alpha": 176,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 104,
+          "parts": {
+            "cart": {
+              "offset": [
+                24,
+                30
+              ],
+              "scale": 1.0,
+              "angle": 34.0,
+              "alpha": 116,
+              "z_index": null
+            },
+            "driver_head": {
+              "offset": [
+                24,
+                30
+              ],
+              "scale": 1.0,
+              "angle": 34.0,
+              "alpha": 116,
+              "z_index": null
+            },
+            "driver_body": {
+              "offset": [
+                24,
+                30
+              ],
+              "scale": 1.0,
+              "angle": 34.0,
+              "alpha": 116,
+              "z_index": null
+            },
+            "arm": {
+              "offset": [
+                24,
+                30
+              ],
+              "scale": 1.0,
+              "angle": 34.0,
+              "alpha": 116,
+              "z_index": null
+            },
+            "bucket": {
+              "offset": [
+                24,
+                30
+              ],
+              "scale": 1.0,
+              "angle": 34.0,
+              "alpha": 116,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 116,
+          "parts": {
+            "cart": {
+              "offset": [
+                36,
+                42
+              ],
+              "scale": 1.0,
+              "angle": 46.0,
+              "alpha": 72,
+              "z_index": null
+            },
+            "driver_head": {
+              "offset": [
+                36,
+                42
+              ],
+              "scale": 1.0,
+              "angle": 46.0,
+              "alpha": 72,
+              "z_index": null
+            },
+            "driver_body": {
+              "offset": [
+                36,
+                42
+              ],
+              "scale": 1.0,
+              "angle": 46.0,
+              "alpha": 72,
+              "z_index": null
+            },
+            "arm": {
+              "offset": [
+                36,
+                42
+              ],
+              "scale": 1.0,
+              "angle": 46.0,
+              "alpha": 72,
+              "z_index": null
+            },
+            "bucket": {
+              "offset": [
+                36,
+                42
+              ],
+              "scale": 1.0,
+              "angle": 46.0,
+              "alpha": 72,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,244 @@
+{
+  "anchor": [
+    78,
+    78
+  ],
+  "clips": {
+    "arming": {
+      "frames": [
+        {
+          "surface_path": "arming_00.png",
+          "duration_ms": 150,
+          "content_bbox": [
+            60,
+            83,
+            37,
+            46
+          ],
+          "anchor": [
+            78,
+            78
+          ]
+        },
+        {
+          "surface_path": "arming_01.png",
+          "duration_ms": 150,
+          "content_bbox": [
+            58,
+            82,
+            40,
+            48
+          ],
+          "anchor": [
+            78,
+            78
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "priming": {
+      "frames": [
+        {
+          "surface_path": "priming_00.png",
+          "duration_ms": 88,
+          "content_bbox": [
+            55,
+            77,
+            47,
+            51
+          ],
+          "anchor": [
+            78,
+            78
+          ]
+        },
+        {
+          "surface_path": "priming_01.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            51,
+            72,
+            54,
+            55
+          ],
+          "anchor": [
+            78,
+            78
+          ]
+        },
+        {
+          "surface_path": "priming_02.png",
+          "duration_ms": 96,
+          "content_bbox": [
+            48,
+            68,
+            60,
+            57
+          ],
+          "anchor": [
+            78,
+            78
+          ]
+        },
+        {
+          "surface_path": "priming_03.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            50,
+            70,
+            56,
+            55
+          ],
+          "anchor": [
+            78,
+            78
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "armed_idle": {
+      "frames": [
+        {
+          "surface_path": "armed_idle_00.png",
+          "duration_ms": 96,
+          "content_bbox": [
+            49,
+            69,
+            58,
+            56
+          ],
+          "anchor": [
+            78,
+            78
+          ]
+        },
+        {
+          "surface_path": "armed_idle_01.png",
+          "duration_ms": 100,
+          "content_bbox": [
+            50,
+            68,
+            57,
+            56
+          ],
+          "anchor": [
+            78,
+            78
+          ]
+        },
+        {
+          "surface_path": "armed_idle_02.png",
+          "duration_ms": 96,
+          "content_bbox": [
+            49,
+            67,
+            58,
+            57
+          ],
+          "anchor": [
+            78,
+            78
+          ]
+        },
+        {
+          "surface_path": "armed_idle_03.png",
+          "duration_ms": 100,
+          "content_bbox": [
+            49,
+            69,
+            57,
+            55
+          ],
+          "anchor": [
+            78,
+            78
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "detonate": {
+      "frames": [
+        {
+          "surface_path": "detonate_00.png",
+          "duration_ms": 54,
+          "content_bbox": [
+            48,
+            66,
+            61,
+            57
+          ],
+          "anchor": [
+            78,
+            78
+          ]
+        },
+        {
+          "surface_path": "detonate_01.png",
+          "duration_ms": 62,
+          "content_bbox": [
+            44,
+            60,
+            69,
+            61
+          ],
+          "anchor": [
+            78,
+            78
+          ]
+        },
+        {
+          "surface_path": "detonate_02.png",
+          "duration_ms": 70,
+          "content_bbox": [
+            39,
+            53,
+            79,
+            70
+          ],
+          "anchor": [
+            78,
+            78
+          ]
+        },
+        {
+          "surface_path": "detonate_03.png",
+          "duration_ms": 82,
+          "content_bbox": [
+            35,
+            47,
+            87,
+            78
+          ],
+          "anchor": [
+            78,
+            78
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 150,
+      "impact_marker": "detonate",
+      "lock_until_end": true
+    }
+  }
+}

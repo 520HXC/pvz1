@@ -1,0 +1,1305 @@
+{
+  "source_sprite": "assets/plants/sunflower.png",
+  "output_size": [
+    148,
+    148
+  ],
+  "anchor": [
+    74,
+    116
+  ],
+  "parts": {
+    "back_petals": {
+      "file": "back_petals.png",
+      "source_rect": [
+        42,
+        6,
+        234,
+        220
+      ],
+      "z_index": 0
+    },
+    "stem": {
+      "file": "stem.png",
+      "source_rect": [
+        144,
+        176,
+        32,
+        114
+      ],
+      "z_index": 1
+    },
+    "left_leaf": {
+      "file": "left_leaf.png",
+      "source_rect": [
+        53,
+        223,
+        97,
+        67
+      ],
+      "z_index": 1
+    },
+    "right_leaf": {
+      "file": "right_leaf.png",
+      "source_rect": [
+        168,
+        223,
+        103,
+        67
+      ],
+      "z_index": 1
+    },
+    "front_petals": {
+      "file": "front_petals.png",
+      "source_rect": [
+        62,
+        36,
+        196,
+        178
+      ],
+      "z_index": 2
+    },
+    "face": {
+      "file": "face.png",
+      "source_rect": [
+        100,
+        46,
+        122,
+        122
+      ],
+      "z_index": 4
+    }
+  },
+  "clips": {
+    "idle": {
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false,
+      "frames": [
+        {
+          "duration_ms": 84,
+          "parts": {
+            "back_petals": {
+              "offset": [
+                -1,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -4.6,
+              "alpha": 255,
+              "z_index": null
+            },
+            "front_petals": {
+              "offset": [
+                0,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                -2,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -3.4,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                0,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -1.6,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                -8,
+                4
+              ],
+              "scale": 1.0,
+              "angle": -17.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                6,
+                3
+              ],
+              "scale": 1.0,
+              "angle": 11.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 92,
+          "parts": {
+            "back_petals": {
+              "offset": [
+                -2,
+                -8
+              ],
+              "scale": 1.0,
+              "angle": -2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "front_petals": {
+              "offset": [
+                -1,
+                -7
+              ],
+              "scale": 1.0,
+              "angle": -0.4,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                -1,
+                -13
+              ],
+              "scale": 1.0,
+              "angle": -1.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                -1,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": -0.7,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                -5,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                4,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 100,
+          "parts": {
+            "back_petals": {
+              "offset": [
+                0,
+                -16
+              ],
+              "scale": 1.0,
+              "angle": 2.4,
+              "alpha": 255,
+              "z_index": null
+            },
+            "front_petals": {
+              "offset": [
+                1,
+                -15
+              ],
+              "scale": 1.0,
+              "angle": 4.8,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                2,
+                -21
+              ],
+              "scale": 1.0,
+              "angle": 6.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                1,
+                -8
+              ],
+              "scale": 1.0,
+              "angle": 2.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                6,
+                -7
+              ],
+              "scale": 1.0,
+              "angle": 15.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                -5,
+                -6
+              ],
+              "scale": 1.0,
+              "angle": -14.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 106,
+          "parts": {
+            "back_petals": {
+              "offset": [
+                2,
+                -22
+              ],
+              "scale": 1.0,
+              "angle": 5.8,
+              "alpha": 255,
+              "z_index": null
+            },
+            "front_petals": {
+              "offset": [
+                2,
+                -22
+              ],
+              "scale": 1.0,
+              "angle": 8.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                3,
+                -28
+              ],
+              "scale": 1.0,
+              "angle": 9.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                1,
+                -13
+              ],
+              "scale": 1.0,
+              "angle": 3.8,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                12,
+                -12
+              ],
+              "scale": 1.0,
+              "angle": 26.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                -10,
+                -10
+              ],
+              "scale": 1.0,
+              "angle": -24.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 98,
+          "parts": {
+            "back_petals": {
+              "offset": [
+                1,
+                -10
+              ],
+              "scale": 1.0,
+              "angle": 2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "front_petals": {
+              "offset": [
+                1,
+                -9
+              ],
+              "scale": 1.0,
+              "angle": 3.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                1,
+                -13
+              ],
+              "scale": 1.0,
+              "angle": 4.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                1,
+                -5
+              ],
+              "scale": 1.0,
+              "angle": 1.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                4,
+                -3
+              ],
+              "scale": 1.0,
+              "angle": 9.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                -3,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -8.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 90,
+          "parts": {
+            "back_petals": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -2.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "front_petals": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -0.8,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                -1,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -1.4,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -0.6,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                -5,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -9.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                4,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "sun_produce": {
+      "loop": false,
+      "next_clip": "idle",
+      "event_markers": [
+        "sun"
+      ],
+      "hold_last_frame_ms": 138,
+      "impact_marker": "sun",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 72,
+          "parts": {
+            "back_petals": {
+              "offset": [
+                -2,
+                4
+              ],
+              "scale": 1.0,
+              "angle": -6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "front_petals": {
+              "offset": [
+                -1,
+                4
+              ],
+              "scale": 1.0,
+              "angle": -3.4,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                -3,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -4.8,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                0,
+                6
+              ],
+              "scale": 1.0,
+              "angle": -2.4,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                -12,
+                7
+              ],
+              "scale": 1.0,
+              "angle": -28.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                11,
+                6
+              ],
+              "scale": 1.0,
+              "angle": 24.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 80,
+          "parts": {
+            "back_petals": {
+              "offset": [
+                -3,
+                -4
+              ],
+              "scale": 1.02,
+              "angle": -2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "front_petals": {
+              "offset": [
+                -1,
+                -7
+              ],
+              "scale": 1.08,
+              "angle": 0.4,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                -1,
+                -10
+              ],
+              "scale": 1.1,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -0.4,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                -7,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -14.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                7,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 13.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 90,
+          "parts": {
+            "back_petals": {
+              "offset": [
+                -2,
+                -18
+              ],
+              "scale": 1.06,
+              "angle": 3.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "front_petals": {
+              "offset": [
+                0,
+                -22
+              ],
+              "scale": 1.14,
+              "angle": 6.8,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                0,
+                -28
+              ],
+              "scale": 1.18,
+              "angle": 8.4,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                0,
+                -12
+              ],
+              "scale": 1.0,
+              "angle": 2.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                8,
+                -9
+              ],
+              "scale": 1.0,
+              "angle": 19.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                -8,
+                -9
+              ],
+              "scale": 1.0,
+              "angle": -18.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 112,
+          "parts": {
+            "back_petals": {
+              "offset": [
+                0,
+                -28
+              ],
+              "scale": 1.1,
+              "angle": 5.4,
+              "alpha": 255,
+              "z_index": null
+            },
+            "front_petals": {
+              "offset": [
+                1,
+                -35
+              ],
+              "scale": 1.22,
+              "angle": 10.4,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                2,
+                -42
+              ],
+              "scale": 1.28,
+              "angle": 11.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                0,
+                -20
+              ],
+              "scale": 1.0,
+              "angle": 3.6,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                15,
+                -16
+              ],
+              "scale": 1.0,
+              "angle": 31.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                -14,
+                -15
+              ],
+              "scale": 1.0,
+              "angle": -29.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 110,
+          "parts": {
+            "back_petals": {
+              "offset": [
+                0,
+                -22
+              ],
+              "scale": 1.08,
+              "angle": 3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "front_petals": {
+              "offset": [
+                0,
+                -26
+              ],
+              "scale": 1.14,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                1,
+                -29
+              ],
+              "scale": 1.16,
+              "angle": 6.4,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                0,
+                -13
+              ],
+              "scale": 1.0,
+              "angle": 1.6,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                6,
+                -7
+              ],
+              "scale": 1.0,
+              "angle": 14.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                -6,
+                -7
+              ],
+              "scale": 1.0,
+              "angle": -13.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 96,
+          "parts": {
+            "back_petals": {
+              "offset": [
+                0,
+                -6
+              ],
+              "scale": 1.0,
+              "angle": 0.8,
+              "alpha": 255,
+              "z_index": null
+            },
+            "front_petals": {
+              "offset": [
+                0,
+                -8
+              ],
+              "scale": 1.0,
+              "angle": 1.8,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                0,
+                -10
+              ],
+              "scale": 1.0,
+              "angle": 2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                0,
+                -3
+              ],
+              "scale": 1.0,
+              "angle": 0.5,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                1,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                -1,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -1.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 92,
+          "parts": {
+            "back_petals": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -0.8,
+              "alpha": 255,
+              "z_index": null
+            },
+            "front_petals": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 0.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                0,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 0.4,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                -2,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -4.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                2,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 4.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "hit": {
+      "loop": false,
+      "next_clip": "idle",
+      "event_markers": [],
+      "hold_last_frame_ms": 110,
+      "impact_marker": "hit",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 78,
+          "parts": {
+            "back_petals": {
+              "offset": [
+                4,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "front_petals": {
+              "offset": [
+                4,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                4,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                2,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                3,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                2,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 5.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 96,
+          "parts": {
+            "back_petals": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "front_petals": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                1,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.2,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "death": {
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 200,
+      "impact_marker": "death",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 82,
+          "parts": {
+            "back_petals": {
+              "offset": [
+                4,
+                6
+              ],
+              "scale": 1.0,
+              "angle": 14.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "front_petals": {
+              "offset": [
+                4,
+                6
+              ],
+              "scale": 1.0,
+              "angle": 14.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                4,
+                6
+              ],
+              "scale": 1.0,
+              "angle": 14.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                2,
+                7
+              ],
+              "scale": 1.0,
+              "angle": 8.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                -4,
+                9
+              ],
+              "scale": 1.0,
+              "angle": -18.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                5,
+                9
+              ],
+              "scale": 1.0,
+              "angle": 20.0,
+              "alpha": 220,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 94,
+          "parts": {
+            "back_petals": {
+              "offset": [
+                11,
+                16
+              ],
+              "scale": 1.0,
+              "angle": 28.0,
+              "alpha": 150,
+              "z_index": null
+            },
+            "front_petals": {
+              "offset": [
+                13,
+                18
+              ],
+              "scale": 1.0,
+              "angle": 32.0,
+              "alpha": 150,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                13,
+                18
+              ],
+              "scale": 1.0,
+              "angle": 32.0,
+              "alpha": 150,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                8,
+                18
+              ],
+              "scale": 1.0,
+              "angle": 18.0,
+              "alpha": 150,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                -7,
+                18
+              ],
+              "scale": 1.0,
+              "angle": -28.0,
+              "alpha": 150,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                9,
+                18
+              ],
+              "scale": 1.0,
+              "angle": 28.0,
+              "alpha": 150,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 114,
+          "parts": {
+            "back_petals": {
+              "offset": [
+                20,
+                30
+              ],
+              "scale": 1.0,
+              "angle": 42.0,
+              "alpha": 88,
+              "z_index": null
+            },
+            "front_petals": {
+              "offset": [
+                22,
+                32
+              ],
+              "scale": 1.0,
+              "angle": 46.0,
+              "alpha": 88,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                22,
+                32
+              ],
+              "scale": 1.0,
+              "angle": 46.0,
+              "alpha": 88,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                14,
+                30
+              ],
+              "scale": 1.0,
+              "angle": 26.0,
+              "alpha": 88,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                -9,
+                26
+              ],
+              "scale": 1.0,
+              "angle": -36.0,
+              "alpha": 88,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                13,
+                26
+              ],
+              "scale": 1.0,
+              "angle": 36.0,
+              "alpha": 88,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    }
+  }
+}

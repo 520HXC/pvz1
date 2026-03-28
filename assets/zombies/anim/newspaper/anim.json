@@ -1,0 +1,480 @@
+{
+  "anchor": [
+    94,
+    146
+  ],
+  "clips": {
+    "walk_paper": {
+      "frames": [
+        {
+          "surface_path": "walk_paper_00.png",
+          "duration_ms": 110,
+          "content_bbox": [
+            21,
+            11,
+            151,
+            164
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "walk_paper_01.png",
+          "duration_ms": 102,
+          "content_bbox": [
+            24,
+            7,
+            147,
+            167
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "walk_paper_02.png",
+          "duration_ms": 98,
+          "content_bbox": [
+            34,
+            8,
+            143,
+            166
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "walk_paper_03.png",
+          "duration_ms": 96,
+          "content_bbox": [
+            27,
+            9,
+            144,
+            164
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "paper_loss": {
+      "frames": [
+        {
+          "surface_path": "paper_loss_00.png",
+          "duration_ms": 64,
+          "content_bbox": [
+            24,
+            11,
+            152,
+            163
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "paper_loss_01.png",
+          "duration_ms": 66,
+          "content_bbox": [
+            43,
+            4,
+            145,
+            172
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "paper_loss_02.png",
+          "duration_ms": 78,
+          "content_bbox": [
+            39,
+            2,
+            149,
+            174
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "paper_loss_03.png",
+          "duration_ms": 98,
+          "content_bbox": [
+            35,
+            4,
+            135,
+            168
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "enraged_walk",
+      "event_markers": [],
+      "hold_last_frame_ms": 188,
+      "impact_marker": "paper_loss",
+      "lock_until_end": true
+    },
+    "enraged_walk": {
+      "frames": [
+        {
+          "surface_path": "enraged_walk_00.png",
+          "duration_ms": 60,
+          "content_bbox": [
+            19,
+            12,
+            144,
+            164
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "enraged_walk_01.png",
+          "duration_ms": 58,
+          "content_bbox": [
+            27,
+            10,
+            140,
+            164
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "enraged_walk_02.png",
+          "duration_ms": 60,
+          "content_bbox": [
+            43,
+            4,
+            135,
+            172
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "enraged_walk_03.png",
+          "duration_ms": 58,
+          "content_bbox": [
+            29,
+            9,
+            138,
+            165
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "eat_paper": {
+      "frames": [
+        {
+          "surface_path": "eat_paper_00.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            23,
+            11,
+            150,
+            162
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "eat_paper_01.png",
+          "duration_ms": 108,
+          "content_bbox": [
+            21,
+            12,
+            154,
+            162
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "eat_paper_02.png",
+          "duration_ms": 94,
+          "content_bbox": [
+            24,
+            9,
+            147,
+            164
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "eat_enraged": {
+      "frames": [
+        {
+          "surface_path": "eat_enraged_00.png",
+          "duration_ms": 76,
+          "content_bbox": [
+            21,
+            11,
+            141,
+            163
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "eat_enraged_01.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            19,
+            12,
+            144,
+            162
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "eat_enraged_02.png",
+          "duration_ms": 84,
+          "content_bbox": [
+            23,
+            9,
+            137,
+            164
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "hit_paper": {
+      "frames": [
+        {
+          "surface_path": "hit_paper_00.png",
+          "duration_ms": 80,
+          "content_bbox": [
+            39,
+            5,
+            147,
+            168
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "hit_paper_01.png",
+          "duration_ms": 98,
+          "content_bbox": [
+            34,
+            8,
+            144,
+            165
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "hit_paper_02.png",
+          "duration_ms": 106,
+          "content_bbox": [
+            32,
+            9,
+            141,
+            163
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 126,
+      "impact_marker": "hit",
+      "lock_until_end": true
+    },
+    "hit_enraged": {
+      "frames": [
+        {
+          "surface_path": "hit_enraged_00.png",
+          "duration_ms": 80,
+          "content_bbox": [
+            43,
+            4,
+            131,
+            169
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "hit_enraged_01.png",
+          "duration_ms": 98,
+          "content_bbox": [
+            35,
+            8,
+            129,
+            165
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "hit_enraged_02.png",
+          "duration_ms": 106,
+          "content_bbox": [
+            32,
+            9,
+            128,
+            163
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 126,
+      "impact_marker": "hit",
+      "lock_until_end": true
+    },
+    "death": {
+      "frames": [
+        {
+          "surface_path": "death_00.png",
+          "duration_ms": 80,
+          "content_bbox": [
+            28,
+            6,
+            160,
+            170
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "death_01.png",
+          "duration_ms": 88,
+          "content_bbox": [
+            29,
+            7,
+            159,
+            176
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "death_02.png",
+          "duration_ms": 100,
+          "content_bbox": [
+            32,
+            12,
+            156,
+            176
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        },
+        {
+          "surface_path": "death_03.png",
+          "duration_ms": 116,
+          "content_bbox": [
+            38,
+            19,
+            150,
+            169
+          ],
+          "anchor": [
+            94,
+            146
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 220,
+      "impact_marker": "death",
+      "lock_until_end": true
+    }
+  }
+}

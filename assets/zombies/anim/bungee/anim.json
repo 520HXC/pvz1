@@ -1,0 +1,254 @@
+{
+  "anchor": [
+    118,
+    118
+  ],
+  "clips": {
+    "descending": {
+      "frames": [
+        {
+          "surface_path": "descending_00.png",
+          "duration_ms": 88,
+          "content_bbox": [
+            61,
+            0,
+            109,
+            162
+          ],
+          "anchor": [
+            118,
+            118
+          ]
+        },
+        {
+          "surface_path": "descending_01.png",
+          "duration_ms": 88,
+          "content_bbox": [
+            62,
+            8,
+            107,
+            172
+          ],
+          "anchor": [
+            118,
+            118
+          ]
+        },
+        {
+          "surface_path": "descending_02.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            64,
+            19,
+            104,
+            170
+          ],
+          "anchor": [
+            118,
+            118
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "lock_target": {
+      "frames": [
+        {
+          "surface_path": "lock_target_00.png",
+          "duration_ms": 96,
+          "content_bbox": [
+            56,
+            16,
+            118,
+            174
+          ],
+          "anchor": [
+            118,
+            118
+          ]
+        },
+        {
+          "surface_path": "lock_target_01.png",
+          "duration_ms": 96,
+          "content_bbox": [
+            61,
+            15,
+            109,
+            174
+          ],
+          "anchor": [
+            118,
+            118
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "steal_lift": {
+      "frames": [
+        {
+          "surface_path": "steal_lift_00.png",
+          "duration_ms": 78,
+          "content_bbox": [
+            53,
+            15,
+            123,
+            171
+          ],
+          "anchor": [
+            118,
+            118
+          ]
+        },
+        {
+          "surface_path": "steal_lift_01.png",
+          "duration_ms": 88,
+          "content_bbox": [
+            58,
+            1,
+            114,
+            173
+          ],
+          "anchor": [
+            118,
+            118
+          ]
+        },
+        {
+          "surface_path": "steal_lift_02.png",
+          "duration_ms": 88,
+          "content_bbox": [
+            62,
+            0,
+            107,
+            159
+          ],
+          "anchor": [
+            118,
+            118
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "exit",
+      "event_markers": [],
+      "hold_last_frame_ms": 110,
+      "impact_marker": "steal",
+      "lock_until_end": true
+    },
+    "exit": {
+      "frames": [
+        {
+          "surface_path": "exit_00.png",
+          "duration_ms": 88,
+          "content_bbox": [
+            65,
+            0,
+            102,
+            153
+          ],
+          "anchor": [
+            118,
+            118
+          ]
+        },
+        {
+          "surface_path": "exit_01.png",
+          "duration_ms": 96,
+          "content_bbox": [
+            65,
+            0,
+            102,
+            130
+          ],
+          "anchor": [
+            118,
+            118
+          ]
+        },
+        {
+          "surface_path": "exit_02.png",
+          "duration_ms": 100,
+          "content_bbox": [
+            65,
+            0,
+            102,
+            109
+          ],
+          "anchor": [
+            118,
+            118
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 120,
+      "impact_marker": "exit",
+      "lock_until_end": true
+    },
+    "blocked_exit": {
+      "frames": [
+        {
+          "surface_path": "blocked_exit_00.png",
+          "duration_ms": 86,
+          "content_bbox": [
+            53,
+            15,
+            123,
+            174
+          ],
+          "anchor": [
+            118,
+            118
+          ]
+        },
+        {
+          "surface_path": "blocked_exit_01.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            64,
+            0,
+            104,
+            165
+          ],
+          "anchor": [
+            118,
+            118
+          ]
+        },
+        {
+          "surface_path": "blocked_exit_02.png",
+          "duration_ms": 100,
+          "content_bbox": [
+            65,
+            0,
+            102,
+            137
+          ],
+          "anchor": [
+            118,
+            118
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "exit",
+      "event_markers": [],
+      "hold_last_frame_ms": 120,
+      "impact_marker": "blocked",
+      "lock_until_end": true
+    }
+  }
+}

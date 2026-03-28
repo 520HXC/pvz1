@@ -1,0 +1,2523 @@
+{
+  "source_sprite": "assets/zombies/newspaper.png",
+  "output_size": [
+    188,
+    188
+  ],
+  "anchor": [
+    94,
+    146
+  ],
+  "parts": {
+    "head": {
+      "file": "head.png",
+      "source_rect": [
+        71,
+        18,
+        137,
+        111
+      ],
+      "z_index": 4
+    },
+    "torso": {
+      "file": "torso.png",
+      "source_rect": [
+        89,
+        98,
+        136,
+        104
+      ],
+      "z_index": 3
+    },
+    "left_arm": {
+      "file": "left_arm.png",
+      "source_rect": [
+        54,
+        111,
+        48,
+        83
+      ],
+      "z_index": 2
+    },
+    "right_arm": {
+      "file": "right_arm.png",
+      "source_rect": [
+        208,
+        93,
+        62,
+        99
+      ],
+      "z_index": 2
+    },
+    "left_leg": {
+      "file": "left_leg.png",
+      "source_rect": [
+        92,
+        198,
+        54,
+        94
+      ],
+      "z_index": 1
+    },
+    "right_leg": {
+      "file": "right_leg.png",
+      "source_rect": [
+        170,
+        198,
+        54,
+        94
+      ],
+      "z_index": 1
+    },
+    "paper_back": {
+      "file": "paper_back.png",
+      "source_rect": [
+        145,
+        98,
+        82,
+        122
+      ],
+      "z_index": 4
+    },
+    "paper_front": {
+      "file": "paper_front.png",
+      "source_rect": [
+        176,
+        92,
+        114,
+        134
+      ],
+      "z_index": 6
+    }
+  },
+  "clips": {
+    "walk_paper": {
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false,
+      "frames": [
+        {
+          "duration_ms": 110,
+          "parts": {
+            "head": {
+              "offset": [
+                -10,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": -12.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                -9,
+                4
+              ],
+              "scale": 1.0,
+              "angle": -13.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -11,
+                4
+              ],
+              "scale": 1.0,
+              "angle": -40.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                -2,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                -5,
+                4
+              ],
+              "scale": 1.0,
+              "angle": 16.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                3,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -13.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                -11,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -12.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                -7,
+                -3
+              ],
+              "scale": 1.0,
+              "angle": -8.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 102,
+          "parts": {
+            "head": {
+              "offset": [
+                -7,
+                -7
+              ],
+              "scale": 1.0,
+              "angle": -7.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                -6,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -9.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -6,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -28.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                1,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": -3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                -2,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 7.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                -6,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": -7.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                -4,
+                -5
+              ],
+              "scale": 1.0,
+              "angle": -4.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 98,
+          "parts": {
+            "head": {
+              "offset": [
+                -2,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                -2,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                5,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 12.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                2,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                -3,
+                3
+              ],
+              "scale": 1.0,
+              "angle": 16.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                4,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 5.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 96,
+          "parts": {
+            "head": {
+              "offset": [
+                -6,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -5.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                -5,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -2,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -18.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                0,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                0,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 4.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                -4,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -5.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                -3,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -3.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "paper_loss": {
+      "loop": false,
+      "next_clip": "enraged_walk",
+      "event_markers": [],
+      "hold_last_frame_ms": 188,
+      "impact_marker": "paper_loss",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 64,
+          "parts": {
+            "head": {
+              "offset": [
+                -4,
+                -3
+              ],
+              "scale": 1.0,
+              "angle": -10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                -4,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -12.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -7,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -30.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                -1,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 4.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                -3,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 12.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                2,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                -1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -14.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -8.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 66,
+          "parts": {
+            "head": {
+              "offset": [
+                4,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                5,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 12.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                6,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 36.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                10,
+                -3
+              ],
+              "scale": 1.0,
+              "angle": 42.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                2,
+                3
+              ],
+              "scale": 1.0,
+              "angle": 8.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                4,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                14,
+                -18
+              ],
+              "scale": 1.0,
+              "angle": -54.0,
+              "alpha": 210,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                24,
+                -24
+              ],
+              "scale": 0.98,
+              "angle": -78.0,
+              "alpha": 200,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 78,
+          "parts": {
+            "head": {
+              "offset": [
+                3,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 14.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                3,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 16.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                6,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 22.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                10,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 32.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                3,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                5,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -8.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                32,
+                -8
+              ],
+              "scale": 0.9,
+              "angle": -94.0,
+              "alpha": 124,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                45,
+                -2
+              ],
+              "scale": 0.82,
+              "angle": -128.0,
+              "alpha": 78,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 98,
+          "parts": {
+            "head": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 12.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                0,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 12.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                2,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 12.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                5,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 18.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                48,
+                8
+              ],
+              "scale": 1.0,
+              "angle": -128.0,
+              "alpha": 0,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                60,
+                16
+              ],
+              "scale": 1.0,
+              "angle": -150.0,
+              "alpha": 0,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "enraged_walk": {
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false,
+      "frames": [
+        {
+          "duration_ms": 60,
+          "parts": {
+            "head": {
+              "offset": [
+                -14,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": -16.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                -12,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -18.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -14,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -46.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                -6,
+                -3
+              ],
+              "scale": 1.0,
+              "angle": -16.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                -8,
+                5
+              ],
+              "scale": 1.0,
+              "angle": 24.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                6,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -24.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                54,
+                10
+              ],
+              "scale": 1.0,
+              "angle": -124.0,
+              "alpha": 0,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                60,
+                12
+              ],
+              "scale": 1.0,
+              "angle": -136.0,
+              "alpha": 0,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 58,
+          "parts": {
+            "head": {
+              "offset": [
+                -7,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -5.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                -6,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -8.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -2,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -22.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                4,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 12.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                -2,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 8.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                54,
+                10
+              ],
+              "scale": 1.0,
+              "angle": -124.0,
+              "alpha": 0,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                60,
+                12
+              ],
+              "scale": 1.0,
+              "angle": -136.0,
+              "alpha": 0,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 60,
+          "parts": {
+            "head": {
+              "offset": [
+                1,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 11.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 12.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                7,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 34.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                9,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 36.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                6,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -24.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                -7,
+                5
+              ],
+              "scale": 1.0,
+              "angle": 26.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                54,
+                10
+              ],
+              "scale": 1.0,
+              "angle": -124.0,
+              "alpha": 0,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                60,
+                12
+              ],
+              "scale": 1.0,
+              "angle": -136.0,
+              "alpha": 0,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 58,
+          "parts": {
+            "head": {
+              "offset": [
+                -8,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                -7,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -5.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                3,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 14.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                0,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -5.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                0,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 7.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                54,
+                10
+              ],
+              "scale": 1.0,
+              "angle": -124.0,
+              "alpha": 0,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                60,
+                12
+              ],
+              "scale": 1.0,
+              "angle": -136.0,
+              "alpha": 0,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "eat_paper": {
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false,
+      "frames": [
+        {
+          "duration_ms": 92,
+          "parts": {
+            "head": {
+              "offset": [
+                -9,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -8.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                -6,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -8,
+                3
+              ],
+              "scale": 1.0,
+              "angle": -34.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                -3,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                -2,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 4.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                1,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                -8,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                -6,
+                -3
+              ],
+              "scale": 1.0,
+              "angle": -8.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 108,
+          "parts": {
+            "head": {
+              "offset": [
+                -15,
+                -3
+              ],
+              "scale": 1.02,
+              "angle": -14.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                -10,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -9.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -12,
+                4
+              ],
+              "scale": 1.0,
+              "angle": -44.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                -7,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                -3,
+                3
+              ],
+              "scale": 1.0,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                1,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                -14,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": -18.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                -12,
+                -6
+              ],
+              "scale": 1.0,
+              "angle": -20.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 94,
+          "parts": {
+            "head": {
+              "offset": [
+                -8,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -5.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                -5,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -7,
+                3
+              ],
+              "scale": 1.0,
+              "angle": -24.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                -2,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                -1,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 4.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                1,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                -8,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -8.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                -6,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -6.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "eat_enraged": {
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false,
+      "frames": [
+        {
+          "duration_ms": 76,
+          "parts": {
+            "head": {
+              "offset": [
+                -11,
+                -3
+              ],
+              "scale": 1.0,
+              "angle": -10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                -9,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -12,
+                4
+              ],
+              "scale": 1.0,
+              "angle": -40.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                -5,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -12.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                -4,
+                4
+              ],
+              "scale": 1.0,
+              "angle": 10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                1,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                54,
+                10
+              ],
+              "scale": 1.0,
+              "angle": -124.0,
+              "alpha": 0,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                60,
+                12
+              ],
+              "scale": 1.0,
+              "angle": -136.0,
+              "alpha": 0,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 92,
+          "parts": {
+            "head": {
+              "offset": [
+                -17,
+                -3
+              ],
+              "scale": 1.03,
+              "angle": -15.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                -12,
+                3
+              ],
+              "scale": 1.0,
+              "angle": -12.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -15,
+                5
+              ],
+              "scale": 1.0,
+              "angle": -52.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                -9,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -20.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                -4,
+                4
+              ],
+              "scale": 1.0,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                2,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                54,
+                10
+              ],
+              "scale": 1.0,
+              "angle": -124.0,
+              "alpha": 0,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                60,
+                12
+              ],
+              "scale": 1.0,
+              "angle": -136.0,
+              "alpha": 0,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 84,
+          "parts": {
+            "head": {
+              "offset": [
+                -9,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -5.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                -6,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -4.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -8,
+                3
+              ],
+              "scale": 1.0,
+              "angle": -28.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                -4,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                -1,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 4.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                1,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                54,
+                10
+              ],
+              "scale": 1.0,
+              "angle": -124.0,
+              "alpha": 0,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                60,
+                12
+              ],
+              "scale": 1.0,
+              "angle": -136.0,
+              "alpha": 0,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "hit_paper": {
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 126,
+      "impact_marker": "hit",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 80,
+          "parts": {
+            "head": {
+              "offset": [
+                8,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 9.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                5,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 7.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                6,
+                3
+              ],
+              "scale": 1.0,
+              "angle": 22.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                7,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 16.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                3,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 8.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                3,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                8,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 12.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                10,
+                -3
+              ],
+              "scale": 1.0,
+              "angle": 16.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 98,
+          "parts": {
+            "head": {
+              "offset": [
+                3,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                2,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                3,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 8.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                3,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 5.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                1,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                1,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                3,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 5.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                4,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 7.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 106,
+          "parts": {
+            "head": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.5,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                1,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 2.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "hit_enraged": {
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 126,
+      "impact_marker": "hit",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 80,
+          "parts": {
+            "head": {
+              "offset": [
+                10,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 11.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                7,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 9.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                9,
+                3
+              ],
+              "scale": 1.0,
+              "angle": 30.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                8,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 22.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                3,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 8.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                3,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                54,
+                10
+              ],
+              "scale": 1.0,
+              "angle": -124.0,
+              "alpha": 0,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                60,
+                12
+              ],
+              "scale": 1.0,
+              "angle": -136.0,
+              "alpha": 0,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 98,
+          "parts": {
+            "head": {
+              "offset": [
+                4,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 4.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                2,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                3,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                3,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                1,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                1,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                54,
+                10
+              ],
+              "scale": 1.0,
+              "angle": -124.0,
+              "alpha": 0,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                60,
+                12
+              ],
+              "scale": 1.0,
+              "angle": -136.0,
+              "alpha": 0,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 106,
+          "parts": {
+            "head": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.5,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                1,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                54,
+                10
+              ],
+              "scale": 1.0,
+              "angle": -124.0,
+              "alpha": 0,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                60,
+                12
+              ],
+              "scale": 1.0,
+              "angle": -136.0,
+              "alpha": 0,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "death": {
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 220,
+      "impact_marker": "death",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 80,
+          "parts": {
+            "head": {
+              "offset": [
+                2,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 8.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                4,
+                4
+              ],
+              "scale": 1.0,
+              "angle": 8.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                -2,
+                3
+              ],
+              "scale": 1.0,
+              "angle": -14.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                6,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 20.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                -1,
+                4
+              ],
+              "scale": 1.0,
+              "angle": 10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                4,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -8.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                10,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": -30.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                16,
+                -8
+              ],
+              "scale": 1.0,
+              "angle": -46.0,
+              "alpha": 188,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 88,
+          "parts": {
+            "head": {
+              "offset": [
+                8,
+                8
+              ],
+              "scale": 1.0,
+              "angle": 20.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                10,
+                14
+              ],
+              "scale": 1.0,
+              "angle": 18.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                2,
+                12
+              ],
+              "scale": 1.0,
+              "angle": -28.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                12,
+                10
+              ],
+              "scale": 1.0,
+              "angle": 28.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                5,
+                16
+              ],
+              "scale": 1.0,
+              "angle": 28.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                12,
+                12
+              ],
+              "scale": 1.0,
+              "angle": -18.0,
+              "alpha": 220,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                24,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -64.0,
+              "alpha": 150,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                30,
+                4
+              ],
+              "scale": 1.0,
+              "angle": -88.0,
+              "alpha": 112,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 100,
+          "parts": {
+            "head": {
+              "offset": [
+                15,
+                22
+              ],
+              "scale": 1.0,
+              "angle": 34.0,
+              "alpha": 168,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                18,
+                28
+              ],
+              "scale": 1.0,
+              "angle": 28.0,
+              "alpha": 168,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                8,
+                22
+              ],
+              "scale": 1.0,
+              "angle": -42.0,
+              "alpha": 168,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                20,
+                22
+              ],
+              "scale": 1.0,
+              "angle": 40.0,
+              "alpha": 168,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                14,
+                32
+              ],
+              "scale": 1.0,
+              "angle": 46.0,
+              "alpha": 168,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                24,
+                28
+              ],
+              "scale": 1.0,
+              "angle": -30.0,
+              "alpha": 168,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                38,
+                10
+              ],
+              "scale": 1.0,
+              "angle": -98.0,
+              "alpha": 72,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                48,
+                16
+              ],
+              "scale": 1.0,
+              "angle": -120.0,
+              "alpha": 24,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 116,
+          "parts": {
+            "head": {
+              "offset": [
+                22,
+                34
+              ],
+              "scale": 1.0,
+              "angle": 48.0,
+              "alpha": 100,
+              "z_index": null
+            },
+            "torso": {
+              "offset": [
+                28,
+                40
+              ],
+              "scale": 1.0,
+              "angle": 40.0,
+              "alpha": 100,
+              "z_index": null
+            },
+            "left_arm": {
+              "offset": [
+                16,
+                32
+              ],
+              "scale": 1.0,
+              "angle": -56.0,
+              "alpha": 100,
+              "z_index": null
+            },
+            "right_arm": {
+              "offset": [
+                30,
+                34
+              ],
+              "scale": 1.0,
+              "angle": 54.0,
+              "alpha": 100,
+              "z_index": null
+            },
+            "left_leg": {
+              "offset": [
+                24,
+                48
+              ],
+              "scale": 1.0,
+              "angle": 64.0,
+              "alpha": 100,
+              "z_index": null
+            },
+            "right_leg": {
+              "offset": [
+                38,
+                42
+              ],
+              "scale": 1.0,
+              "angle": -42.0,
+              "alpha": 100,
+              "z_index": null
+            },
+            "paper_back": {
+              "offset": [
+                46,
+                22
+              ],
+              "scale": 1.0,
+              "angle": -122.0,
+              "alpha": 0,
+              "z_index": null
+            },
+            "paper_front": {
+              "offset": [
+                56,
+                26
+              ],
+              "scale": 1.0,
+              "angle": -142.0,
+              "alpha": 0,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    }
+  }
+}

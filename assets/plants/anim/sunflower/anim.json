@@ -1,0 +1,302 @@
+{
+  "anchor": [
+    74,
+    116
+  ],
+  "clips": {
+    "idle": {
+      "frames": [
+        {
+          "surface_path": "idle_00.png",
+          "duration_ms": 84,
+          "content_bbox": [
+            23,
+            3,
+            105,
+            134
+          ],
+          "anchor": [
+            74,
+            116
+          ]
+        },
+        {
+          "surface_path": "idle_01.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            23,
+            0,
+            104,
+            134
+          ],
+          "anchor": [
+            74,
+            116
+          ]
+        },
+        {
+          "surface_path": "idle_02.png",
+          "duration_ms": 100,
+          "content_bbox": [
+            26,
+            0,
+            97,
+            134
+          ],
+          "anchor": [
+            74,
+            116
+          ]
+        },
+        {
+          "surface_path": "idle_03.png",
+          "duration_ms": 106,
+          "content_bbox": [
+            27,
+            0,
+            96,
+            133
+          ],
+          "anchor": [
+            74,
+            116
+          ]
+        },
+        {
+          "surface_path": "idle_04.png",
+          "duration_ms": 98,
+          "content_bbox": [
+            26,
+            0,
+            98,
+            135
+          ],
+          "anchor": [
+            74,
+            116
+          ]
+        },
+        {
+          "surface_path": "idle_05.png",
+          "duration_ms": 90,
+          "content_bbox": [
+            23,
+            2,
+            104,
+            132
+          ],
+          "anchor": [
+            74,
+            116
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "sun_produce": {
+      "frames": [
+        {
+          "surface_path": "sun_produce_00.png",
+          "duration_ms": 72,
+          "content_bbox": [
+            23,
+            4,
+            105,
+            138
+          ],
+          "anchor": [
+            74,
+            116
+          ]
+        },
+        {
+          "surface_path": "sun_produce_01.png",
+          "duration_ms": 80,
+          "content_bbox": [
+            23,
+            0,
+            105,
+            135
+          ],
+          "anchor": [
+            74,
+            116
+          ]
+        },
+        {
+          "surface_path": "sun_produce_02.png",
+          "duration_ms": 90,
+          "content_bbox": [
+            20,
+            0,
+            107,
+            133
+          ],
+          "anchor": [
+            74,
+            116
+          ]
+        },
+        {
+          "surface_path": "sun_produce_03.png",
+          "duration_ms": 112,
+          "content_bbox": [
+            16,
+            0,
+            115,
+            131
+          ],
+          "anchor": [
+            74,
+            116
+          ]
+        },
+        {
+          "surface_path": "sun_produce_04.png",
+          "duration_ms": 110,
+          "content_bbox": [
+            20,
+            0,
+            107,
+            133
+          ],
+          "anchor": [
+            74,
+            116
+          ]
+        },
+        {
+          "surface_path": "sun_produce_05.png",
+          "duration_ms": 96,
+          "content_bbox": [
+            25,
+            0,
+            100,
+            134
+          ],
+          "anchor": [
+            74,
+            116
+          ]
+        },
+        {
+          "surface_path": "sun_produce_06.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            24,
+            2,
+            102,
+            133
+          ],
+          "anchor": [
+            74,
+            116
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "idle",
+      "event_markers": [
+        "sun"
+      ],
+      "hold_last_frame_ms": 138,
+      "impact_marker": "sun",
+      "lock_until_end": true
+    },
+    "hit": {
+      "frames": [
+        {
+          "surface_path": "hit_00.png",
+          "duration_ms": 78,
+          "content_bbox": [
+            26,
+            3,
+            100,
+            132
+          ],
+          "anchor": [
+            74,
+            116
+          ]
+        },
+        {
+          "surface_path": "hit_01.png",
+          "duration_ms": 96,
+          "content_bbox": [
+            25,
+            2,
+            101,
+            133
+          ],
+          "anchor": [
+            74,
+            116
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "idle",
+      "event_markers": [],
+      "hold_last_frame_ms": 110,
+      "impact_marker": "hit",
+      "lock_until_end": true
+    },
+    "death": {
+      "frames": [
+        {
+          "surface_path": "death_00.png",
+          "duration_ms": 82,
+          "content_bbox": [
+            25,
+            5,
+            101,
+            135
+          ],
+          "anchor": [
+            74,
+            116
+          ]
+        },
+        {
+          "surface_path": "death_01.png",
+          "duration_ms": 94,
+          "content_bbox": [
+            25,
+            10,
+            104,
+            137
+          ],
+          "anchor": [
+            74,
+            116
+          ]
+        },
+        {
+          "surface_path": "death_02.png",
+          "duration_ms": 114,
+          "content_bbox": [
+            26,
+            18,
+            108,
+            130
+          ],
+          "anchor": [
+            74,
+            116
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 200,
+      "impact_marker": "death",
+      "lock_until_end": true
+    }
+  }
+}

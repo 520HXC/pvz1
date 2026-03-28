@@ -2,6 +2,7 @@
 import math
 import os
 import random
+import re
 import struct
 import sys
 import zlib
@@ -636,9 +637,23 @@ ZOMBOSS_BOSS_RULESETS: Dict[str, Dict[str, object]] = {
             {"time": 14.4, "spawns": (("conehead", 2),)},
             {"time": 20.6, "spawns": (("buckethead", 1),)},
         ),
-        "boss_attack_cycle": ("fireball", "iceball", "fireball", "iceball"),
-        "boss_attack_interval": 11.3,
+        "boss_pattern_pool": (
+            ("fireball", "iceball", "stomp_smash", "fireball"),
+            ("fireball", "stomp_smash", "iceball", "fireball"),
+            ("iceball", "fireball", "stomp_smash", "iceball"),
+        ),
+        "boss_attack_interval": 8.9,
         "boss_attack_warning": 1.85,
+        "boss_fire_warning": 0.74,
+        "boss_ice_warning": 0.82,
+        "boss_phase_windows": {
+            "fireball": {"row_select": 0.42, "windup": 0.74, "release": 0.16, "recover": 0.72},
+            "iceball": {"row_select": 0.48, "windup": 0.82, "release": 0.18, "recover": 0.76},
+            "bungee_call": {"windup": 0.86, "release": 0.12, "recover": 0.18},
+            "stomp_smash": {"warning": 0.72, "impact_t": 0.22, "recover": 0.92},
+            "rv_call": {"windup": 0.92, "impact_t": 0.20, "recover": 0.28},
+        },
+        "boss_exposed_window": 0.76,
         "boss_spawn_cycle": {
             "interval": 7.1,
             "early": (("normal", "normal"), ("normal", "conehead"), ("conehead",)),
@@ -646,6 +661,7 @@ ZOMBOSS_BOSS_RULESETS: Dict[str, Dict[str, object]] = {
             "late": (("buckethead", "imp"), ("buckethead", "buckethead"), ("gargantuar",)),
         },
         "boss_bungee_cycle": {"interval": 20.5, "count": 1},
+        "boss_stomp_cycle": {"interval": 23.5, "width": 2},
         "boss_rv_cycle": {"interval": 31.0, "width": 2},
         "boss_result_title_key": "zomboss_boss_result_title",
         "boss_result_summary_key": "zomboss_boss_result_summary",
@@ -686,9 +702,23 @@ ZOMBOSS_BOSS_RULESETS: Dict[str, Dict[str, object]] = {
             {"time": 11.8, "spawns": (("buckethead", 1), ("conehead", 1))},
             {"time": 16.2, "spawns": (("buckethead", 1), ("imp", 1))},
         ),
-        "boss_attack_cycle": ("fireball", "iceball", "fireball", "iceball"),
-        "boss_attack_interval": 10.1,
+        "boss_pattern_pool": (
+            ("fireball", "iceball", "stomp_smash", "fireball", "iceball"),
+            ("iceball", "fireball", "stomp_smash", "iceball", "fireball"),
+            ("fireball", "stomp_smash", "iceball", "stomp_smash", "fireball"),
+        ),
+        "boss_attack_interval": 7.6,
         "boss_attack_warning": 1.68,
+        "boss_fire_warning": 0.62,
+        "boss_ice_warning": 0.70,
+        "boss_phase_windows": {
+            "fireball": {"row_select": 0.34, "windup": 0.62, "release": 0.14, "recover": 0.60},
+            "iceball": {"row_select": 0.38, "windup": 0.70, "release": 0.16, "recover": 0.64},
+            "bungee_call": {"windup": 0.72, "release": 0.10, "recover": 0.12},
+            "stomp_smash": {"warning": 0.58, "impact_t": 0.18, "recover": 0.74},
+            "rv_call": {"windup": 0.76, "impact_t": 0.16, "recover": 0.20},
+        },
+        "boss_exposed_window": 0.64,
         "boss_spawn_cycle": {
             "interval": 6.0,
             "early": (("normal", "conehead"), ("conehead", "conehead"), ("buckethead",)),
@@ -696,6 +726,7 @@ ZOMBOSS_BOSS_RULESETS: Dict[str, Dict[str, object]] = {
             "late": (("buckethead", "imp"), ("gargantuar", "imp"), ("buckethead", "gargantuar")),
         },
         "boss_bungee_cycle": {"interval": 16.5, "count": 2},
+        "boss_stomp_cycle": {"interval": 18.6, "width": 2},
         "boss_rv_cycle": {"interval": 24.5, "width": 2},
         "boss_result_title_key": "zomboss_revenge_result_title",
         "boss_result_summary_key": "zomboss_revenge_result_summary",
@@ -1408,7 +1439,8 @@ I18N = {
 "zomboss_revenge_fail_notice": "The revenge cycle broke the roof!",
 "zomboss_fireball_notice": "Fireball incoming - save Ice-shroom!",
 "zomboss_iceball_notice": "Iceball incoming - save Jalapeno!",
-"zomboss_rv_notice": "Boss smash incoming!",
+"zomboss_stomp_notice": "Boss stomp incoming!",
+"zomboss_rv_notice": "Boss van incoming!",
 "zomboss_bungee_notice": "Bungee raid incoming!",
 "zomboss_counter_fireball": "Fireball extinguished!",
 "zomboss_counter_iceball": "Ice trail melted!",
@@ -1802,7 +1834,8 @@ I18N = {
 "zomboss_revenge_fail_notice": "复仇循环压垮了屋顶！",
 "zomboss_fireball_notice": "火球要来了，留好寒冰菇！",
 "zomboss_iceball_notice": "冰球要来了，留好火爆辣椒！",
-"zomboss_rv_notice": "僵王砸车要落下来了！",
+"zomboss_stomp_notice": "僵王重砸要落下来了！",
+"zomboss_rv_notice": "僵王砸车要冲下来了！",
 "zomboss_bungee_notice": "蹦极空投要来了！",
 "zomboss_counter_fireball": "火球被寒冰菇压住了！",
 "zomboss_counter_iceball": "冰道被火爆辣椒融掉了！",
@@ -2502,6 +2535,7 @@ class Projectile:
     enemy: bool = False
     teleport_cd: float = 0.0
     anti_air: bool = False
+    kind: str = ""
 
     def update(self, dt: float) -> None:
         self.x += self.speed * dt * self.direction
@@ -2564,6 +2598,788 @@ class Zombie:
     stunned_t: float = 0.0
     hypnotized: bool = False
     state: Dict[str, float] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class AnimationFrame:
+    surface_path: str = ""
+    source_rect: Optional[Tuple[int, int, int, int]] = None
+    duration_ms: int = 120
+    offset: Tuple[int, int] = (0, 0)
+    scale: float = 1.0
+    alpha: int = 255
+    flip: bool = False
+    angle: float = 0.0
+    content_bbox: Optional[Tuple[int, int, int, int]] = None
+    anchor: Tuple[int, int] = (0, 0)
+
+
+@dataclass(frozen=True)
+class AnimationClip:
+    frames: Tuple[AnimationFrame, ...]
+    loop: bool = True
+    next_clip: str = ""
+    event_markers: Tuple[str, ...] = ()
+    hold_last_frame_ms: int = 0
+    impact_marker: str = ""
+    lock_until_end: bool = False
+
+
+@dataclass(frozen=True)
+class AnimationSet:
+    clips: Dict[str, AnimationClip]
+    anchor: Tuple[int, int] = (0, 0)
+
+
+@dataclass
+class AnimationState:
+    current_clip: str = ""
+    frame_index: int = 0
+    frame_timer_ms: float = 0.0
+    locked: bool = False
+    pending_clip: str = ""
+    hold_timer_ms: float = 0.0
+
+
+def make_animation_clip(
+    specs: List[Dict[str, object]],
+    *,
+    loop: bool = True,
+    next_clip: str = "",
+    event_markers: Tuple[str, ...] = (),
+    hold_last_frame_ms: int = 0,
+    impact_marker: str = "",
+    lock_until_end: bool = False,
+    anchor: Tuple[int, int] = (0, 0),
+) -> AnimationClip:
+    frames: List[AnimationFrame] = []
+    for spec in specs:
+        offset_raw = spec.get("offset", (0, 0))
+        if not isinstance(offset_raw, (tuple, list)) or len(offset_raw) != 2:
+            offset_raw = (0, 0)
+        rect_raw = spec.get("source_rect")
+        rect: Optional[Tuple[int, int, int, int]] = None
+        if isinstance(rect_raw, (tuple, list)) and len(rect_raw) == 4:
+            rect = tuple(int(v) for v in rect_raw)
+        bbox_raw = spec.get("content_bbox")
+        bbox: Optional[Tuple[int, int, int, int]] = None
+        if isinstance(bbox_raw, (tuple, list)) and len(bbox_raw) == 4:
+            bbox = tuple(int(v) for v in bbox_raw)
+        anchor_raw = spec.get("anchor", anchor)
+        if not isinstance(anchor_raw, (tuple, list)) or len(anchor_raw) != 2:
+            anchor_raw = anchor
+        frames.append(
+            AnimationFrame(
+                surface_path=str(spec.get("surface_path", "")),
+                source_rect=rect,
+                duration_ms=max(1, int(spec.get("duration_ms", 120))),
+                offset=(int(offset_raw[0]), int(offset_raw[1])),
+                scale=float(spec.get("scale", 1.0)),
+                alpha=int(spec.get("alpha", 255)),
+                flip=bool(spec.get("flip", False)),
+                angle=float(spec.get("angle", 0.0)),
+                content_bbox=bbox,
+                anchor=(int(anchor_raw[0]), int(anchor_raw[1])),
+            )
+        )
+    return AnimationClip(
+        tuple(frames),
+        loop=loop,
+        next_clip=next_clip,
+        event_markers=tuple(event_markers),
+        hold_last_frame_ms=max(0, int(hold_last_frame_ms)),
+        impact_marker=str(impact_marker),
+        lock_until_end=bool(lock_until_end),
+    )
+
+
+def animated_bob_clip(
+    *,
+    offsets: Tuple[Tuple[int, int], ...],
+    duration_ms: int = 100,
+    base_scale: float = 1.0,
+    scale_step: float = 0.02,
+    angle_step: float = 1.8,
+    loop: bool = True,
+    next_clip: str = "",
+    event_markers: Tuple[str, ...] = (),
+    alpha: int = 255,
+) -> AnimationClip:
+    specs: List[Dict[str, object]] = []
+    total = max(1, len(offsets) - 1)
+    mid = total / 2.0
+    for idx, offset in enumerate(offsets):
+        dist = abs(idx - mid)
+        wave = 1.0 - (dist / max(1.0, mid if mid else 1.0))
+        specs.append(
+            {
+                "offset": offset,
+                "duration_ms": duration_ms,
+                "scale": base_scale + wave * scale_step,
+                "angle": (idx - mid) * angle_step,
+                "alpha": alpha,
+            }
+        )
+    return make_animation_clip(specs, loop=loop, next_clip=next_clip, event_markers=event_markers)
+
+
+def animated_fade_clip(
+    *,
+    offsets: Tuple[Tuple[int, int], ...],
+    start_scale: float,
+    end_scale: float,
+    start_alpha: int,
+    end_alpha: int,
+    duration_ms: int,
+    end_angle: float = 0.0,
+    next_clip: str = "",
+) -> AnimationClip:
+    specs: List[Dict[str, object]] = []
+    total = max(1, len(offsets) - 1)
+    for idx, offset in enumerate(offsets):
+        t = idx / total
+        specs.append(
+            {
+                "offset": offset,
+                "duration_ms": duration_ms,
+                "scale": start_scale + (end_scale - start_scale) * t,
+                "alpha": int(start_alpha + (end_alpha - start_alpha) * t),
+                "angle": end_angle * t,
+            }
+        )
+    return make_animation_clip(specs, loop=False, next_clip=next_clip)
+
+
+def build_default_animation_registry() -> Dict[str, Dict[str, AnimationSet]]:
+    death_clip = animated_fade_clip(
+        offsets=((0, 0), (0, 6), (0, 10), (0, 14)),
+        start_scale=1.0,
+        end_scale=0.82,
+        start_alpha=255,
+        end_alpha=72,
+        duration_ms=70,
+        end_angle=-18.0,
+    )
+    eat_clip = animated_bob_clip(
+        offsets=((-3, 0), (0, 0), (-2, 1)),
+        duration_ms=80,
+        base_scale=1.0,
+        scale_step=0.01,
+        angle_step=3.0,
+    )
+    plant: Dict[str, AnimationSet] = {
+        "sunflower": AnimationSet(
+            {
+                "idle": animated_bob_clip(
+                    offsets=((0, 0), (2, -2), (0, -4), (-2, -2)),
+                    duration_ms=110,
+                    scale_step=0.04,
+                    angle_step=1.6,
+                ),
+                "sun_produce": animated_bob_clip(
+                    offsets=((0, -2), (0, -7), (0, -10), (0, -4)),
+                    duration_ms=90,
+                    base_scale=1.03,
+                    scale_step=0.08,
+                    angle_step=1.0,
+                    loop=False,
+                    next_clip="idle",
+                    event_markers=("sun",),
+                ),
+                "hit": animated_bob_clip(
+                    offsets=((-2, 1), (2, -1)),
+                    duration_ms=70,
+                    scale_step=0.03,
+                    angle_step=5.0,
+                    loop=False,
+                    next_clip="idle",
+                ),
+                "death": death_clip,
+            }
+        ),
+        "peashooter": AnimationSet(
+            {
+                "idle": animated_bob_clip(
+                    offsets=((0, 0), (1, -1), (0, -2), (-1, -1)),
+                    duration_ms=100,
+                    scale_step=0.03,
+                    angle_step=1.2,
+                ),
+                "shoot": animated_bob_clip(
+                    offsets=((1, 0), (-6, 1), (-2, 0)),
+                    duration_ms=65,
+                    scale_step=0.03,
+                    angle_step=3.0,
+                    loop=False,
+                    next_clip="idle",
+                    event_markers=("shoot",),
+                ),
+                "hit": animated_bob_clip(
+                    offsets=((-2, 2), (2, -1)),
+                    duration_ms=70,
+                    scale_step=0.03,
+                    angle_step=5.0,
+                    loop=False,
+                    next_clip="idle",
+                ),
+                "death": death_clip,
+            }
+        ),
+        "wallnut": AnimationSet(
+            {
+                "idle_healthy": animated_bob_clip(
+                    offsets=((0, 0), (1, 0), (0, -1), (-1, 0)),
+                    duration_ms=140,
+                    scale_step=0.01,
+                    angle_step=0.9,
+                ),
+                "idle_cracked": animated_bob_clip(
+                    offsets=((0, 0), (1, 1), (0, 0), (-1, 1)),
+                    duration_ms=140,
+                    scale_step=0.01,
+                    angle_step=1.1,
+                ),
+                "idle_heavy_cracked": animated_bob_clip(
+                    offsets=((0, 1), (1, 2), (-1, 1)),
+                    duration_ms=150,
+                    scale_step=0.01,
+                    angle_step=1.4,
+                ),
+                "hit": animated_bob_clip(
+                    offsets=((-4, 2), (3, -1)),
+                    duration_ms=65,
+                    scale_step=0.04,
+                    angle_step=6.0,
+                    loop=False,
+                    next_clip="idle_healthy",
+                ),
+                "death": animated_fade_clip(
+                    offsets=((0, 0), (0, 4), (0, 8), (0, 13)),
+                    start_scale=1.0,
+                    end_scale=0.82,
+                    start_alpha=255,
+                    end_alpha=70,
+                    duration_ms=80,
+                    end_angle=-16.0,
+                ),
+            }
+        ),
+        "potato_mine": AnimationSet(
+            {
+                "arming": animated_bob_clip(
+                    offsets=((0, 8), (0, 9)),
+                    duration_ms=150,
+                    base_scale=0.81,
+                    scale_step=0.01,
+                    angle_step=1.0,
+                ),
+                "priming": animated_bob_clip(
+                    offsets=((0, 5), (0, 3), (0, 1), (0, 3)),
+                    duration_ms=95,
+                    base_scale=0.88,
+                    scale_step=0.06,
+                    angle_step=1.6,
+                ),
+                "armed_idle": animated_bob_clip(
+                    offsets=((0, 0), (1, -1), (-1, 0)),
+                    duration_ms=90,
+                    scale_step=0.04,
+                    angle_step=1.5,
+                ),
+                "detonate": animated_fade_clip(
+                    offsets=((0, 0), (0, -4), (0, -8), (0, -10)),
+                    start_scale=1.0,
+                    end_scale=1.4,
+                    start_alpha=255,
+                    end_alpha=80,
+                    duration_ms=50,
+                    end_angle=2.0,
+                ),
+            }
+        ),
+        "imitater": AnimationSet(
+            {
+                "morphing": animated_bob_clip(
+                    offsets=((0, 0), (0, -2), (0, 1), (0, -1)),
+                    duration_ms=90,
+                    base_scale=0.96,
+                    scale_step=0.08,
+                    angle_step=10.0,
+                ),
+                "copied_idle": animated_bob_clip(
+                    offsets=((0, 0), (1, -1), (0, -2), (-1, -1)),
+                    duration_ms=105,
+                    base_scale=0.98,
+                    scale_step=0.03,
+                    angle_step=1.4,
+                ),
+                "hit": animated_bob_clip(
+                    offsets=((-3, 2), (2, -1)),
+                    duration_ms=65,
+                    scale_step=0.04,
+                    angle_step=6.0,
+                    loop=False,
+                    next_clip="copied_idle",
+                ),
+                "death": death_clip,
+            }
+        ),
+    }
+    zombie: Dict[str, AnimationSet] = {
+        "normal": AnimationSet(
+            {
+                "walk": animated_bob_clip(
+                    offsets=((0, 0), (1, 1), (0, 2), (-1, 1)),
+                    duration_ms=95,
+                    scale_step=0.02,
+                    angle_step=1.4,
+                ),
+                "eat": eat_clip,
+                "hit": animated_bob_clip(
+                    offsets=((2, -1), (-2, 1)),
+                    duration_ms=65,
+                    scale_step=0.02,
+                    angle_step=4.0,
+                    loop=False,
+                    next_clip="walk",
+                ),
+                "death": death_clip,
+            }
+        ),
+        "conehead": AnimationSet(
+            {
+                "walk": animated_bob_clip(
+                    offsets=((0, 0), (1, 1), (0, 2), (-1, 1)),
+                    duration_ms=95,
+                    base_scale=1.03,
+                    scale_step=0.02,
+                    angle_step=1.2,
+                ),
+                "eat": animated_bob_clip(
+                    offsets=((-3, 0), (0, 0), (-2, 1)),
+                    duration_ms=80,
+                    base_scale=1.03,
+                    scale_step=0.01,
+                    angle_step=3.0,
+                ),
+                "helmet_break": animated_bob_clip(
+                    offsets=((1, -2), (-1, 0)),
+                    duration_ms=65,
+                    base_scale=1.05,
+                    scale_step=0.02,
+                    angle_step=7.0,
+                    loop=False,
+                    next_clip="walk",
+                ),
+                "death": death_clip,
+            }
+        ),
+        "buckethead": AnimationSet(
+            {
+                "walk": animated_bob_clip(
+                    offsets=((0, 0), (1, 1), (0, 2), (-1, 1)),
+                    duration_ms=95,
+                    base_scale=1.05,
+                    scale_step=0.02,
+                    angle_step=1.2,
+                ),
+                "eat": animated_bob_clip(
+                    offsets=((-3, 0), (0, 0), (-2, 1)),
+                    duration_ms=80,
+                    base_scale=1.05,
+                    scale_step=0.01,
+                    angle_step=3.0,
+                ),
+                "helmet_break": animated_bob_clip(
+                    offsets=((1, -2), (-1, 0)),
+                    duration_ms=70,
+                    base_scale=1.06,
+                    scale_step=0.02,
+                    angle_step=7.0,
+                    loop=False,
+                    next_clip="walk",
+                ),
+                "death": death_clip,
+            }
+        ),
+        "pole_vaulting": AnimationSet(
+            {
+                "run": animated_bob_clip(
+                    offsets=((0, 0), (2, 1), (0, 2), (-2, 1)),
+                    duration_ms=75,
+                    base_scale=1.03,
+                    scale_step=0.03,
+                    angle_step=2.0,
+                ),
+                "vault": animated_bob_clip(
+                    offsets=((0, -4), (0, -16), (-3, -28), (-6, -10)),
+                    duration_ms=55,
+                    base_scale=1.08,
+                    scale_step=0.05,
+                    angle_step=6.0,
+                    loop=False,
+                    next_clip="post_vault_walk",
+                    event_markers=("vault",),
+                ),
+                "post_vault_walk": animated_bob_clip(
+                    offsets=((0, 0), (1, 1), (0, 2), (-1, 1)),
+                    duration_ms=85,
+                    base_scale=1.01,
+                    scale_step=0.02,
+                    angle_step=1.4,
+                ),
+                "eat": eat_clip,
+                "death": death_clip,
+            }
+        ),
+        "newspaper": AnimationSet(
+            {
+                "walk_paper": animated_bob_clip(
+                    offsets=((-1, 0), (0, 1), (-1, 2)),
+                    duration_ms=95,
+                    scale_step=0.01,
+                    angle_step=-2.4,
+                ),
+                "paper_loss": animated_bob_clip(
+                    offsets=((0, 0), (2, -2), (-2, 1)),
+                    duration_ms=75,
+                    base_scale=1.02,
+                    scale_step=0.03,
+                    angle_step=5.0,
+                    loop=False,
+                    next_clip="enraged_walk",
+                ),
+                "enraged_walk": animated_bob_clip(
+                    offsets=((0, 0), (2, 2), (-2, 2)),
+                    duration_ms=70,
+                    base_scale=1.07,
+                    scale_step=0.03,
+                    angle_step=2.2,
+                ),
+                "eat": eat_clip,
+                "death": death_clip,
+            }
+        ),
+        "bungee": AnimationSet(
+            {
+                "descending": animated_bob_clip(
+                    offsets=((0, -78), (0, -56), (0, -38)),
+                    duration_ms=70,
+                    scale_step=0.01,
+                    angle_step=0.0,
+                ),
+                "lock_target": animated_bob_clip(
+                    offsets=((0, -18), (0, -14)),
+                    duration_ms=85,
+                    base_scale=1.03,
+                    scale_step=0.02,
+                    angle_step=1.0,
+                ),
+                "steal_lift": animated_bob_clip(
+                    offsets=((0, -22), (0, -44), (0, -66)),
+                    duration_ms=70,
+                    base_scale=1.05,
+                    scale_step=0.01,
+                    angle_step=0.0,
+                    loop=False,
+                    next_clip="exit",
+                ),
+                "exit": animated_fade_clip(
+                    offsets=((0, -56), (0, -86), (0, -116)),
+                    start_scale=1.0,
+                    end_scale=0.96,
+                    start_alpha=255,
+                    end_alpha=120,
+                    duration_ms=70,
+                    end_angle=0.0,
+                ),
+                "blocked_exit": animated_fade_clip(
+                    offsets=((0, -14), (0, -44), (0, -84)),
+                    start_scale=1.02,
+                    end_scale=0.94,
+                    start_alpha=255,
+                    end_alpha=150,
+                    duration_ms=65,
+                    end_angle=7.0,
+                ),
+            }
+        ),
+        "balloon": AnimationSet(
+            {
+                "airborne": animated_bob_clip(
+                    offsets=((0, -18), (1, -24), (-1, -20)),
+                    duration_ms=95,
+                    base_scale=0.98,
+                    scale_step=0.02,
+                    angle_step=2.0,
+                ),
+                "popped_fall": animated_bob_clip(
+                    offsets=((0, -10), (0, 4), (0, 16)),
+                    duration_ms=65,
+                    base_scale=0.98,
+                    scale_step=0.01,
+                    angle_step=8.0,
+                    loop=False,
+                    next_clip="grounded_walk",
+                ),
+                "grounded_walk": animated_bob_clip(
+                    offsets=((0, 0), (1, 1), (0, 2), (-1, 1)),
+                    duration_ms=90,
+                    base_scale=1.02,
+                    scale_step=0.02,
+                    angle_step=1.4,
+                ),
+                "eat": eat_clip,
+                "death": death_clip,
+            }
+        ),
+        "digger": AnimationSet(
+            {
+                "burrow_enter": animated_bob_clip(
+                    offsets=((0, 10), (0, 20)),
+                    duration_ms=70,
+                    base_scale=0.93,
+                    scale_step=0.03,
+                    angle_step=-5.0,
+                    loop=False,
+                    next_clip="underground_travel",
+                ),
+                "underground_travel": animated_bob_clip(
+                    offsets=((0, 22), (0, 24)),
+                    duration_ms=90,
+                    base_scale=0.83,
+                    scale_step=0.01,
+                    angle_step=0.0,
+                    alpha=148,
+                ),
+                "emerge": animated_bob_clip(
+                    offsets=((0, 22), (0, 10), (0, 0)),
+                    duration_ms=70,
+                    base_scale=0.84,
+                    scale_step=0.08,
+                    angle_step=4.0,
+                    loop=False,
+                    next_clip="surface_attack",
+                ),
+                "surface_attack": animated_bob_clip(
+                    offsets=((0, 0), (1, 1), (0, 2), (-1, 1)),
+                    duration_ms=95,
+                    scale_step=0.02,
+                    angle_step=1.4,
+                ),
+                "death": death_clip,
+            }
+        ),
+        "ladder": AnimationSet(
+            {
+                "carrying_walk": animated_bob_clip(
+                    offsets=((0, 0), (1, 1), (0, 2), (-1, 1)),
+                    duration_ms=95,
+                    base_scale=1.04,
+                    scale_step=0.02,
+                    angle_step=1.4,
+                ),
+                "placing": animated_bob_clip(
+                    offsets=((0, 3), (0, 5), (0, 3)),
+                    duration_ms=85,
+                    base_scale=1.05,
+                    scale_step=0.02,
+                    angle_step=-4.5,
+                    loop=False,
+                    next_clip="placed_walk",
+                ),
+                "placed_walk": animated_bob_clip(
+                    offsets=((0, 0), (1, 1), (0, 2), (-1, 1)),
+                    duration_ms=95,
+                    base_scale=1.02,
+                    scale_step=0.02,
+                    angle_step=1.0,
+                ),
+                "eat": eat_clip,
+                "death": death_clip,
+            }
+        ),
+        "zomboni": AnimationSet(
+            {
+                "cruise": animated_bob_clip(
+                    offsets=((0, 0), (1, 0), (0, 1), (-1, 0)),
+                    duration_ms=110,
+                    base_scale=1.05,
+                    scale_step=0.02,
+                    angle_step=1.0,
+                ),
+                "crush": animated_bob_clip(
+                    offsets=((0, 0), (3, 0), (1, 1)),
+                    duration_ms=75,
+                    base_scale=1.08,
+                    scale_step=0.03,
+                    angle_step=-2.8,
+                ),
+                "death": animated_fade_clip(
+                    offsets=((0, 0), (0, 4), (0, 10)),
+                    start_scale=1.0,
+                    end_scale=0.88,
+                    start_alpha=255,
+                    end_alpha=96,
+                    duration_ms=75,
+                    end_angle=-9.0,
+                ),
+            }
+        ),
+        "catapult": AnimationSet(
+            {
+                "walk": animated_bob_clip(
+                    offsets=((0, 0), (1, 1), (0, 2), (-1, 1)),
+                    duration_ms=110,
+                    base_scale=1.05,
+                    scale_step=0.02,
+                    angle_step=1.1,
+                ),
+                "windup": animated_bob_clip(
+                    offsets=((0, 0), (-3, -2), (-6, -3)),
+                    duration_ms=85,
+                    base_scale=1.08,
+                    scale_step=0.02,
+                    angle_step=-4.5,
+                    loop=False,
+                    next_clip="lob",
+                ),
+                "lob": animated_bob_clip(
+                    offsets=((-6, -4), (-2, -1)),
+                    duration_ms=75,
+                    base_scale=1.08,
+                    scale_step=0.02,
+                    angle_step=7.0,
+                    loop=False,
+                    next_clip="recover",
+                ),
+                "recover": animated_bob_clip(
+                    offsets=((0, 0), (2, 1), (0, 1)),
+                    duration_ms=95,
+                    base_scale=1.03,
+                    scale_step=0.02,
+                    angle_step=2.4,
+                ),
+                "death": death_clip,
+            }
+        ),
+        "pogo": AnimationSet(
+            {
+                "hop_loop": animated_bob_clip(
+                    offsets=((0, 0), (0, -6), (0, -2)),
+                    duration_ms=85,
+                    base_scale=1.04,
+                    scale_step=0.03,
+                    angle_step=2.0,
+                ),
+                "vault_over": animated_bob_clip(
+                    offsets=((0, -6), (-3, -24), (-8, -18), (-4, -6)),
+                    duration_ms=70,
+                    base_scale=1.08,
+                    scale_step=0.04,
+                    angle_step=6.5,
+                    loop=False,
+                    next_clip="recover",
+                ),
+                "recover": animated_bob_clip(
+                    offsets=((0, 0), (1, 1), (0, 2)),
+                    duration_ms=85,
+                    base_scale=1.02,
+                    scale_step=0.02,
+                    angle_step=1.6,
+                ),
+                "eat": eat_clip,
+                "death": death_clip,
+            }
+        ),
+        "zomboss": AnimationSet(
+            {
+                "idle": animated_bob_clip(
+                    offsets=((0, 0), (0, -2), (0, -1)),
+                    duration_ms=120,
+                    base_scale=1.01,
+                    scale_step=0.02,
+                    angle_step=0.8,
+                ),
+                "windup_fire": animated_bob_clip(
+                    offsets=((-4, -4), (-8, -8)),
+                    duration_ms=85,
+                    base_scale=1.06,
+                    scale_step=0.02,
+                    angle_step=-5.0,
+                    loop=False,
+                    next_clip="launch_fire",
+                ),
+                "windup_ice": animated_bob_clip(
+                    offsets=((4, -4), (8, -8)),
+                    duration_ms=85,
+                    base_scale=1.06,
+                    scale_step=0.02,
+                    angle_step=5.0,
+                    loop=False,
+                    next_clip="launch_ice",
+                ),
+                "launch_fire": animated_bob_clip(
+                    offsets=((-6, -6), (-2, -2)),
+                    duration_ms=70,
+                    base_scale=1.10,
+                    scale_step=0.02,
+                    angle_step=-8.0,
+                    loop=False,
+                    next_clip="idle",
+                ),
+                "launch_ice": animated_bob_clip(
+                    offsets=((6, -6), (2, -2)),
+                    duration_ms=70,
+                    base_scale=1.10,
+                    scale_step=0.02,
+                    angle_step=8.0,
+                    loop=False,
+                    next_clip="idle",
+                ),
+                "bungee_call": animated_bob_clip(
+                    offsets=((0, -4), (0, -8)),
+                    duration_ms=90,
+                    base_scale=1.07,
+                    scale_step=0.02,
+                    angle_step=-3.0,
+                    loop=False,
+                    next_clip="idle",
+                ),
+                "rv_call": animated_bob_clip(
+                    offsets=((0, -2), (0, -6)),
+                    duration_ms=90,
+                    base_scale=1.07,
+                    scale_step=0.03,
+                    angle_step=4.0,
+                    loop=False,
+                    next_clip="idle",
+                ),
+                "hurt": animated_bob_clip(
+                    offsets=((0, 0), (0, 2)),
+                    duration_ms=70,
+                    base_scale=1.01,
+                    scale_step=0.02,
+                    angle_step=6.0,
+                    loop=False,
+                    next_clip="idle",
+                ),
+                "defeat": animated_fade_clip(
+                    offsets=((0, 0), (0, 6), (0, 14), (0, 20)),
+                    start_scale=1.0,
+                    end_scale=0.84,
+                    start_alpha=255,
+                    end_alpha=96,
+                    duration_ms=90,
+                    end_angle=-18.0,
+                ),
+            }
+        ),
+    }
+    return {"plant": plant, "zombie": zombie}
+
+
+ANIMATION_REGISTRY = build_default_animation_registry()
 
 
 def build_battlefields() -> Dict[str, Battlefield]:
@@ -3211,9 +4027,18 @@ class BattleState:
         self.zomboss_spawn_t = 0.0
         self.zomboss_spawn_index = 0
         self.zomboss_bungee_t = 0.0
+        self.zomboss_stomp_t = 0.0
         self.zomboss_rv_t = 0.0
+        self.zomboss_pattern_id = 0
+        self.zomboss_pattern_step = 0
+        self.zomboss_attack_phase = ""
+        self.zomboss_exposed_t = 0.0
+        self.zomboss_head_lane_row = -1
+        self.zomboss_eye_mode = "idle"
         self.zomboss_pending_attack: Dict[str, object] = {}
         self.zomboss_night_tint = 0.0
+        self.zomboss_actor: Optional[Zombie] = None
+        self.animation_clip_provider = None
 
     def mode_bool(self, key: str, default: bool = False) -> bool:
         val = self.mode_rules.get(key, default)
@@ -3433,12 +4258,174 @@ class BattleState:
         for kind in pack:
             self.spawn_zombie(wave_idx=wave_idx, forced_kind=kind)
 
+    def zomboss_pattern_pool(self) -> Tuple[Tuple[str, ...], ...]:
+        raw = self.zomboss_ruleset().get("boss_pattern_pool", ())
+        patterns: List[Tuple[str, ...]] = []
+        if isinstance(raw, (list, tuple)):
+            for entry in raw:
+                if not isinstance(entry, (list, tuple)):
+                    continue
+                seq = tuple(str(kind) for kind in entry if str(kind) in {"fireball", "iceball", "stomp_smash"})
+                if seq:
+                    patterns.append(seq)
+        if patterns:
+            return tuple(patterns)
+        legacy = tuple(str(kind) for kind in self.zomboss_ruleset().get("boss_attack_cycle", ()) if str(kind) in {"fireball", "iceball", "stomp_smash"})
+        return (legacy,) if legacy else ()
+
+    def zomboss_phase_windows(self, kind: str) -> Dict[str, float]:
+        raw = self.zomboss_ruleset().get("boss_phase_windows", {})
+        if not isinstance(raw, dict):
+            return {}
+        payload = raw.get(kind, {})
+        if not isinstance(payload, dict):
+            return {}
+        out: Dict[str, float] = {}
+        for key, value in payload.items():
+            try:
+                out[str(key)] = max(0.05, float(value))
+            except Exception:
+                continue
+        return out
+
+    def zomboss_phase_window(self, kind: str, phase: str, default: float) -> float:
+        windows = self.zomboss_phase_windows(kind)
+        if phase in windows:
+            return windows[phase]
+        if kind == "fireball" and phase == "windup":
+            return max(0.05, float(self.zomboss_ruleset().get("boss_fire_warning", default)))
+        if kind == "iceball" and phase == "windup":
+            return max(0.05, float(self.zomboss_ruleset().get("boss_ice_warning", default)))
+        return max(0.05, float(default))
+
+    def zomboss_exposed_window(self) -> float:
+        return max(0.25, float(self.zomboss_ruleset().get("boss_exposed_window", 0.66)))
+
+    def zomboss_notice_key(self, kind: str) -> str:
+        notice_map = {
+            "fireball": "zomboss_fireball_notice",
+            "iceball": "zomboss_iceball_notice",
+            "stomp_smash": "zomboss_stomp_notice",
+            "rv_call": "zomboss_rv_notice",
+            "bungee_call": "zomboss_bungee_notice",
+        }
+        return notice_map.get(kind, "")
+
+    def clear_zomboss_attack_state(self) -> None:
+        self.zomboss_pending_attack = {}
+        self.zomboss_attack_phase = ""
+        self.zomboss_eye_mode = "idle"
+        self.zomboss_head_lane_row = -1
+
+    def set_zomboss_attack_phase(self, payload: Dict[str, object], phase: str, duration: float, *, eye_mode: str = "idle", row: Optional[int] = None) -> None:
+        payload["phase"] = str(phase)
+        payload["t"] = max(0.05, float(duration))
+        payload["total"] = max(0.05, float(duration))
+        self.zomboss_attack_phase = str(phase)
+        self.zomboss_eye_mode = eye_mode
+        if row is not None:
+            self.zomboss_head_lane_row = max(0, min(self.rows() - 1, int(row)))
+        elif phase not in {"head_dip_row_select", "windup_fire", "release_fire", "windup_ice", "release_ice", "recover_exposed"}:
+            self.zomboss_head_lane_row = -1
+
+    def next_zomboss_pattern_attack(self) -> Optional[str]:
+        patterns = self.zomboss_pattern_pool()
+        if not patterns:
+            return None
+        if self.zomboss_pattern_id < 0 or self.zomboss_pattern_id >= len(patterns):
+            self.zomboss_pattern_id = random.randrange(len(patterns))
+            self.zomboss_pattern_step = 0
+        pattern = patterns[self.zomboss_pattern_id]
+        if not pattern:
+            return None
+        attack = pattern[self.zomboss_pattern_step % len(pattern)]
+        self.zomboss_pattern_step += 1
+        if self.zomboss_pattern_step >= len(pattern):
+            self.zomboss_pattern_step = 0
+            if len(patterns) > 1:
+                choices = [idx for idx in range(len(patterns)) if idx != self.zomboss_pattern_id]
+                if choices:
+                    self.zomboss_pattern_id = random.choice(choices)
+        return attack
+
+    def spawn_zomboss_lane_projectile(self, kind: str, row: int) -> None:
+        lane_row = max(0, min(self.rows() - 1, int(row)))
+        spawn_x = float(self.lawn_right() + 42)
+        spawn_y = float(self.row_y(lane_row) - 10)
+        if kind == "fireball":
+            self.add_projectile(
+                lane_row,
+                spawn_x,
+                spawn_y,
+                9999.0,
+                direction=-1,
+                enemy=True,
+                speed=258.0,
+                radius=17,
+                kind="zomboss_fireball",
+                color=(232, 120, 58),
+                outline=(126, 56, 18),
+            )
+        elif kind == "iceball":
+            self.add_projectile(
+                lane_row,
+                spawn_x,
+                spawn_y,
+                9999.0,
+                direction=-1,
+                enemy=True,
+                speed=244.0,
+                radius=16,
+                kind="zomboss_iceball",
+                color=(154, 214, 255),
+                outline=(72, 118, 176),
+            )
+
+    def execute_zomboss_attack_payload(self, payload: Dict[str, object]) -> None:
+        if bool(payload.get("resolved", False)):
+            return
+        payload["resolved"] = True
+        kind = str(payload.get("kind", ""))
+        if kind == "fireball":
+            row = int(payload.get("row", random.randrange(self.rows())))
+            self.spawn_zomboss_lane_projectile("fireball", row)
+        elif kind == "iceball":
+            row = int(payload.get("row", random.randrange(self.rows())))
+            self.spawn_zomboss_lane_projectile("iceball", row)
+        elif kind == "stomp_smash":
+            col = int(payload.get("col", 5))
+            width = max(1, int(float(payload.get("width", 2.0))))
+            for row in range(self.rows()):
+                self.damage_zomboss_cells(row, col, col + width - 1, 9999.0, flash_t=0.30)
+        elif kind == "rv_call":
+            col = int(payload.get("col", 5))
+            width = max(2, int(float(payload.get("width", 2.0))))
+            for row in range(self.rows()):
+                self.damage_zomboss_cells(row, col, col + width - 1, 9999.0, flash_t=0.26)
+            self.spawn_zombie(wave_idx=1, forced_kind="imp")
+        elif kind == "bungee_call":
+            count = max(1, int(self.zomboss_ruleset().get("boss_bungee_cycle", {}).get("count", 1)))
+            for _ in range(count):
+                self.spawn_zombie(wave_idx=1, forced_kind="bungee")
+
     def damage_zomboss(self, amount: float) -> None:
         if self.zomboss_hp_max <= 0.0 or self.result:
             return
+        if self.zomboss_exposed_t <= 0.0:
+            return
         self.zomboss_hp = max(0.0, self.zomboss_hp - max(0.0, amount))
+        self.zomboss_exposed_t = max(self.zomboss_exposed_t, 0.18)
+        actor = self.ensure_zomboss_anim_actor()
+        if actor is not None:
+            actor.hp = self.zomboss_hp
+            actor.hp_max = max(actor.hp_max, self.zomboss_hp_max)
+            actor.state["hit_flash"] = max(float(actor.state.get("hit_flash", 0.0)), 0.18)
+            self.bump_anim_event(actor, "hurt")
         if self.zomboss_hp <= 0.0:
-            self.zomboss_pending_attack = {}
+            self.clear_zomboss_attack_state()
+            self.zomboss_exposed_t = 0.0
+            if actor is not None:
+                actor.hp = 0.0
             for z in self.zombies:
                 z.hp = 0.0
                 z.state["dying_t"] = 0.24
@@ -3455,9 +4442,17 @@ class BattleState:
         self.zomboss_spawn_t = 0.0
         self.zomboss_spawn_index = 0
         self.zomboss_bungee_t = 0.0
+        self.zomboss_stomp_t = max(0.0, float(self.zomboss_ruleset().get("boss_stomp_cycle", {}).get("interval", 20.0)))
         self.zomboss_rv_t = 0.0
+        self.zomboss_pattern_id = random.randrange(max(1, len(self.zomboss_pattern_pool()))) if self.zomboss_pattern_pool() else 0
+        self.zomboss_pattern_step = 0
+        self.zomboss_attack_phase = ""
+        self.zomboss_exposed_t = 0.0
+        self.zomboss_head_lane_row = -1
+        self.zomboss_eye_mode = "idle"
         self.zomboss_pending_attack = {}
         self.zomboss_night_tint = 1.0
+        self.zomboss_actor = None
         self.total_waves = 0
         self.large_wave_indices = ()
         self.final_wave_index = 0
@@ -3476,34 +4471,52 @@ class BattleState:
     def queue_zomboss_attack(self, kind: str) -> None:
         if self.zomboss_pending_attack or self.result:
             return
-        warning = max(0.35, self.mode_float("boss_attack_warning", 1.55))
-        payload: Dict[str, object] = {"kind": kind, "t": warning, "total": warning}
+        kind = {"bungee": "bungee_call", "rv": "rv_call"}.get(kind, kind)
+        payload: Dict[str, object] = {"kind": kind, "phase": "", "t": 0.0, "total": 0.0, "resolved": False}
         if kind in {"fireball", "iceball"}:
-            payload["row"] = float(random.randrange(self.rows()))
-            payload["col"] = float(random.randint(5, 7 if COLS >= 8 else COLS - 1))
-        elif kind == "rv":
-            payload["col"] = float(random.randint(5, 6 if COLS >= 8 else max(4, COLS - 2)))
-            payload["width"] = float(max(2, int(self.zomboss_ruleset().get("boss_rv_cycle", {}).get("width", 2))))
+            row = random.randrange(self.rows())
+            col = random.randint(5, 7 if COLS >= 8 else COLS - 1)
+            payload["row"] = float(row)
+            payload["col"] = float(col)
+            self.set_zomboss_attack_phase(payload, "head_dip_row_select", self.zomboss_phase_window(kind, "row_select", 0.40), eye_mode=("fire" if kind == "fireball" else "ice"), row=row)
+        elif kind == "stomp_smash":
+            stomp_cycle = self.zomboss_ruleset().get("boss_stomp_cycle", {})
+            width = max(1, int(float(stomp_cycle.get("width", 2)) if isinstance(stomp_cycle, dict) else 2.0))
+            min_col = max(4, COLS - 3)
+            max_col = 6 if COLS >= 8 else max(4, COLS - width)
+            col = random.randint(min_col, max_col) if max_col >= min_col else min_col
+            payload["col"] = float(col)
+            payload["width"] = float(width)
+            self.set_zomboss_attack_phase(payload, "stomp_smash", self.zomboss_phase_window(kind, "warning", 0.68), eye_mode="smash")
+            self.zomboss_stomp_t = 0.0
+        elif kind == "bungee_call":
+            self.set_zomboss_attack_phase(payload, "bungee_call", self.zomboss_phase_window(kind, "windup", 0.82), eye_mode="bungee")
+        elif kind == "rv_call":
+            rv_cycle = self.zomboss_ruleset().get("boss_rv_cycle", {})
+            width = max(2, int(float(rv_cycle.get("width", 2)) if isinstance(rv_cycle, dict) else 2.0))
+            max_col = 6 if COLS >= 8 else max(4, COLS - width)
+            col = random.randint(5, max_col) if max_col >= 5 else max_col
+            payload["col"] = float(col)
+            payload["width"] = float(width)
+            self.set_zomboss_attack_phase(payload, "rv_call", self.zomboss_phase_window(kind, "windup", 0.90), eye_mode="smash")
+        else:
+            return
         self.zomboss_pending_attack = payload
-        notice_map = {
-            "fireball": "zomboss_fireball_notice",
-            "iceball": "zomboss_iceball_notice",
-            "rv": "zomboss_rv_notice",
-            "bungee": "zomboss_bungee_notice",
-        }
-        if kind in notice_map:
-            self.queue_notice_key(notice_map[kind], color=(176, 74, 46), duration_ms=max(1200, int(warning * 1000)))
+        label_key = self.zomboss_notice_key(kind)
+        if label_key:
+            duration_ms = max(1200, int(float(payload.get("t", 0.8)) * 1000))
+            self.queue_notice_key(label_key, color=(176, 74, 46), duration_ms=duration_ms)
 
     def cancel_zomboss_pending_attack(self, counter_kind: str) -> bool:
         if not self.zomboss_pending_attack:
             return False
         kind = str(self.zomboss_pending_attack.get("kind", ""))
         if kind == "fireball" and counter_kind == "ice_shroom":
-            self.zomboss_pending_attack = {}
+            self.clear_zomboss_attack_state()
             self.queue_notice_key("zomboss_counter_fireball", color=(68, 112, 188), duration_ms=1350)
             return True
         if kind == "iceball" and counter_kind == "jalapeno":
-            self.zomboss_pending_attack = {}
+            self.clear_zomboss_attack_state()
             self.ice_rows.clear()
             self.queue_notice_key("zomboss_counter_iceball", color=(196, 92, 40), duration_ms=1350)
             return True
@@ -3526,30 +4539,52 @@ class BattleState:
     def resolve_zomboss_pending_attack(self) -> None:
         if not self.zomboss_pending_attack:
             return
-        kind = str(self.zomboss_pending_attack.get("kind", ""))
-        if kind == "fireball":
-            row = int(self.zomboss_pending_attack.get("row", random.randrange(self.rows())))
-            col = int(self.zomboss_pending_attack.get("col", 6))
-            self.damage_zomboss_cells(row, col - 1, col + 1, 9999.0, flash_t=0.22)
-        elif kind == "iceball":
-            row = int(self.zomboss_pending_attack.get("row", random.randrange(self.rows())))
-            col = int(self.zomboss_pending_attack.get("col", 6))
-            self.damage_zomboss_cells(row, col - 1, col + 1, 150.0, flash_t=0.18)
-            self.ice_rows[row] = max(float(self.ice_rows.get(row, 0.0)), 9999.0)
-        elif kind == "rv":
-            col = int(self.zomboss_pending_attack.get("col", 5))
-            width = max(2, int(float(self.zomboss_pending_attack.get("width", 2.0))))
-            for row in range(self.rows()):
-                self.damage_zomboss_cells(row, col, col + width - 1, 9999.0, flash_t=0.26)
-            self.spawn_zombie(wave_idx=1, forced_kind="imp")
-        elif kind == "bungee":
-            count = max(1, int(self.zomboss_ruleset().get("boss_bungee_cycle", {}).get("count", 1)))
-            for _ in range(count):
-                self.spawn_zombie(wave_idx=1, forced_kind="bungee")
-        self.zomboss_pending_attack = {}
+        payload = self.zomboss_pending_attack
+        kind = str(payload.get("kind", ""))
+        phase = str(payload.get("phase", ""))
+        if kind in {"fireball", "iceball"}:
+            row = int(payload.get("row", random.randrange(self.rows())))
+            eye_mode = "fire" if kind == "fireball" else "ice"
+            if phase == "head_dip_row_select":
+                next_phase = "windup_fire" if kind == "fireball" else "windup_ice"
+                self.set_zomboss_attack_phase(payload, next_phase, self.zomboss_phase_window(kind, "windup", 0.70), eye_mode=eye_mode, row=row)
+                return
+            if phase in {"windup_fire", "windup_ice"}:
+                release_phase = "release_fire" if kind == "fireball" else "release_ice"
+                self.execute_zomboss_attack_payload(payload)
+                self.set_zomboss_attack_phase(payload, release_phase, self.zomboss_phase_window(kind, "release", 0.16), eye_mode=eye_mode, row=row)
+                return
+            if phase in {"release_fire", "release_ice"}:
+                recover_t = self.zomboss_phase_window(kind, "recover", self.zomboss_exposed_window())
+                self.zomboss_exposed_t = max(self.zomboss_exposed_t, max(recover_t, self.zomboss_exposed_window()))
+                self.set_zomboss_attack_phase(payload, "recover_exposed", recover_t, eye_mode="exposed", row=row)
+                return
+            if phase == "recover_exposed":
+                self.clear_zomboss_attack_state()
+                return
+        if kind == "stomp_smash":
+            if phase == "stomp_smash":
+                self.execute_zomboss_attack_payload(payload)
+                recover_t = self.zomboss_phase_window(kind, "recover", self.zomboss_exposed_window())
+                self.zomboss_exposed_t = max(self.zomboss_exposed_t, max(recover_t, self.zomboss_exposed_window()))
+                self.set_zomboss_attack_phase(payload, "recover_exposed", recover_t, eye_mode="exposed")
+                return
+            if phase == "recover_exposed":
+                self.clear_zomboss_attack_state()
+                return
+        if kind == "bungee_call":
+            self.execute_zomboss_attack_payload(payload)
+            self.clear_zomboss_attack_state()
+            return
+        if kind == "rv_call":
+            self.execute_zomboss_attack_payload(payload)
+            self.clear_zomboss_attack_state()
+            return
+        self.clear_zomboss_attack_state()
 
     def update_zomboss_boss_mode(self, dt: float) -> None:
         rules = self.zomboss_ruleset()
+        self.zomboss_exposed_t = max(0.0, self.zomboss_exposed_t - dt)
         intro = rules.get("boss_intro_phase", ())
         if isinstance(intro, (list, tuple)) and self.zomboss_intro_index < len(intro):
             self.zomboss_intro_elapsed += dt
@@ -3573,16 +4608,24 @@ class BattleState:
             if float(self.zomboss_pending_attack.get("t", 0.0)) <= 0.0:
                 self.resolve_zomboss_pending_attack()
         else:
-            attack_cycle = [str(kind) for kind in rules.get("boss_attack_cycle", ()) if str(kind)]
-            attack_interval = max(4.0, float(rules.get("boss_attack_interval", 10.5)))
-            if attack_cycle:
+            self.zomboss_attack_phase = "recover_exposed" if self.zomboss_exposed_t > 0.0 else ""
+            self.zomboss_eye_mode = "exposed" if self.zomboss_exposed_t > 0.0 else "idle"
+            if not intro_active:
                 self.zomboss_attack_t += dt
-                if not intro_active and self.zomboss_attack_t >= attack_interval:
+                attack_interval = max(4.0, float(rules.get("boss_attack_interval", 8.5)))
+                if self.zomboss_attack_t >= attack_interval:
                     self.zomboss_attack_t = 0.0
-                    next_attack = attack_cycle[self.zomboss_attack_index % len(attack_cycle)]
-                    self.zomboss_attack_index += 1
-                    self.queue_zomboss_attack(next_attack)
+                    next_attack = self.next_zomboss_pattern_attack()
+                    if next_attack == "stomp_smash":
+                        stomp_cycle = rules.get("boss_stomp_cycle", {})
+                        stomp_interval = max(10.0, float(stomp_cycle.get("interval", 20.0))) if isinstance(stomp_cycle, dict) else 20.0
+                        if self.zomboss_stomp_t < stomp_interval:
+                            next_attack = "fireball" if (self.zomboss_attack_index % 2 == 0) else "iceball"
+                    if next_attack:
+                        self.zomboss_attack_index += 1
+                        self.queue_zomboss_attack(next_attack)
         if not intro_active:
+            self.zomboss_stomp_t += dt
             spawn_cycle = self.zomboss_spawn_cycle()
             spawn_interval = max(2.4, float(spawn_cycle.get("interval", 6.0)))
             self.zomboss_spawn_t += dt
@@ -3605,25 +4648,43 @@ class BattleState:
                 bungee_interval = max(8.0, float(bungee_cycle.get("interval", 0.0)))
                 if bungee_interval > 0.0 and self.zomboss_bungee_t >= bungee_interval and not self.zomboss_pending_attack:
                     self.zomboss_bungee_t -= bungee_interval
-                    count = max(1, int(bungee_cycle.get("count", 1)))
-                    self.queue_notice_key("zomboss_bungee_notice", color=(172, 74, 58), duration_ms=1100)
-                    for _ in range(count):
-                        self.spawn_zombie(wave_idx=1, forced_kind="bungee")
+                    self.queue_zomboss_attack("bungee_call")
             rv_cycle = rules.get("boss_rv_cycle", {})
             if isinstance(rv_cycle, dict):
                 self.zomboss_rv_t += dt
                 rv_interval = max(10.0, float(rv_cycle.get("interval", 0.0)))
-                if rv_interval > 0.0 and self.zomboss_rv_t >= rv_interval and not self.zomboss_pending_attack:
+                progress_pressure = 1.0 - self.zomboss_progress_ratio()
+                rv_ready = progress_pressure >= (0.48 if self.zomboss_stage_key() == "adventure_zomboss_boss" else 0.34)
+                if rv_interval > 0.0 and rv_ready and self.zomboss_rv_t >= rv_interval and not self.zomboss_pending_attack:
                     self.zomboss_rv_t -= rv_interval
-                    self.queue_zomboss_attack("rv")
+                    self.queue_zomboss_attack("rv_call")
+        self.update_zomboss_animation(dt)
 
-    def draw_zomboss_boss_overlay(self, screen: pygame.Surface, zombie_sprite_fn=None, tr_fn=None) -> None:
+    def draw_zomboss_boss_overlay(self, screen: pygame.Surface, zombie_sprite_fn=None, tr_fn=None, entity_anim_frame_fn=None) -> None:
         if not self.is_zomboss_boss_mode():
             return
         lawn_rect = pygame.Rect(LAWN_X, 0, COLS * CELL_W, LAWN_Y + self.lawn_h())
         tint = pygame.Surface((lawn_rect.w, lawn_rect.h), pygame.SRCALPHA)
         tint.fill((18, 24, 42, 78))
         screen.blit(tint, lawn_rect.topleft)
+        pending = self.zomboss_pending_attack if isinstance(self.zomboss_pending_attack, dict) else {}
+        pending_kind = str(pending.get("kind", ""))
+        telegraph_alpha = 0
+        if pending_kind:
+            total = max(0.05, float(pending.get("total", 0.1)))
+            telegraph_alpha = int(54 + 72 * clamp(float(pending.get("t", 0.0)) / total, 0.0, 1.0))
+        if pending_kind in {"fireball", "iceball"} and self.zomboss_head_lane_row >= 0:
+            row_rect = pygame.Rect(LAWN_X, LAWN_Y + self.zomboss_head_lane_row * CELL_H, COLS * CELL_W, CELL_H)
+            row_overlay = pygame.Surface(row_rect.size, pygame.SRCALPHA)
+            row_overlay.fill((188, 64, 46, telegraph_alpha) if pending_kind == "fireball" else (78, 122, 188, telegraph_alpha))
+            screen.blit(row_overlay, row_rect.topleft)
+        elif pending_kind in {"stomp_smash", "rv_call"}:
+            width = max(1, int(float(pending.get("width", 2.0))))
+            col = int(float(pending.get("col", max(4, COLS - 3))))
+            area_rect = pygame.Rect(LAWN_X + col * CELL_W, LAWN_Y, width * CELL_W, self.lawn_h())
+            area_overlay = pygame.Surface(area_rect.size, pygame.SRCALPHA)
+            area_overlay.fill((188, 96, 52, telegraph_alpha))
+            screen.blit(area_overlay, area_rect.topleft)
         moon = pygame.Surface((148, 148), pygame.SRCALPHA)
         for radius, alpha in ((48, 18), (38, 28), (28, 44)):
             pygame.draw.circle(moon, (224, 234, 252, alpha), (74, 74), radius)
@@ -3631,11 +4692,53 @@ class BattleState:
         boss_rect = pygame.Rect(self.lawn_right() - 94, LAWN_Y + 18, 82, 94)
         pygame.draw.rect(screen, (68, 54, 66), boss_rect, border_radius=12)
         pygame.draw.rect(screen, (162, 126, 92), boss_rect, 3, border_radius=12)
-        if callable(zombie_sprite_fn):
-            spr = zombie_sprite_fn("zomboss")
-            if spr is not None:
-                scaled = pygame.transform.smoothscale(spr, (68, 68))
-                screen.blit(scaled, scaled.get_rect(center=(boss_rect.centerx, boss_rect.y + 38)))
+        actor = self.ensure_zomboss_anim_actor()
+        anim_state = self.get_entity_animation_state(actor) if actor is not None else None
+        anim_surface = None
+        anim_frame = None
+        if callable(entity_anim_frame_fn) and anim_state is not None:
+            anim_surface, anim_frame = entity_anim_frame_fn("zombie", "zomboss", anim_state)
+        if anim_surface is None and callable(zombie_sprite_fn):
+            anim_surface = zombie_sprite_fn("zomboss")
+        if anim_surface is not None:
+            render = anim_surface
+            surf_dx = 0.0
+            surf_dy = 0.0
+            if anim_frame is not None:
+                render, surf_dx, surf_dy, _ = self.normalize_animation_surface(render, anim_frame)
+            if anim_frame is not None and anim_frame.flip:
+                render = pygame.transform.flip(render, True, False)
+            base_scale = 68.0 / max(1.0, float(max(render.get_width(), render.get_height())))
+            frame_scale = anim_frame.scale if anim_frame is not None else 1.0
+            frame_angle = anim_frame.angle if anim_frame is not None else 0.0
+            render = pygame.transform.rotozoom(render, frame_angle, max(0.45, base_scale * frame_scale))
+            if actor is not None:
+                hit_flash = clamp(float(actor.state.get("hit_flash", 0.0)) / 0.18, 0.0, 1.0)
+                if hit_flash > 0.0:
+                    flashed = render.copy()
+                    flash_tint = pygame.Surface(flashed.get_size(), pygame.SRCALPHA)
+                    flash_tint.fill((255, 255, 255, int(150 * hit_flash)))
+                    flashed.blit(flash_tint, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+                    render = flashed
+            if anim_frame is not None and anim_frame.alpha < 255:
+                render = render.copy()
+                render.set_alpha(int(clamp(anim_frame.alpha, 0, 255)))
+            offset = anim_frame.offset if anim_frame is not None else (0, 0)
+            screen.blit(render, render.get_rect(center=(boss_rect.centerx + int(offset[0] + surf_dx), boss_rect.y + 38 + int(offset[1] + surf_dy))))
+        eye_colors = {
+            "fire": (236, 92, 48),
+            "ice": (102, 172, 238),
+            "bungee": (244, 218, 124),
+            "smash": (236, 128, 62),
+            "exposed": (246, 240, 196),
+        }
+        eye_color = eye_colors.get(self.zomboss_eye_mode, None)
+        if eye_color is not None:
+            for dx in (-12, 12):
+                glow = pygame.Surface((20, 20), pygame.SRCALPHA)
+                pygame.draw.circle(glow, (*eye_color, 74), (10, 10), 8)
+                pygame.draw.circle(glow, eye_color, (10, 10), 4)
+                screen.blit(glow, (boss_rect.centerx + dx - 10, boss_rect.y + 20))
         hp_track = pygame.Rect(boss_rect.x + 8, boss_rect.bottom - 18, boss_rect.w - 16, 8)
         pygame.draw.rect(screen, (42, 26, 20), hp_track, border_radius=4)
         hp_fill = hp_track.inflate(-2, -2)
@@ -3643,13 +4746,12 @@ class BattleState:
         if fill_w > 0:
             fill_rect = pygame.Rect(hp_fill.x, hp_fill.y, fill_w, hp_fill.h)
             pygame.draw.rect(screen, (192, 52, 42), fill_rect, border_radius=3)
-        if self.zomboss_pending_attack:
-            kind = str(self.zomboss_pending_attack.get("kind", ""))
+        if pending_kind:
             cue = pygame.Rect(boss_rect.x - 4, boss_rect.bottom + 4, boss_rect.w + 8, 16)
-            fill = (170, 64, 52) if kind in {"fireball", "rv"} else (72, 108, 172)
+            fill = (170, 64, 52) if pending_kind in {"fireball", "stomp_smash", "rv_call"} else (72, 108, 172)
             pygame.draw.rect(screen, fill, cue, border_radius=8)
             pygame.draw.rect(screen, (244, 228, 198), cue, 2, border_radius=8)
-            label_key = "zomboss_fireball_notice" if kind == "fireball" else ("zomboss_iceball_notice" if kind == "iceball" else ("zomboss_rv_notice" if kind == "rv" else "zomboss_bungee_notice"))
+            label_key = self.zomboss_notice_key(pending_kind) or "zomboss_fireball_notice"
             label_text = tr_fn(label_key) if callable(tr_fn) else label_key
             label = pygame.font.Font(None, 16).render(label_text, True, (248, 240, 222))
             screen.blit(label, label.get_rect(center=cue.center))
@@ -4024,7 +5126,7 @@ class BattleState:
             row = int(zombie.state.get("target_row", zombie.row))
             col = int(zombie.state.get("target_col", 0.0))
             if self.has_umbrella_cover(row, col):
-                zombie.state["bungee_state"] = "exit"
+                zombie.state["bungee_state"] = "blocked_exit"
                 zombie.state["bungee_phase_t"] = 0.40
                 zombie.state["bungee_phase_total"] = 0.40
                 zombie.state["has_loot"] = 0.0
@@ -4057,6 +5159,10 @@ class BattleState:
             if phase_t <= 0.0:
                 self.slay_zombie(zombie, source="bungee_exit")
             return True
+        if state == "blocked_exit":
+            if phase_t <= 0.0:
+                self.slay_zombie(zombie, source="bungee_blocked")
+            return True
         return False
 
     def update_catapult_state(self, zombie: Zombie, dt: float) -> bool:
@@ -4086,6 +5192,7 @@ class BattleState:
                         self.armor.pop(pos, None)
                         self.main.pop(pos, None)
                         self.support.pop(pos, None)
+                self.bump_anim_event(zombie, "lob")
                 zombie.state["catapult_state"] = "recover"
                 recover_t = random.uniform(1.04, 1.30)
                 zombie.state["catapult_phase_t"] = recover_t
@@ -6049,9 +7156,9 @@ class BattleState:
                     self.spawn_zombie(self.current_wave or 1, forced_kind=kind)
                     active_specials += 1
 
-    def draw_special_minigame_overlay(self, screen: pygame.Surface, plant_sprite_fn, zombie_sprite_fn=None, tr_fn=None) -> None:
+    def draw_special_minigame_overlay(self, screen: pygame.Surface, plant_sprite_fn, zombie_sprite_fn=None, tr_fn=None, entity_anim_frame_fn=None) -> None:
         if self.is_zomboss_boss_mode():
-            self.draw_zomboss_boss_overlay(screen, zombie_sprite_fn, tr_fn)
+            self.draw_zomboss_boss_overlay(screen, zombie_sprite_fn, tr_fn, entity_anim_frame_fn)
         if self.is_portal_combat_mode():
             self.draw_portal_combat_overlay(screen)
             if self.portal_shift_notice_t > 0.0:
@@ -6290,6 +7397,10 @@ class BattleState:
             plant.state["anim_phase"] = random.uniform(0.0, math.tau)
         if "last_hp" not in plant.state:
             plant.state["last_hp"] = plant.hp
+        if not isinstance(plant.state.get("_anim"), AnimationState):
+            plant.state["_anim"] = AnimationState()
+        if not isinstance(plant.state.get("_anim_seen"), dict):
+            plant.state["_anim_seen"] = {}
         self.update_plant_visual_state(plant)
 
     def ensure_zombie_anim_state(self, zombie: Zombie) -> None:
@@ -6297,6 +7408,10 @@ class BattleState:
             zombie.state["anim_phase"] = random.uniform(0.0, math.tau)
         if "last_hp" not in zombie.state:
             zombie.state["last_hp"] = zombie.hp
+        if not isinstance(zombie.state.get("_anim"), AnimationState):
+            zombie.state["_anim"] = AnimationState()
+        if not isinstance(zombie.state.get("_anim_seen"), dict):
+            zombie.state["_anim_seen"] = {}
         if zombie.kind == "balloon":
             zombie.state.setdefault("balloon_state", "airborne")
             zombie.state.setdefault("balloon_drop_t", 0.0)
@@ -6320,6 +7435,11 @@ class BattleState:
             zombie.state.setdefault("ladder_state", "carrying")
             zombie.state.setdefault("ladder_phase_t", 0.0)
             zombie.state.setdefault("ladder_phase_total", 0.0)
+        elif zombie.kind == "pole_vaulting":
+            zombie.state.setdefault("pole_vault_state", "run")
+            zombie.state.setdefault("pole_vault_t", 0.0)
+            zombie.state.setdefault("pole_vault_total", 0.0)
+            zombie.state.setdefault("pole_vault_end_x", zombie.x)
         elif zombie.kind == "zomboni":
             zombie.state.setdefault("zomboni_state", "cruise")
             zombie.state.setdefault("zomboni_crush_t", 0.0)
@@ -6335,6 +7455,335 @@ class BattleState:
             zombie.state.setdefault("pogo_recover_total", 0.32)
             zombie.state.setdefault("pogo_start_x", zombie.x)
             zombie.state.setdefault("pogo_end_x", zombie.x)
+
+    def ensure_entity_animation_runtime(self, entity: object) -> AnimationState:
+        st = getattr(entity, "state", {})
+        if not isinstance(st.get("_anim"), AnimationState):
+            st["_anim"] = AnimationState()
+        if not isinstance(st.get("_anim_seen"), dict):
+            st["_anim_seen"] = {}
+        return st["_anim"]
+
+    def animation_seen(self, entity: object) -> Dict[str, int]:
+        st = getattr(entity, "state", {})
+        if not isinstance(st.get("_anim_seen"), dict):
+            st["_anim_seen"] = {}
+        return st["_anim_seen"]
+
+    def bump_anim_event(self, entity: object, key: str) -> None:
+        st = getattr(entity, "state", {})
+        seq_key = f"{key}_seq"
+        st[seq_key] = int(st.get(seq_key, 0)) + 1
+
+    def consume_anim_event(self, entity: object, key: str) -> bool:
+        st = getattr(entity, "state", {})
+        seen = self.animation_seen(entity)
+        seq_key = f"{key}_seq"
+        current = int(st.get(seq_key, 0))
+        if current > int(seen.get(seq_key, 0)):
+            seen[seq_key] = current
+            return True
+        return False
+
+    def animation_clip_for(self, entity_kind: str, variant: str, clip_name: str) -> Optional[AnimationClip]:
+        provider = self.animation_clip_provider
+        if callable(provider):
+            try:
+                return provider(entity_kind, clip_name, variant=variant)
+            except TypeError:
+                return provider(entity_kind, clip_name, variant)
+        return None
+
+    def switch_entity_animation(self, entity: object, entity_kind: str, variant: str, clip_name: str) -> AnimationState:
+        anim = self.ensure_entity_animation_runtime(entity)
+        clip = self.animation_clip_for(entity_kind, variant, clip_name)
+        if clip is None:
+            anim.current_clip = clip_name
+            anim.frame_index = 0
+            anim.frame_timer_ms = 0.0
+            anim.locked = False
+            anim.pending_clip = ""
+            anim.hold_timer_ms = 0.0
+            return anim
+        anim.current_clip = clip_name
+        anim.frame_index = 0
+        anim.frame_timer_ms = 0.0
+        anim.locked = bool(clip.lock_until_end)
+        anim.pending_clip = ""
+        anim.hold_timer_ms = 0.0
+        return anim
+
+    def plant_animation_variant(self, plant: Plant) -> Optional[str]:
+        if plant.kind in {"sunflower", "peashooter", "wallnut", "potato_mine", "imitater"}:
+            return plant.kind
+        return None
+
+    def zombie_animation_variant(self, zombie: Zombie) -> Optional[str]:
+        if zombie.kind in {
+            "normal",
+            "conehead",
+            "buckethead",
+            "pole_vaulting",
+            "newspaper",
+            "bungee",
+            "balloon",
+            "digger",
+            "ladder",
+            "zomboni",
+            "catapult",
+            "pogo",
+            "zomboss",
+        }:
+            return zombie.kind
+        return None
+
+    def resolve_entity_animation(self, entity: object, entity_kind: str) -> Tuple[Optional[str], Optional[str]]:
+        if isinstance(entity, Plant):
+            variant = self.plant_animation_variant(entity)
+            if variant is None:
+                return None, None
+            if entity.hp <= 0:
+                return variant, "death"
+            if self.consume_anim_event(entity, "hit"):
+                return variant, "hit"
+            if entity.kind == "sunflower":
+                if self.consume_anim_event(entity, "sun"):
+                    return variant, "sun_produce"
+                return variant, "idle"
+            if entity.kind == "peashooter":
+                if self.consume_anim_event(entity, "shoot"):
+                    return variant, "shoot"
+                return variant, "idle"
+            if entity.kind == "wallnut":
+                if self.consume_anim_event(entity, "hit"):
+                    stage = str(entity.state.get("damage_stage", "healthy"))
+                    return variant, "hit"
+                stage = str(entity.state.get("damage_stage", "healthy"))
+                if stage == "heavy_cracked":
+                    return variant, "idle_heavy_cracked"
+                if stage == "cracked":
+                    return variant, "idle_cracked"
+                return variant, "idle_healthy"
+            if entity.kind == "potato_mine":
+                if self.consume_anim_event(entity, "detonate"):
+                    return variant, "detonate"
+                potato_state = str(entity.state.get("potato_state", "arming"))
+                if potato_state == "armed":
+                    return variant, "armed_idle"
+                if potato_state == "priming":
+                    return variant, "priming"
+                return variant, "arming"
+            if entity.kind == "imitater":
+                if float(entity.state.get("imitater_morph_t", 0.0)) > 0.0 or str(entity.state.get("imitater_state", "copied")) == "morphing":
+                    return variant, "morphing"
+                return variant, "copied_idle"
+            return variant, "idle"
+        if isinstance(entity, Zombie):
+            variant = self.zombie_animation_variant(entity)
+            if variant is None:
+                return None, None
+            if entity.hp <= 0 or float(entity.state.get("dying_t", 0.0)) > 0.0:
+                if entity.kind == "zomboss":
+                    return variant, "defeat"
+                return variant, "death"
+            if entity.kind in {"conehead", "buckethead"} and self.consume_anim_event(entity, "helmet_break"):
+                return variant, "helmet_break"
+            if entity.kind == "newspaper":
+                state = str(entity.state.get("paper_state", "paper_intact"))
+                if state == "paper_lost_transition":
+                    return variant, "paper_loss"
+                if self.consume_anim_event(entity, "hit"):
+                    return variant, "hit_enraged" if state == "enraged" else "hit_paper"
+                if state == "enraged":
+                    return variant, "eat_enraged" if float(entity.state.get("bite_t", 0.0)) > 0.0 else "enraged_walk"
+                if float(entity.state.get("bite_t", 0.0)) > 0.0:
+                    return variant, "eat_paper"
+                return variant, "walk_paper"
+            if entity.kind == "bungee":
+                state = self.bungee_state(entity)
+                if state == "descending":
+                    return variant, "descending"
+                if state == "lock_target":
+                    return variant, "lock_target"
+                if state == "steal_lift":
+                    return variant, "steal_lift"
+                if state == "blocked_exit":
+                    return variant, "blocked_exit"
+                return variant, "exit"
+            if entity.kind == "balloon":
+                state = self.balloon_state(entity)
+                if state == "airborne":
+                    return variant, "airborne"
+                if state == "popped_fall":
+                    return variant, "popped_fall"
+                return variant, "eat" if float(entity.state.get("bite_t", 0.0)) > 0.0 else "grounded_walk"
+            if entity.kind == "digger":
+                state = self.digger_state(entity)
+                if state in {"burrow_enter", "underground_travel", "emerge", "surface_attack"}:
+                    return variant, state
+            if entity.kind == "ladder":
+                state = self.ladder_state(entity)
+                if state == "placing":
+                    return variant, "placing"
+                if state == "placed_attack":
+                    return variant, "eat" if float(entity.state.get("bite_t", 0.0)) > 0.0 else "placed_walk"
+                return variant, "carrying_walk"
+            if entity.kind == "zomboni":
+                state = self.zomboni_state(entity)
+                return variant, "crush" if state == "crush" else "cruise"
+            if entity.kind == "catapult":
+                if self.consume_anim_event(entity, "lob"):
+                    return variant, "lob"
+                state = self.catapult_state(entity)
+                if state == "windup":
+                    return variant, "windup"
+                if state == "recover":
+                    return variant, "recover"
+                return variant, "walk"
+            if entity.kind == "pogo":
+                state = self.pogo_state(entity)
+                if state == "vault_over":
+                    return variant, "vault_over"
+                if state == "recover":
+                    return variant, "recover"
+                return variant, "eat" if float(entity.state.get("bite_t", 0.0)) > 0.0 else "hop_loop"
+            if entity.kind == "pole_vaulting":
+                pole_state = str(entity.state.get("pole_vault_state", "run"))
+                if pole_state == "vault":
+                    return variant, "vault"
+                if pole_state == "post_vault_walk":
+                    if self.consume_anim_event(entity, "hit"):
+                        return variant, "hit_post_vault"
+                    return variant, "eat" if float(entity.state.get("bite_t", 0.0)) > 0.0 else "post_vault_walk"
+                if self.consume_anim_event(entity, "hit"):
+                    return variant, "hit_run"
+                return variant, "eat" if float(entity.state.get("bite_t", 0.0)) > 0.0 else "run"
+            if entity.kind == "zomboss":
+                if self.consume_anim_event(entity, "hurt"):
+                    return variant, "hurt"
+                phase = str(self.zomboss_attack_phase or self.zomboss_pending_attack.get("phase", ""))
+                if phase == "head_dip_row_select":
+                    return variant, "head_dip_row_select"
+                if phase == "windup_fire":
+                    return variant, "windup_fire"
+                if phase == "release_fire":
+                    return variant, "release_fire"
+                if phase == "windup_ice":
+                    return variant, "windup_ice"
+                if phase == "release_ice":
+                    return variant, "release_ice"
+                if phase == "bungee_call":
+                    return variant, "bungee_call"
+                if phase == "stomp_smash":
+                    return variant, "stomp_smash"
+                if phase == "rv_call":
+                    return variant, "rv_call"
+                if phase == "recover_exposed" or self.zomboss_exposed_t > 0.0:
+                    return variant, "recover_exposed"
+                return variant, "idle"
+            if self.consume_anim_event(entity, "hit"):
+                return variant, "hit"
+            if float(entity.state.get("bite_t", 0.0)) > 0.0:
+                return variant, "eat"
+            return variant, "walk"
+        return None, None
+
+    def advance_entity_animation(self, entity: object, dt: float, entity_kind: str) -> None:
+        variant, requested_clip = self.resolve_entity_animation(entity, entity_kind)
+        if not variant or not requested_clip:
+            return
+        anim = self.ensure_entity_animation_runtime(entity)
+        if not anim.current_clip:
+            self.switch_entity_animation(entity, entity_kind, variant, requested_clip)
+            return
+        if requested_clip != anim.current_clip:
+            current_clip = self.animation_clip_for(entity_kind, variant, anim.current_clip)
+            if current_clip is not None and not current_clip.loop and anim.locked:
+                anim.pending_clip = requested_clip
+            else:
+                self.switch_entity_animation(entity, entity_kind, variant, requested_clip)
+                return
+        clip = self.animation_clip_for(entity_kind, variant, anim.current_clip)
+        if clip is None or not clip.frames:
+            return
+        def finish_non_loop(current_clip: AnimationClip, current_variant: str) -> bool:
+            fallback_clip = current_clip.next_clip or anim.pending_clip
+            if not fallback_clip:
+                next_variant, next_requested = self.resolve_entity_animation(entity, entity_kind)
+                fallback_clip = next_requested or anim.current_clip
+                current_variant = next_variant or current_variant
+            self.switch_entity_animation(entity, entity_kind, current_variant, fallback_clip)
+            anim.pending_clip = ""
+            return True
+
+        dt_ms = dt * 1000.0
+        if not clip.loop and anim.frame_index >= len(clip.frames) - 1 and anim.hold_timer_ms > 0.0:
+            anim.hold_timer_ms = max(0.0, anim.hold_timer_ms - dt_ms)
+            if anim.hold_timer_ms > 0.0:
+                return
+            finish_non_loop(clip, variant)
+            clip = self.animation_clip_for(entity_kind, variant, anim.current_clip)
+            if clip is None or not clip.frames:
+                return
+        anim.frame_timer_ms += dt_ms
+        while clip.frames and anim.frame_timer_ms >= clip.frames[min(anim.frame_index, len(clip.frames) - 1)].duration_ms:
+            anim.frame_timer_ms -= clip.frames[min(anim.frame_index, len(clip.frames) - 1)].duration_ms
+            anim.frame_index += 1
+            if anim.frame_index < len(clip.frames):
+                continue
+            if clip.loop:
+                anim.frame_index = 0
+                break
+            if clip.hold_last_frame_ms > 0 and anim.hold_timer_ms <= 0.0:
+                anim.frame_index = len(clip.frames) - 1
+                anim.frame_timer_ms = 0.0
+                anim.hold_timer_ms = float(clip.hold_last_frame_ms)
+                break
+            finish_non_loop(clip, variant)
+            clip = self.animation_clip_for(entity_kind, variant, anim.current_clip)
+            if clip is None or not clip.frames:
+                break
+
+    def get_entity_animation_state(self, entity: object) -> Optional[AnimationState]:
+        st = getattr(entity, "state", {})
+        anim = st.get("_anim")
+        return anim if isinstance(anim, AnimationState) else None
+
+    def ensure_zomboss_anim_actor(self) -> Optional[Zombie]:
+        if not self.is_zomboss_boss_mode():
+            return None
+        if self.zomboss_actor is None:
+            self.zomboss_actor = Zombie(
+                kind="zomboss",
+                row=max(0, self.rows() // 2),
+                x=float(self.lawn_right() + 34),
+                hp=max(1.0, self.zomboss_hp or 1.0),
+                hp_max=max(1.0, self.zomboss_hp_max or 1.0),
+                speed=0.0,
+                dps=0.0,
+                state={},
+            )
+        actor = self.zomboss_actor
+        actor.row = max(0, self.rows() // 2)
+        actor.x = float(self.lawn_right() + 34)
+        actor.hp_max = max(1.0, self.zomboss_hp_max or actor.hp_max or 1.0)
+        if self.zomboss_hp_max > 0.0:
+            actor.hp = max(0.0, self.zomboss_hp)
+        self.ensure_zombie_anim_state(actor)
+        return actor
+
+    def update_zomboss_animation(self, dt: float) -> None:
+        actor = self.ensure_zomboss_anim_actor()
+        if actor is None:
+            return
+        actor.hp = max(0.0, self.zomboss_hp)
+        actor.hp_max = max(1.0, self.zomboss_hp_max or actor.hp_max)
+        actor.state["hit_flash"] = max(0.0, float(actor.state.get("hit_flash", 0.0)) - dt)
+        actor.state["boss_phase"] = self.zomboss_attack_phase
+        actor.state["eye_mode"] = self.zomboss_eye_mode
+        actor.state["exposed_t"] = self.zomboss_exposed_t
+        actor.state["head_lane_row"] = self.zomboss_head_lane_row
+        self.advance_entity_animation(actor, dt, "zombie")
 
     def rows(self) -> int:
         return self.field.rows
@@ -6540,9 +7989,17 @@ class BattleState:
         self.zomboss_spawn_t = 0.0
         self.zomboss_spawn_index = 0
         self.zomboss_bungee_t = 0.0
+        self.zomboss_stomp_t = 0.0
         self.zomboss_rv_t = 0.0
+        self.zomboss_pattern_id = 0
+        self.zomboss_pattern_step = 0
+        self.zomboss_attack_phase = ""
+        self.zomboss_exposed_t = 0.0
+        self.zomboss_head_lane_row = -1
+        self.zomboss_eye_mode = "idle"
         self.zomboss_pending_attack = {}
         self.zomboss_night_tint = 0.0
+        self.zomboss_actor = None
         if self.mode_bool("conveyor", False):
             self.conveyor_pool = [k for k in self.mode_list("conveyor_pool") if k in self.plant_types] or list(available)
             self.conveyor_cap = max(4, int(self.mode_float("conveyor_cap", 8.0)))
@@ -6702,6 +8159,9 @@ class BattleState:
         outline: Tuple[int, int, int] = (20, 110, 38),
         enemy: bool = False,
         anti_air: bool = False,
+        speed: float = 360.0,
+        radius: int = 8,
+        kind: str = "",
     ) -> None:
         self.projs.append(
             Projectile(
@@ -6709,15 +8169,17 @@ class BattleState:
                 x=x,
                 y=y,
                 damage=dmg,
-                speed=360.0,
+                speed=speed,
                 slow=slow,
                 direction=direction,
                 lobbed=lobbed,
                 splash=splash,
                 color=color,
                 outline=outline,
+                radius=radius,
                 enemy=enemy,
                 anti_air=anti_air,
+                kind=kind,
             )
         )
 
@@ -7066,7 +8528,9 @@ class BattleState:
             prev_hp = plant.state.get("last_hp", plant.hp)
             if plant.hp < prev_hp - 0.01:
                 plant.state["hit_flash"] = 0.14
+                self.bump_anim_event(plant, "hit")
             plant.state["last_hp"] = plant.hp
+            self.advance_entity_animation(plant, dt, "plant")
             plant.state["recoil_t"] = max(0.0, plant.state.get("recoil_t", 0.0) - dt)
             plant.state["hit_flash"] = max(0.0, plant.state.get("hit_flash", 0.0) - dt)
             plant.state["ladder_flash_t"] = max(0.0, float(plant.state.get("ladder_flash_t", 0.0)) - dt)
@@ -7104,6 +8568,7 @@ class BattleState:
             if b == "sun" and plant.cd <= 0:
                 self.tokens.append(Token(cx + random.randint(-12, 12), cy - 16, cfg.sun_amount, 9.0, "sun"))
                 plant.cd = random.uniform(max(1.0, cfg.interval - 1.0), cfg.interval + 1.0)
+                self.bump_anim_event(plant, "sun")
             elif b == "sun_shroom" and plant.cd <= 0:
                 amt = 25 if self.elapsed > 90 else 15
                 self.tokens.append(Token(cx + random.randint(-12, 12), cy - 16, amt, 9.0, "sun"))
@@ -7117,6 +8582,8 @@ class BattleState:
                     self.add_projectile(plant.row, cx + 22, cy + oy, dmg, slow=slow, color=col, outline=out, anti_air=(b == "shoot_balloon"))
                 plant.cd = self.scaled_plant_interval(cfg.interval)
                 plant.state["recoil_t"] = 0.15
+                if plant.kind == "peashooter":
+                    self.bump_anim_event(plant, "shoot")
             elif b == "shoot_short" and plant.cd <= 0:
                 z = self.z_near(plant.row, cx + CELL_W * 1.5, CELL_W * 3.2)
                 if z:
@@ -7166,6 +8633,7 @@ class BattleState:
                         plant.state["potato_state"] = "priming"
                 elif self.z_near(plant.row, cx, 44):
                     self.boom(cx, cy + 8, 95, 9999)
+                    self.bump_anim_event(plant, "detonate")
                     plant.hp = 0
             elif b == "chomp" and plant.cd <= 0:
                 z = self.z_near(plant.row, cx, 52)
@@ -7282,6 +8750,10 @@ class BattleState:
                 self.damage_zomboss(p.damage * 4.0)
                 self.projs.remove(p)
                 continue
+            if p.kind == "zomboss_iceball" and p.x < LAWN_X - 26:
+                self.ice_rows[p.row] = max(float(self.ice_rows.get(p.row, 0.0)), 9999.0)
+                self.projs.remove(p)
+                continue
             if p.x < LAWN_X - 60 or p.x > SCREEN_WIDTH + 40:
                 self.projs.remove(p)
                 continue
@@ -7308,7 +8780,7 @@ class BattleState:
                     if target is None:
                         continue
                     cx, _ = self.cell_center(p.row, cc)
-                    if abs(cx - p.x) <= 28:
+                    if abs(cx - p.x) <= max(28, p.radius + 12):
                         hit_plant = target
                         hit_pos = pos
                         break
@@ -7316,10 +8788,15 @@ class BattleState:
                     hit_plant.hp -= p.damage
                     hit_plant.state["hit_flash"] = 0.16
                     self.hit_sparks.append({"x": float(p.x), "y": float(self.row_y(p.row) - 10), "t": 0.16, "ttl": 0.16})
-                    if hit_plant.hp <= 0:
+                    if p.kind == "zomboss_iceball":
+                        self.ice_rows[p.row] = max(float(self.ice_rows.get(p.row, 0.0)), 9999.0)
+                    destroyed = hit_plant.hp <= 0
+                    if destroyed:
                         self.armor.pop(hit_pos, None)
                         self.main.pop(hit_pos, None)
                         self.support.pop(hit_pos, None)
+                    if p.kind in {"zomboss_fireball", "zomboss_iceball"} and destroyed:
+                        continue
                     self.projs.remove(p)
                 continue
             hit = None
@@ -7400,9 +8877,16 @@ class BattleState:
             prev_hp = z.state.get("last_hp", z.hp)
             if z.hp < prev_hp - 0.01:
                 z.state["hit_flash"] = 0.13
+                self.bump_anim_event(z, "hit")
                 if self.is_invisi_ghoul_mode():
                     z.state["invisi_reveal_t"] = max(float(z.state.get("invisi_reveal_t", 0.0)), 0.52)
             z.state["last_hp"] = z.hp
+            self.advance_entity_animation(z, dt, "zombie")
+            if z.kind in {"conehead", "buckethead"}:
+                break_ratio = 0.58 if z.kind == "conehead" else 0.62
+                if z.hp_max > 0 and (z.hp / z.hp_max) <= break_ratio and float(z.state.get("helmet_broken", 0.0)) <= 0.0:
+                    z.state["helmet_broken"] = 1.0
+                    self.bump_anim_event(z, "helmet_break")
             if z.kind == "newspaper":
                 self.ensure_newspaper_state(z)
                 self.update_newspaper_state(z, dt)
@@ -7486,6 +8970,27 @@ class BattleState:
                     z.state["ladder_phase_total"] = 0.66
                     z.state["bite_t"] = 0.0
                     continue
+            if z.kind == "pole_vaulting":
+                pole_state = str(z.state.get("pole_vault_state", "run"))
+                if pole_state == "vault":
+                    vault_t = max(0.0, float(z.state.get("pole_vault_t", 0.0)) - dt)
+                    z.state["pole_vault_t"] = vault_t
+                    total = max(0.01, float(z.state.get("pole_vault_total", 0.38)))
+                    progress = 1.0 - clamp(vault_t / total, 0.0, 1.0)
+                    end_x = float(z.state.get("pole_vault_end_x", z.x - CELL_W * 0.92))
+                    start_x = float(z.state.get("pole_vault_start_x", z.x))
+                    z.x = start_x + (end_x - start_x) * progress
+                    if vault_t <= 0.0:
+                        z.state["pole_vault_state"] = "post_vault_walk"
+                    continue
+                if pole_state == "run" and target is not None:
+                    z.state["pole_vault_state"] = "vault"
+                    z.state["pole_vault_t"] = 0.38
+                    z.state["pole_vault_total"] = 0.38
+                    z.state["pole_vault_start_x"] = z.x
+                    z.state["pole_vault_end_x"] = max(LAWN_X - 8.0, z.x - CELL_W * 0.92)
+                    self.bump_anim_event(z, "vault")
+                    continue
             if z.kind == "pogo" and self.pogo_state(z) == "hop_loop" and target is not None:
                 blocked_by_tallnut = bool(main_target and main_target.kind == "tall_nut")
                 pogo_target_kind = target.kind if target else ""
@@ -7547,6 +9052,48 @@ class BattleState:
                     self.result = "lose"
                     return
 
+    def surface_content_size(self, surface: Optional[pygame.Surface]) -> Tuple[int, int]:
+        if surface is None:
+            return (0, 0)
+        rect = surface.get_bounding_rect(min_alpha=1)
+        if rect.w <= 0 or rect.h <= 0:
+            return surface.get_size()
+        return (int(rect.w), int(rect.h))
+
+    def normalize_animation_surface(
+        self,
+        surface: Optional[pygame.Surface],
+        frame: AnimationFrame,
+        *,
+        target_size: Optional[Tuple[int, int]] = None,
+    ) -> Tuple[Optional[pygame.Surface], float, float, float]:
+        if surface is None:
+            return None, 0.0, 0.0, 1.0
+        full_rect = surface.get_rect()
+        rect = full_rect.copy()
+        if frame.content_bbox is not None:
+            rect = pygame.Rect(frame.content_bbox)
+            rect.clamp_ip(full_rect)
+            if rect.w <= 0 or rect.h <= 0:
+                rect = full_rect.copy()
+        anchor = frame.anchor
+        if not (0 <= int(anchor[0]) <= full_rect.w and 0 <= int(anchor[1]) <= full_rect.h):
+            anchor = full_rect.center
+        crop_anchor_x = float(anchor[0] - rect.x)
+        crop_anchor_y = float(anchor[1] - rect.y)
+        crop_center_x = rect.w / 2.0
+        crop_center_y = rect.h / 2.0
+        shift_x = float(crop_center_x - crop_anchor_x)
+        shift_y = float(crop_center_y - crop_anchor_y)
+        scale_ratio = 1.0
+        if target_size is not None:
+            target_w = max(1, int(target_size[0]))
+            target_h = max(1, int(target_size[1]))
+            scale_ratio = min(target_w / max(1, rect.w), target_h / max(1, rect.h))
+        if rect.size == surface.get_size() and rect.topleft == (0, 0):
+            return surface, shift_x, shift_y, scale_ratio
+        return surface.subsurface(rect).copy(), shift_x, shift_y, scale_ratio
+
     def draw(
         self,
         screen: pygame.Surface,
@@ -7557,6 +9104,7 @@ class BattleState:
         zombie_name_fn,
         plant_sprite_fn,
         zombie_sprite_fn,
+        entity_anim_frame_fn=None,
         ui_flags: Optional[Dict[str, bool]] = None,
     ) -> None:
         show_plant_hp_bars = True if ui_flags is None else bool(ui_flags.get("show_plant_hp_bars", True))
@@ -7651,7 +9199,7 @@ class BattleState:
                 screen.blit(ice, row_rect.topleft)
                 for yy in range(row_rect.y + 6, row_rect.bottom - 6, 8):
                     pygame.draw.line(screen, (214, 238, 252), (row_rect.x + 10, yy), (row_rect.right - 10, yy), 1)
-        self.draw_special_minigame_overlay(screen, plant_sprite_fn, zombie_sprite_fn, tr)
+        self.draw_special_minigame_overlay(screen, plant_sprite_fn, zombie_sprite_fn, tr, entity_anim_frame_fn)
         if self.is_whack_mode():
             for row in range(self.rows()):
                 for col in range(2, COLS):
@@ -7860,24 +9408,49 @@ class BattleState:
                 scale -= 0.06 * k
                 angle += 5.0 * k
 
+            sprite = plant_sprite_fn(plant.kind, plant.slot)
+            anim_alpha = 1.0
+            used_anim_frame = False
+            if entity_anim_frame_fn is not None:
+                anim_surface, anim_frame = entity_anim_frame_fn(
+                    "plant",
+                    plant.kind,
+                    self.get_entity_animation_state(plant),
+                    slot=plant.slot,
+                )
+                if anim_surface is not None and anim_frame is not None and self.plant_animation_variant(plant):
+                    target_size = self.surface_content_size(sprite)
+                    anim_surface, surf_dx, surf_dy, anim_scale_fit = self.normalize_animation_surface(
+                        anim_surface,
+                        anim_frame,
+                        target_size=target_size,
+                    )
+                    sprite = anim_surface
+                    dx = float(anim_frame.offset[0]) + surf_dx
+                    dy = float(anim_frame.offset[1]) + surf_dy
+                    scale = float(anim_frame.scale) * anim_scale_fit
+                    angle = float(anim_frame.angle)
+                    anim_alpha = clamp(float(anim_frame.alpha) / 255.0, 0.0, 1.0)
+                    used_anim_frame = True
             draw_cx = int(cx + dx)
             draw_cy = int((cy if plant.slot != "support" else cy + 6) + dy)
             shadow_w = 46 if plant.slot != "support" else 52
             shadow_h = 12 if plant.slot != "support" else 10
             shadow_rect = pygame.Rect(draw_cx - shadow_w // 2, draw_cy + 24, shadow_w, shadow_h)
             pygame.draw.ellipse(screen, (26, 34, 24), shadow_rect)
-            sprite = plant_sprite_fn(plant.kind, plant.slot)
             plant_render_w = 56
             plant_render_h = 72
             if sprite is not None:
-                if plant.state.get("imitater_morph_t", 0.0) > 0.0:
+                if not used_anim_frame and plant.state.get("imitater_morph_t", 0.0) > 0.0:
                     sprite = plant_sprite_fn("imitater", plant.slot) or sprite
                     angle += 220.0 * (1.0 - clamp(float(plant.state.get("imitater_morph_t", 0.0)) / max(0.1, float(plant.state.get("imitater_morph_total", 3.2))), 0.0, 1.0))
+                flash_strength = (hit_flash / 0.24) if used_anim_frame else (hit_flash / 0.14)
                 sp = sprite_fx(
                     sprite,
-                    scale=scale * plant_global_scale,
+                    scale=scale if used_anim_frame else scale * plant_global_scale,
                     angle=angle,
-                    flash=hit_flash / 0.14,
+                    flash=flash_strength,
+                    alpha=anim_alpha,
                     mono=bool(plant.state.get("from_imitater", 0.0)) and plant.state.get("imitater_morph_t", 0.0) <= 0.0,
                 )
                 self_rect = sp.get_rect(center=(draw_cx, draw_cy))
@@ -7906,7 +9479,7 @@ class BattleState:
                     pygame.draw.circle(screen, color, (draw_cx, draw_cy), rad)
                     plant_render_w = rad * 2
                     plant_render_h = rad * 2
-            if plant.kind == "potato_mine":
+            if plant.kind == "potato_mine" and not used_anim_frame:
                 armed = plant.state.get("armed", 0.0) > 0.0
                 potato_state = str(plant.state.get("potato_state", "arming"))
                 if armed:
@@ -8183,6 +9756,7 @@ class BattleState:
                 life = clamp(float(z.state.get("whack_t", 0.0)) / 1.45, 0.0, 1.0)
                 dy += 22.0 * (1.0 - life)
                 scale *= 0.82 + 0.18 * life
+            used_anim_frame = False
             if kind == "bungee":
                 target_row = int(z.state.get("target_row", z.row))
                 target_col = int(z.state.get("target_col", -1.0))
@@ -8200,6 +9774,28 @@ class BattleState:
                 pygame.draw.ellipse(dust, (128, 98, 66, alpha), (4, 8, 34, 8))
                 pygame.draw.ellipse(dust, (182, 154, 110, alpha // 2), (8, 4, 26, 10))
                 screen.blit(dust, (int(z.x) - 21, y + 16))
+            zsprite = zombie_sprite_fn(z.kind)
+            anim_alpha = alpha
+            if entity_anim_frame_fn is not None:
+                anim_surface, anim_frame = entity_anim_frame_fn(
+                    "zombie",
+                    z.kind,
+                    self.get_entity_animation_state(z),
+                )
+                if anim_surface is not None and anim_frame is not None and self.zombie_animation_variant(z):
+                    target_size = self.surface_content_size(zsprite)
+                    anim_surface, surf_dx, surf_dy, anim_scale_fit = self.normalize_animation_surface(
+                        anim_surface,
+                        anim_frame,
+                        target_size=target_size,
+                    )
+                    zsprite = anim_surface
+                    dx = float(anim_frame.offset[0]) + surf_dx
+                    dy = float(anim_frame.offset[1]) + surf_dy
+                    scale = float(anim_frame.scale) * anim_scale_fit
+                    angle = float(anim_frame.angle)
+                    anim_alpha = alpha * clamp(float(anim_frame.alpha) / 255.0, 0.0, 1.0)
+                    used_anim_frame = True
             draw_x = int(z.x + dx)
             draw_y = int(y - 6 + dy)
             zombie_render_w = 56
@@ -8208,14 +9804,14 @@ class BattleState:
             z_shadow_w = int(44 * shadow_scale)
             z_shadow_h = int(12 * shadow_scale)
             pygame.draw.ellipse(screen, (24, 24, 24), (draw_x - z_shadow_w // 2, draw_y + 28, z_shadow_w, z_shadow_h))
-            zsprite = zombie_sprite_fn(z.kind)
             if zsprite is not None:
+                flash_strength = (hit_flash / 0.24) if used_anim_frame else (hit_flash / 0.14)
                 sp = sprite_fx(
                     zsprite,
-                    scale=scale * zombie_global_scale,
+                    scale=scale if used_anim_frame else scale * zombie_global_scale,
                     angle=angle,
-                    flash=hit_flash / 0.14,
-                    alpha=alpha,
+                    flash=flash_strength,
+                    alpha=anim_alpha,
                     flip_x=z.hypnotized,
                 )
                 z_rect = sp.get_rect(center=(draw_x, draw_y))
@@ -8242,7 +9838,7 @@ class BattleState:
             if kind == "bungee":
                 rope_top = max(0, draw_y - 118)
                 pygame.draw.line(screen, (86, 70, 54), (draw_x, rope_top), (draw_x, draw_y - 18), 2)
-            if kind == "newspaper":
+            if kind == "newspaper" and not used_anim_frame:
                 self.ensure_newspaper_state(z)
                 paper_state = str(z.state.get("paper_state", "paper_intact"))
                 if paper_state == "paper_intact":
@@ -8333,13 +9929,20 @@ class Game:
         self.assets_root = Path(__file__).resolve().parent / "assets"
         for sub in ("plants", "zombies", "ui"):
             os.makedirs(self.assets_root / sub, exist_ok=True)
+        os.makedirs(self.assets_root / "plants" / "anim", exist_ok=True)
+        os.makedirs(self.assets_root / "zombies" / "anim", exist_ok=True)
         os.makedirs(self.assets_root / "ui" / "modes", exist_ok=True)
         self.image_cache: Dict[Tuple[str, Optional[Tuple[int, int]]], Optional[pygame.Surface]] = {}
+        self.animation_sheet_cache: Dict[str, Optional[pygame.Surface]] = {}
+        self.animation_frame_cache: Dict[Tuple[str, Optional[Tuple[int, int, int, int]]], Optional[pygame.Surface]] = {}
+        self.animation_set_cache: Dict[Tuple[str, str], Optional[AnimationSet]] = {}
         self.mode_thumb_cache: Dict[Tuple[str, Tuple[int, int]], pygame.Surface] = {}
         self.adventure_preview_cache: Dict[Tuple[str, Tuple[int, int]], pygame.Surface] = {}
         self.adventure_chapter_cache: Dict[Tuple[int, Tuple[int, int]], pygame.Surface] = {}
         self.logged_loaded_sprites = set()
         self.logged_missing_sprites = set()
+        self.logged_loaded_animation_sets = set()
+        self.logged_missing_animation_sets = set()
         self.download_attempted_keys = set()
         self.asset_source_map = self.load_asset_source_map()
         self.fonts = {
@@ -8374,6 +9977,7 @@ class Game:
         if not isinstance(self.save_data.get("zen_growth"), dict):
             self.save_data["zen_growth"] = {}
         self.battle = BattleState(self.plants, self.zombies, self.fields, self.save_data)
+        self.battle.animation_clip_provider = self.get_animation_clip
         self.scene = "start"
         self.level_page = 0
         self.page_size = 10
@@ -10549,6 +12153,198 @@ class Game:
                 print(f"[missing sprite] zombie {kind} -> {cfg.sprite_path}")
                 self.logged_missing_sprites.add(log_key)
         return sprite
+
+    def load_animation_sheet(self, path: str) -> Optional[pygame.Surface]:
+        if path in self.animation_sheet_cache:
+            return self.animation_sheet_cache[path]
+        full = Path(__file__).resolve().parent / path
+        if not full.exists():
+            self.animation_sheet_cache[path] = None
+            return None
+        try:
+            sheet = pygame.image.load(str(full)).convert_alpha()
+            self.animation_sheet_cache[path] = sheet
+            return sheet
+        except Exception:
+            self.animation_sheet_cache[path] = None
+            return None
+
+    def load_animation_set(self, entity_kind: str, variant: str) -> Optional[AnimationSet]:
+        cache_key = (entity_kind, variant)
+        if cache_key in self.animation_set_cache:
+            return self.animation_set_cache[cache_key]
+        registry = ANIMATION_REGISTRY.get(entity_kind, {})
+        anim_root = self.assets_root / ("plants" if entity_kind == "plant" else "zombies") / "anim" / variant
+        result: Optional[AnimationSet] = registry.get(variant)
+        try:
+            if anim_root.exists():
+                json_path = anim_root / "anim.json"
+                if json_path.exists():
+                    raw = json.loads(json_path.read_text(encoding="utf-8"))
+                    sheet_name = str(raw.get("sheet", "")).strip()
+                    sheet_path = ""
+                    if sheet_name:
+                        sheet_path = str((anim_root / sheet_name).relative_to(Path(__file__).resolve().parent)).replace("\\", "/")
+                    anchor = raw.get("anchor", (0, 0))
+                    if not isinstance(anchor, (list, tuple)) or len(anchor) != 2:
+                        anchor = (0, 0)
+                    clips: Dict[str, AnimationClip] = {}
+                    raw_clips = raw.get("clips", {})
+                    if isinstance(raw_clips, dict):
+                        for clip_name, payload in raw_clips.items():
+                            if not isinstance(payload, dict):
+                                continue
+                            frames: List[Dict[str, object]] = []
+                            raw_frames = payload.get("frames")
+                            if isinstance(raw_frames, list):
+                                for frame in raw_frames:
+                                    if not isinstance(frame, dict):
+                                        continue
+                                    frame_spec = dict(frame)
+                                    raw_surface_path = str(frame_spec.get("surface_path", "")).strip()
+                                    if raw_surface_path:
+                                        root_resolved = Path(__file__).resolve().parent / raw_surface_path
+                                        anim_resolved = anim_root / raw_surface_path
+                                        if not root_resolved.exists() and anim_resolved.exists():
+                                            frame_spec["surface_path"] = str(anim_resolved.relative_to(Path(__file__).resolve().parent)).replace("\\", "/")
+                                    if sheet_path and not frame_spec.get("surface_path"):
+                                        frame_spec["surface_path"] = sheet_path
+                                    frames.append(frame_spec)
+                            frame_order = payload.get("frame_order", [])
+                            if isinstance(frame_order, list):
+                                for item in frame_order:
+                                    item_name = str(item).strip()
+                                    if not item_name:
+                                        continue
+                                    frame_path = str((anim_root / item_name).relative_to(Path(__file__).resolve().parent)).replace("\\", "/")
+                                    frames.append({"surface_path": frame_path, "duration_ms": payload.get("frame_duration_ms", 100)})
+                            if frames:
+                                clips[str(clip_name)] = make_animation_clip(
+                                    frames,
+                                    loop=bool(payload.get("loop", True)),
+                                    next_clip=str(payload.get("next_clip", "")),
+                                    event_markers=tuple(str(x) for x in payload.get("event_markers", []) if x),
+                                    hold_last_frame_ms=int(payload.get("hold_last_frame_ms", 0)),
+                                    impact_marker=str(payload.get("impact_marker", "")),
+                                    lock_until_end=bool(payload.get("lock_until_end", False)),
+                                    anchor=(int(anchor[0]), int(anchor[1])),
+                                )
+                    if clips:
+                        result = AnimationSet(clips=clips, anchor=(int(anchor[0]), int(anchor[1])))
+                elif anim_root.is_dir():
+                    groups: Dict[str, List[Path]] = {}
+                    for frame_path in sorted(anim_root.glob("*.png")):
+                        match = re.match(r"^(.*?)(?:[_-](\d+))?$", frame_path.stem)
+                        if not match:
+                            continue
+                        clip_name = (match.group(1) or frame_path.stem).strip("_-")
+                        groups.setdefault(clip_name, []).append(frame_path)
+                    clips = {}
+                    for clip_name, paths in groups.items():
+                        specs = [
+                            {
+                                "surface_path": str(path.relative_to(Path(__file__).resolve().parent)).replace("\\", "/"),
+                                "duration_ms": 100,
+                            }
+                            for path in paths
+                        ]
+                        if specs:
+                            clips[clip_name] = make_animation_clip(specs)
+                    if clips:
+                        result = AnimationSet(clips=clips, anchor=(0, 0))
+        except Exception:
+            result = registry.get(variant)
+        self.animation_set_cache[cache_key] = result
+        log_key = f"{entity_kind}:{variant}"
+        if result is not None:
+            if log_key not in self.logged_loaded_animation_sets:
+                print(f"[animation loaded] {entity_kind} {variant}")
+                self.logged_loaded_animation_sets.add(log_key)
+        elif log_key not in self.logged_missing_animation_sets:
+            print(f"[missing animation] {entity_kind} {variant}")
+            self.logged_missing_animation_sets.add(log_key)
+        return result
+
+    def get_animation_clip(self, entity_kind: str, action: str, variant: Optional[str] = None) -> Optional[AnimationClip]:
+        if not variant:
+            return None
+        anim_set = self.load_animation_set(entity_kind, variant)
+        if anim_set is None:
+            return None
+        clip = anim_set.clips.get(action)
+        if clip is None and action != "idle":
+            clip = anim_set.clips.get("idle")
+        if clip is None and action != "walk":
+            clip = anim_set.clips.get("walk")
+        return clip
+
+    def get_entity_render_frame(
+        self,
+        entity_kind: str,
+        variant: str,
+        anim_state: Optional[AnimationState],
+        *,
+        slot: str = "main",
+    ) -> Tuple[Optional[pygame.Surface], Optional[AnimationFrame]]:
+        if anim_state is None or not anim_state.current_clip:
+            return None, None
+        clip = self.get_animation_clip(entity_kind, anim_state.current_clip, variant=variant)
+        if clip is None or not clip.frames:
+            return None, None
+        frame = clip.frames[min(anim_state.frame_index, len(clip.frames) - 1)]
+        surface: Optional[pygame.Surface] = None
+        if frame.surface_path:
+            cache_key = (frame.surface_path, frame.source_rect)
+            if cache_key in self.animation_frame_cache:
+                surface = self.animation_frame_cache[cache_key]
+            else:
+                if frame.source_rect is not None:
+                    sheet = self.load_animation_sheet(frame.surface_path)
+                    if sheet is not None:
+                        rect = pygame.Rect(frame.source_rect)
+                        rect.clamp_ip(sheet.get_rect())
+                        if rect.w > 0 and rect.h > 0:
+                            surface = sheet.subsurface(rect).copy()
+                else:
+                    surface = self.load_image(frame.surface_path)
+                self.animation_frame_cache[cache_key] = surface
+        if surface is None:
+            return None, None
+        return surface, frame
+
+    def normalize_animation_surface(
+        self,
+        surface: Optional[pygame.Surface],
+        frame: AnimationFrame,
+        *,
+        target_size: Optional[Tuple[int, int]] = None,
+    ) -> Tuple[Optional[pygame.Surface], float, float, float]:
+        if surface is None:
+            return None, 0.0, 0.0, 1.0
+        full_rect = surface.get_rect()
+        rect = full_rect.copy()
+        if frame.content_bbox is not None:
+            rect = pygame.Rect(frame.content_bbox)
+            rect.clamp_ip(full_rect)
+            if rect.w <= 0 or rect.h <= 0:
+                rect = full_rect.copy()
+        anchor = frame.anchor
+        if not (0 <= int(anchor[0]) <= full_rect.w and 0 <= int(anchor[1]) <= full_rect.h):
+            anchor = full_rect.center
+        crop_anchor_x = float(anchor[0] - rect.x)
+        crop_anchor_y = float(anchor[1] - rect.y)
+        crop_center_x = rect.w / 2.0
+        crop_center_y = rect.h / 2.0
+        shift_x = float(crop_center_x - crop_anchor_x)
+        shift_y = float(crop_center_y - crop_anchor_y)
+        scale_ratio = 1.0
+        if target_size is not None:
+            target_w = max(1, int(target_size[0]))
+            target_h = max(1, int(target_size[1]))
+            scale_ratio = min(target_w / max(1, rect.w), target_h / max(1, rect.h))
+        if rect.size == surface.get_size() and rect.topleft == (0, 0):
+            return surface, shift_x, shift_y, scale_ratio
+        return surface.subsurface(rect).copy(), shift_x, shift_y, scale_ratio
 
     def scale_surface_cover(self, image: pygame.Surface, size: Tuple[int, int]) -> pygame.Surface:
         tw, th = max(1, int(size[0])), max(1, int(size[1]))
@@ -17311,6 +19107,7 @@ class Game:
                 self.zombie_display_name,
                 self.get_plant_sprite,
                 self.get_zombie_sprite,
+                self.get_entity_render_frame,
                 ui_flags={
                     "show_zombie_hp_bars": self.setting_bool("show_zombie_hp_bars", True),
                     "show_plant_hp_bars": self.setting_bool("show_plant_hp_bars", True),
@@ -17466,6 +19263,29 @@ class Game:
 
 if __name__ == "__main__":
     Game().run()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

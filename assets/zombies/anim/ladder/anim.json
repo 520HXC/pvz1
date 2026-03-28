@@ -1,0 +1,324 @@
+{
+  "anchor": [
+    101,
+    101
+  ],
+  "clips": {
+    "carrying_walk": {
+      "frames": [
+        {
+          "surface_path": "carrying_walk_00.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            27,
+            0,
+            150,
+            187
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        },
+        {
+          "surface_path": "carrying_walk_01.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            33,
+            0,
+            138,
+            186
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        },
+        {
+          "surface_path": "carrying_walk_02.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            43,
+            0,
+            130,
+            187
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        },
+        {
+          "surface_path": "carrying_walk_03.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            37,
+            0,
+            134,
+            186
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "placing": {
+      "frames": [
+        {
+          "surface_path": "placing_00.png",
+          "duration_ms": 84,
+          "content_bbox": [
+            21,
+            2,
+            178,
+            199
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        },
+        {
+          "surface_path": "placing_01.png",
+          "duration_ms": 90,
+          "content_bbox": [
+            19,
+            5,
+            183,
+            191
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        },
+        {
+          "surface_path": "placing_02.png",
+          "duration_ms": 96,
+          "content_bbox": [
+            28,
+            6,
+            174,
+            181
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "placed_walk",
+      "event_markers": [],
+      "hold_last_frame_ms": 120,
+      "impact_marker": "place",
+      "lock_until_end": true
+    },
+    "placed_walk": {
+      "frames": [
+        {
+          "surface_path": "placed_walk_00.png",
+          "duration_ms": 90,
+          "content_bbox": [
+            27,
+            0,
+            150,
+            187
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        },
+        {
+          "surface_path": "placed_walk_01.png",
+          "duration_ms": 90,
+          "content_bbox": [
+            33,
+            0,
+            138,
+            186
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        },
+        {
+          "surface_path": "placed_walk_02.png",
+          "duration_ms": 90,
+          "content_bbox": [
+            43,
+            0,
+            130,
+            187
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        },
+        {
+          "surface_path": "placed_walk_03.png",
+          "duration_ms": 90,
+          "content_bbox": [
+            37,
+            0,
+            134,
+            186
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "eat": {
+      "frames": [
+        {
+          "surface_path": "eat_00.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            26,
+            0,
+            146,
+            186
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        },
+        {
+          "surface_path": "eat_01.png",
+          "duration_ms": 101,
+          "content_bbox": [
+            22,
+            0,
+            146,
+            187
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        },
+        {
+          "surface_path": "eat_02.png",
+          "duration_ms": 87,
+          "content_bbox": [
+            25,
+            0,
+            144,
+            187
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        },
+        {
+          "surface_path": "eat_03.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            30,
+            0,
+            143,
+            186
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false
+    },
+    "death": {
+      "frames": [
+        {
+          "surface_path": "death_00.png",
+          "duration_ms": 78,
+          "content_bbox": [
+            29,
+            0,
+            150,
+            189
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        },
+        {
+          "surface_path": "death_01.png",
+          "duration_ms": 82,
+          "content_bbox": [
+            29,
+            0,
+            156,
+            197
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        },
+        {
+          "surface_path": "death_02.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            30,
+            0,
+            162,
+            202
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        },
+        {
+          "surface_path": "death_03.png",
+          "duration_ms": 104,
+          "content_bbox": [
+            36,
+            0,
+            163,
+            202
+          ],
+          "anchor": [
+            101,
+            101
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 220,
+      "impact_marker": "death",
+      "lock_until_end": true
+    }
+  }
+}

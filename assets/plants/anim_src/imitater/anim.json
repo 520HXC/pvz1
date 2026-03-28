@@ -1,0 +1,877 @@
+{
+  "source_sprite": "assets/plants/imitater.png",
+  "output_size": [
+    164,
+    164
+  ],
+  "anchor": [
+    82,
+    82
+  ],
+  "parts": {
+    "body": {
+      "file": "body.png",
+      "source_rect": [
+        96,
+        25,
+        132,
+        245
+      ],
+      "z_index": 2
+    },
+    "cap": {
+      "file": "cap.png",
+      "source_rect": [
+        96,
+        25,
+        128,
+        55
+      ],
+      "z_index": 3
+    },
+    "lips": {
+      "file": "lips.png",
+      "source_rect": [
+        115,
+        138,
+        92,
+        52
+      ],
+      "z_index": 4
+    },
+    "stem": {
+      "file": "stem.png",
+      "source_rect": [
+        145,
+        220,
+        28,
+        70
+      ],
+      "z_index": 1
+    },
+    "left_leaf": {
+      "file": "left_leaf.png",
+      "source_rect": [
+        73,
+        221,
+        86,
+        65
+      ],
+      "z_index": 1
+    },
+    "right_leaf": {
+      "file": "right_leaf.png",
+      "source_rect": [
+        166,
+        223,
+        84,
+        63
+      ],
+      "z_index": 1
+    }
+  },
+  "clips": {
+    "morphing": {
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false,
+      "frames": [
+        {
+          "duration_ms": 86,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 0.96,
+              "angle": -8.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "cap": {
+              "offset": [
+                0,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -12.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "lips": {
+              "offset": [
+                0,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -8.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                -2,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -14.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                2,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 14.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 86,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                -2
+              ],
+              "scale": 1.02,
+              "angle": 10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "cap": {
+              "offset": [
+                0,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": 14.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "lips": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 8.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                -1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -8.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 8.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 92,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.04,
+              "angle": -4.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "cap": {
+              "offset": [
+                0,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "lips": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -4.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 4.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "copied_idle": {
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false,
+      "frames": [
+        {
+          "duration_ms": 100,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -1.6,
+              "alpha": 255,
+              "z_index": null
+            },
+            "cap": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -1.6,
+              "alpha": 255,
+              "z_index": null
+            },
+            "lips": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -1.6,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                -2,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                2,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 5.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 104,
+          "parts": {
+            "body": {
+              "offset": [
+                1,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": 0.8,
+              "alpha": 255,
+              "z_index": null
+            },
+            "cap": {
+              "offset": [
+                1,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": 0.8,
+              "alpha": 255,
+              "z_index": null
+            },
+            "lips": {
+              "offset": [
+                1,
+                -4
+              ],
+              "scale": 1.0,
+              "angle": 0.8,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 100,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                -7
+              ],
+              "scale": 1.0,
+              "angle": 1.8,
+              "alpha": 255,
+              "z_index": null
+            },
+            "cap": {
+              "offset": [
+                0,
+                -7
+              ],
+              "scale": 1.0,
+              "angle": 1.8,
+              "alpha": 255,
+              "z_index": null
+            },
+            "lips": {
+              "offset": [
+                0,
+                -7
+              ],
+              "scale": 1.0,
+              "angle": 1.8,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                0,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                1,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 4.5,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                -2,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -5.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 104,
+          "parts": {
+            "body": {
+              "offset": [
+                -1,
+                -3
+              ],
+              "scale": 1.0,
+              "angle": 0.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "cap": {
+              "offset": [
+                -1,
+                -3
+              ],
+              "scale": 1.0,
+              "angle": 0.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "lips": {
+              "offset": [
+                -1,
+                -3
+              ],
+              "scale": 1.0,
+              "angle": 0.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                0,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 1.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -1.1,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "hit": {
+      "loop": false,
+      "next_clip": "copied_idle",
+      "event_markers": [],
+      "hold_last_frame_ms": 100,
+      "impact_marker": "hit",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 86,
+          "parts": {
+            "body": {
+              "offset": [
+                4,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 7.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "cap": {
+              "offset": [
+                4,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 7.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "lips": {
+              "offset": [
+                4,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 7.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                2,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                2,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 10.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                1,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 4.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 100,
+          "parts": {
+            "body": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "cap": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "lips": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                1,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "death": {
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 180,
+      "impact_marker": "death",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 88,
+          "parts": {
+            "body": {
+              "offset": [
+                4,
+                6
+              ],
+              "scale": 1.0,
+              "angle": 12.0,
+              "alpha": 210,
+              "z_index": null
+            },
+            "cap": {
+              "offset": [
+                4,
+                6
+              ],
+              "scale": 1.0,
+              "angle": 12.0,
+              "alpha": 210,
+              "z_index": null
+            },
+            "lips": {
+              "offset": [
+                4,
+                6
+              ],
+              "scale": 1.0,
+              "angle": 12.0,
+              "alpha": 210,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                2,
+                8
+              ],
+              "scale": 1.0,
+              "angle": 10.0,
+              "alpha": 210,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                -3,
+                10
+              ],
+              "scale": 1.0,
+              "angle": -14.0,
+              "alpha": 210,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                4,
+                10
+              ],
+              "scale": 1.0,
+              "angle": 18.0,
+              "alpha": 210,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 96,
+          "parts": {
+            "body": {
+              "offset": [
+                12,
+                18
+              ],
+              "scale": 1.0,
+              "angle": 26.0,
+              "alpha": 150,
+              "z_index": null
+            },
+            "cap": {
+              "offset": [
+                12,
+                18
+              ],
+              "scale": 1.0,
+              "angle": 26.0,
+              "alpha": 150,
+              "z_index": null
+            },
+            "lips": {
+              "offset": [
+                12,
+                18
+              ],
+              "scale": 1.0,
+              "angle": 26.0,
+              "alpha": 150,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                8,
+                18
+              ],
+              "scale": 1.0,
+              "angle": 18.0,
+              "alpha": 150,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                -6,
+                18
+              ],
+              "scale": 1.0,
+              "angle": -24.0,
+              "alpha": 150,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                10,
+                18
+              ],
+              "scale": 1.0,
+              "angle": 28.0,
+              "alpha": 150,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 112,
+          "parts": {
+            "body": {
+              "offset": [
+                18,
+                28
+              ],
+              "scale": 1.0,
+              "angle": 40.0,
+              "alpha": 90,
+              "z_index": null
+            },
+            "cap": {
+              "offset": [
+                18,
+                28
+              ],
+              "scale": 1.0,
+              "angle": 40.0,
+              "alpha": 90,
+              "z_index": null
+            },
+            "lips": {
+              "offset": [
+                18,
+                28
+              ],
+              "scale": 1.0,
+              "angle": 40.0,
+              "alpha": 90,
+              "z_index": null
+            },
+            "stem": {
+              "offset": [
+                12,
+                28
+              ],
+              "scale": 1.0,
+              "angle": 24.0,
+              "alpha": 90,
+              "z_index": null
+            },
+            "left_leaf": {
+              "offset": [
+                -8,
+                24
+              ],
+              "scale": 1.0,
+              "angle": -32.0,
+              "alpha": 90,
+              "z_index": null
+            },
+            "right_leaf": {
+              "offset": [
+                12,
+                24
+              ],
+              "scale": 1.0,
+              "angle": 34.0,
+              "alpha": 90,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    }
+  }
+}

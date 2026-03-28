@@ -1,0 +1,707 @@
+{
+  "source_sprite": "assets/plants/wallnut.png",
+  "output_size": [
+    164,
+    164
+  ],
+  "anchor": [
+    82,
+    82
+  ],
+  "parts": {
+    "shell": {
+      "file": "shell.png",
+      "source_rect": [
+        76,
+        34,
+        170,
+        236
+      ],
+      "z_index": 1
+    },
+    "face": {
+      "file": "face.png",
+      "source_rect": [
+        115,
+        117,
+        92,
+        64
+      ],
+      "z_index": 2
+    },
+    "highlight": {
+      "file": "highlight.png",
+      "source_rect": [
+        108,
+        56,
+        100,
+        62
+      ],
+      "z_index": 3
+    }
+  },
+  "clips": {
+    "idle_healthy": {
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false,
+      "frames": [
+        {
+          "duration_ms": 140,
+          "parts": {
+            "shell": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "highlight": {
+              "offset": [
+                -1,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -1.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 148,
+          "parts": {
+            "shell": {
+              "offset": [
+                1,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                1,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 0.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "highlight": {
+              "offset": [
+                0,
+                -3
+              ],
+              "scale": 1.0,
+              "angle": 0.2,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 140,
+          "parts": {
+            "shell": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "highlight": {
+              "offset": [
+                1,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 148,
+          "parts": {
+            "shell": {
+              "offset": [
+                -1,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                -1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -0.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "highlight": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -0.2,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "idle_cracked": {
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false,
+      "frames": [
+        {
+          "duration_ms": 140,
+          "parts": {
+            "shell": {
+              "offset": [
+                0,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -1.4,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": -1.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "highlight": {
+              "offset": [
+                -1,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -1.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 148,
+          "parts": {
+            "shell": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                1,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "highlight": {
+              "offset": [
+                0,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 140,
+          "parts": {
+            "shell": {
+              "offset": [
+                0,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 1.6,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "highlight": {
+              "offset": [
+                1,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 0.8,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 148,
+          "parts": {
+            "shell": {
+              "offset": [
+                -1,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                -1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "highlight": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "idle_heavy_cracked": {
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "lock_until_end": false,
+      "frames": [
+        {
+          "duration_ms": 150,
+          "parts": {
+            "shell": {
+              "offset": [
+                0,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -2.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                0,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -1.8,
+              "alpha": 255,
+              "z_index": null
+            },
+            "highlight": {
+              "offset": [
+                -1,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": -1.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 154,
+          "parts": {
+            "shell": {
+              "offset": [
+                1,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                1,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -0.4,
+              "alpha": 255,
+              "z_index": null
+            },
+            "highlight": {
+              "offset": [
+                0,
+                -1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 150,
+          "parts": {
+            "shell": {
+              "offset": [
+                0,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 2.4,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                0,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 1.8,
+              "alpha": 255,
+              "z_index": null
+            },
+            "highlight": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 154,
+          "parts": {
+            "shell": {
+              "offset": [
+                -1,
+                2
+              ],
+              "scale": 1.0,
+              "angle": 0.2,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                -1,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "highlight": {
+              "offset": [
+                0,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 0.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "hit": {
+      "loop": false,
+      "next_clip": "idle_healthy",
+      "event_markers": [],
+      "hold_last_frame_ms": 100,
+      "impact_marker": "hit",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 88,
+          "parts": {
+            "shell": {
+              "offset": [
+                5,
+                2
+              ],
+              "scale": 1.01,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                5,
+                2
+              ],
+              "scale": 1.01,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "highlight": {
+              "offset": [
+                5,
+                2
+              ],
+              "scale": 1.01,
+              "angle": 6.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 104,
+          "parts": {
+            "shell": {
+              "offset": [
+                2,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                2,
+                1
+              ],
+              "scale": 1.0,
+              "angle": 2.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "highlight": {
+              "offset": [
+                1,
+                0
+              ],
+              "scale": 1.0,
+              "angle": 1.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    },
+    "death": {
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 180,
+      "impact_marker": "death",
+      "lock_until_end": true,
+      "frames": [
+        {
+          "duration_ms": 90,
+          "parts": {
+            "shell": {
+              "offset": [
+                4,
+                8
+              ],
+              "scale": 1.0,
+              "angle": 12.0,
+              "alpha": 210,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                4,
+                8
+              ],
+              "scale": 1.0,
+              "angle": 12.0,
+              "alpha": 210,
+              "z_index": null
+            },
+            "highlight": {
+              "offset": [
+                4,
+                8
+              ],
+              "scale": 1.0,
+              "angle": 12.0,
+              "alpha": 210,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 96,
+          "parts": {
+            "shell": {
+              "offset": [
+                12,
+                18
+              ],
+              "scale": 1.0,
+              "angle": 26.0,
+              "alpha": 150,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                12,
+                18
+              ],
+              "scale": 1.0,
+              "angle": 26.0,
+              "alpha": 150,
+              "z_index": null
+            },
+            "highlight": {
+              "offset": [
+                12,
+                18
+              ],
+              "scale": 1.0,
+              "angle": 26.0,
+              "alpha": 150,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 112,
+          "parts": {
+            "shell": {
+              "offset": [
+                22,
+                32
+              ],
+              "scale": 1.0,
+              "angle": 38.0,
+              "alpha": 92,
+              "z_index": null
+            },
+            "face": {
+              "offset": [
+                22,
+                32
+              ],
+              "scale": 1.0,
+              "angle": 38.0,
+              "alpha": 92,
+              "z_index": null
+            },
+            "highlight": {
+              "offset": [
+                22,
+                32
+              ],
+              "scale": 1.0,
+              "angle": 38.0,
+              "alpha": 92,
+              "z_index": null
+            }
+          },
+          "markers": []
+        }
+      ]
+    }
+  }
+}
