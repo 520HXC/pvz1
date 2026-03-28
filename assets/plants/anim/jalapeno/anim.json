@@ -1,0 +1,248 @@
+{
+  "anchor": [
+    76,
+    124
+  ],
+  "clips": {
+    "idle": {
+      "frames": [
+        {
+          "surface_path": "idle_00.png",
+          "duration_ms": 104,
+          "content_bbox": [
+            55,
+            24,
+            41,
+            104
+          ],
+          "anchor": [
+            76,
+            124
+          ]
+        },
+        {
+          "surface_path": "idle_01.png",
+          "duration_ms": 108,
+          "content_bbox": [
+            55,
+            22,
+            41,
+            104
+          ],
+          "anchor": [
+            76,
+            124
+          ]
+        },
+        {
+          "surface_path": "idle_02.png",
+          "duration_ms": 104,
+          "content_bbox": [
+            56,
+            21,
+            41,
+            103
+          ],
+          "anchor": [
+            76,
+            124
+          ]
+        },
+        {
+          "surface_path": "idle_03.png",
+          "duration_ms": 110,
+          "content_bbox": [
+            56,
+            24,
+            41,
+            103
+          ],
+          "anchor": [
+            76,
+            124
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "impact_frame_index": -1,
+      "lock_until_end": false
+    },
+    "detonate": {
+      "frames": [
+        {
+          "surface_path": "detonate_00.png",
+          "duration_ms": 48,
+          "content_bbox": [
+            55,
+            23,
+            41,
+            104
+          ],
+          "anchor": [
+            76,
+            124
+          ]
+        },
+        {
+          "surface_path": "detonate_01.png",
+          "duration_ms": 54,
+          "content_bbox": [
+            53,
+            16,
+            46,
+            114
+          ],
+          "anchor": [
+            76,
+            124
+          ]
+        },
+        {
+          "surface_path": "detonate_02.png",
+          "duration_ms": 58,
+          "content_bbox": [
+            50,
+            3,
+            54,
+            131
+          ],
+          "anchor": [
+            76,
+            124
+          ]
+        },
+        {
+          "surface_path": "detonate_03.png",
+          "duration_ms": 74,
+          "content_bbox": [
+            42,
+            0,
+            71,
+            145
+          ],
+          "anchor": [
+            76,
+            124
+          ]
+        },
+        {
+          "surface_path": "detonate_04.png",
+          "duration_ms": 92,
+          "content_bbox": [
+            50,
+            0,
+            54,
+            133
+          ],
+          "anchor": [
+            76,
+            124
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 182,
+      "impact_marker": "row_blast",
+      "impact_frame_index": 2,
+      "lock_until_end": true
+    },
+    "hit": {
+      "frames": [
+        {
+          "surface_path": "hit_00.png",
+          "duration_ms": 80,
+          "content_bbox": [
+            57,
+            25,
+            43,
+            103
+          ],
+          "anchor": [
+            76,
+            124
+          ]
+        },
+        {
+          "surface_path": "hit_01.png",
+          "duration_ms": 100,
+          "content_bbox": [
+            56,
+            25,
+            41,
+            103
+          ],
+          "anchor": [
+            76,
+            124
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "idle",
+      "event_markers": [],
+      "hold_last_frame_ms": 108,
+      "impact_marker": "hit",
+      "impact_frame_index": 0,
+      "lock_until_end": true
+    },
+    "death": {
+      "frames": [
+        {
+          "surface_path": "death_00.png",
+          "duration_ms": 86,
+          "content_bbox": [
+            56,
+            28,
+            47,
+            103
+          ],
+          "anchor": [
+            76,
+            124
+          ]
+        },
+        {
+          "surface_path": "death_01.png",
+          "duration_ms": 96,
+          "content_bbox": [
+            54,
+            32,
+            61,
+            100
+          ],
+          "anchor": [
+            76,
+            124
+          ]
+        },
+        {
+          "surface_path": "death_02.png",
+          "duration_ms": 112,
+          "content_bbox": [
+            51,
+            37,
+            76,
+            95
+          ],
+          "anchor": [
+            76,
+            124
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 200,
+      "impact_marker": "death",
+      "impact_frame_index": 2,
+      "lock_until_end": true
+    }
+  }
+}

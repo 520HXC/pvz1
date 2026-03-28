@@ -68,6 +68,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "idle_cracked": {
@@ -134,6 +135,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "idle_heavy_cracked": {
@@ -200,6 +202,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "hit": {
@@ -238,6 +241,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 100,
       "impact_marker": "hit",
+      "impact_frame_index": 0,
       "lock_until_end": true
     },
     "death": {
@@ -290,6 +294,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 180,
       "impact_marker": "death",
+      "impact_frame_index": 2,
       "lock_until_end": true
     }
   }

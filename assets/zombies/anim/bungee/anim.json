@@ -54,6 +54,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "lock_target": {
@@ -92,6 +93,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "steal_lift": {
@@ -144,6 +146,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 110,
       "impact_marker": "steal",
+      "impact_frame_index": 1,
       "lock_until_end": true
     },
     "exit": {
@@ -196,6 +199,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 120,
       "impact_marker": "exit",
+      "impact_frame_index": 2,
       "lock_until_end": true
     },
     "blocked_exit": {
@@ -248,6 +252,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 120,
       "impact_marker": "blocked",
+      "impact_frame_index": 2,
       "lock_until_end": true
     }
   }

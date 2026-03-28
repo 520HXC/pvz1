@@ -34,6 +34,7 @@ class PoseClip:
     event_markers: Tuple[str, ...] = ()
     hold_last_frame_ms: int = 0
     impact_marker: str = ""
+    impact_frame_index: int = -1
     lock_until_end: bool = False
 
 
@@ -83,15 +84,22 @@ def pose_clip(
     event_markers: Tuple[str, ...] = (),
     hold_last_frame_ms: int = 0,
     impact_marker: str = "",
+    impact_frame_index: int = -1,
     lock_until_end: bool = False,
 ) -> PoseClip:
+    frame_seq = tuple(frames)
     return PoseClip(
-        frames=tuple(frames),
+        frames=frame_seq,
         loop=loop,
         next_clip=next_clip,
         event_markers=tuple(event_markers),
         hold_last_frame_ms=max(0, int(hold_last_frame_ms)),
         impact_marker=impact_marker,
+        impact_frame_index=(
+            max(0, min(len(frame_seq) - 1, int(impact_frame_index)))
+            if frame_seq and int(impact_frame_index) >= 0
+            else (len(frame_seq) - 1 if frame_seq and impact_marker and not loop else -1)
+        ),
         lock_until_end=lock_until_end,
     )
 
@@ -99,6 +107,10 @@ def pose_clip(
 ANIMATION_CANVAS_OVERRIDES: Dict[Tuple[str, str], Tuple[int, int]] = {
     ("plant", "sunflower"): (148, 148),
     ("plant", "peashooter"): (148, 148),
+    ("plant", "repeater"): (156, 156),
+    ("plant", "chomper"): (176, 176),
+    ("plant", "jalapeno"): (152, 152),
+    ("plant", "ice_shroom"): (156, 156),
     ("plant", "wallnut"): (164, 164),
     ("plant", "potato_mine"): (156, 156),
     ("plant", "imitater"): (164, 164),
@@ -242,6 +254,7 @@ def _biped_hit_clip(
         next_clip=next_clip,
         hold_last_frame_ms=118,
         impact_marker="hit",
+        impact_frame_index=0,
         lock_until_end=True,
     )
 
@@ -267,6 +280,7 @@ def _biped_death_clip(
         loop=False,
         hold_last_frame_ms=220,
         impact_marker="death",
+        impact_frame_index=2,
         lock_until_end=True,
     )
 
@@ -282,6 +296,7 @@ def _machine_hit_clip(next_clip: str = "", groups: Tuple[str, ...] = ()) -> Pose
         next_clip=next_clip,
         hold_last_frame_ms=116,
         impact_marker="hit",
+        impact_frame_index=0,
         lock_until_end=True,
     )
 
@@ -297,6 +312,7 @@ def _machine_death_clip(groups: Tuple[str, ...]) -> PoseClip:
         loop=False,
         hold_last_frame_ms=220,
         impact_marker="death",
+        impact_frame_index=2,
         lock_until_end=True,
     )
 
@@ -338,6 +354,7 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
                     event_markers=("sun",),
                     hold_last_frame_ms=138,
                     impact_marker="sun",
+                    impact_frame_index=3,
                     lock_until_end=True,
                 ),
                 "hit": pose_clip(
@@ -399,6 +416,7 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
                     event_markers=("shoot",),
                     hold_last_frame_ms=124,
                     impact_marker="shoot",
+                    impact_frame_index=2,
                     lock_until_end=True,
                 ),
                 "hit": pose_clip(
@@ -426,6 +444,263 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
             },
             output_size=output_size_for("plant", "peashooter"),
             anchor=(74, 118),
+        ),
+        "repeater": PoseAnimationSet(
+            parts={
+                "head_back": PartDef(r(58, 70, 136, 132), 2),
+                "head_face": PartDef(r(108, 88, 72, 72), 4),
+                "snout": PartDef(r(170, 93, 119, 91), 5),
+                "stem": PartDef(r(140, 180, 35, 108), 1),
+                "left_leaf": PartDef(r(58, 224, 90, 60), 1),
+                "right_leaf": PartDef(r(170, 222, 101, 63), 1),
+            },
+            clips={
+                "idle": pose_clip(
+                    (
+                        pf(84, pm((("head_back",), ps(-3, -2, angle=-3.0)), (("head_face",), ps(-3, -3, angle=-1.8)), (("snout",), ps(4, -2, angle=-3.6)), (("stem",), ps(0, 0, angle=-0.9)), (("left_leaf",), ps(-7, 2, angle=-12.0)), (("right_leaf",), ps(6, 1, angle=9.0)))),
+                        pf(90, pm((("head_back",), ps(-1, -7, angle=-1.2)), (("head_face",), ps(-1, -9, angle=-0.8)), (("snout",), ps(3, -9, angle=-2.2)), (("stem",), ps(0, -2, angle=-0.4)), (("left_leaf",), ps(-4, 0, angle=-6.0)), (("right_leaf",), ps(4, -1, angle=4.0)))),
+                        pf(98, pm((("head_back",), ps(1, -11, angle=2.6)), (("head_face",), ps(1, -13, angle=3.4)), (("snout",), ps(-4, -13, angle=4.4)), (("stem",), ps(0, -5, angle=1.0)), (("left_leaf",), ps(4, -3, angle=9.0)), (("right_leaf",), ps(-4, -3, angle=-8.0)))),
+                        pf(92, pm((("head_back",), ps(0, -5, angle=1.2)), (("head_face",), ps(0, -6, angle=1.8)), (("snout",), ps(-2, -7, angle=2.6)), (("stem",), ps(0, -2, angle=0.4)), (("left_leaf",), ps(1, -1, angle=3.0)), (("right_leaf",), ps(-1, -1, angle=-3.0)))),
+                        pf(88, pm((("head_back",), ps(-1, -1, angle=-1.0)), (("head_face",), ps(-1, -1, angle=-0.5)), (("snout",), ps(2, -1, angle=-1.8)), (("stem",), ps(0, 0, angle=-0.5)), (("left_leaf",), ps(-3, 1, angle=-6.0)), (("right_leaf",), ps(2, 1, angle=5.0)))),
+                    )
+                ),
+                "shoot": pose_clip(
+                    (
+                        pf(54, pm((("head_back",), ps(10, 4, angle=-12.0, scale=0.94)), (("head_face",), ps(9, 3, angle=-10.0, scale=0.93)), (("snout",), ps(24, 3, angle=-20.0, scale=0.84)), (("stem",), ps(5, 2, angle=-3.0)), (("left_leaf",), ps(-11, 5, angle=-22.0)), (("right_leaf",), ps(8, 4, angle=18.0)))),
+                        pf(54, pm((("head_back",), ps(24, 2, angle=-18.0, scale=0.90)), (("head_face",), ps(23, 1, angle=-16.0, scale=0.89)), (("snout",), ps(56, 0, angle=-34.0, scale=0.76)), (("stem",), ps(10, 0, angle=-4.2)), (("left_leaf",), ps(-15, 6, angle=-30.0)), (("right_leaf",), ps(14, 5, angle=28.0)))),
+                        pf(48, pm((("head_back",), ps(34, -1, angle=-22.0, scale=0.92)), (("head_face",), ps(32, -2, angle=-20.0, scale=0.92)), (("snout",), ps(68, -2, angle=-40.0, scale=0.82)), (("stem",), ps(12, -2, angle=-4.6)), (("left_leaf",), ps(-18, 4, angle=-28.0)), (("right_leaf",), ps(16, 4, angle=28.0)))),
+                        pf(52, pm((("head_back",), ps(26, -2, angle=-14.0, scale=0.96)), (("head_face",), ps(25, -3, angle=-12.0, scale=0.96)), (("snout",), ps(52, -3, angle=-24.0, scale=0.96)), (("stem",), ps(8, -2, angle=-2.0)), (("left_leaf",), ps(-11, 1, angle=-16.0)), (("right_leaf",), ps(10, 1, angle=14.0)))),
+                        pf(64, pm((("head_back",), ps(-18, -7, angle=10.0, scale=1.05)), (("head_face",), ps(-16, -9, angle=11.0, scale=1.08)), (("snout",), ps(-36, -11, angle=16.0, scale=1.22)), (("stem",), ps(-5, -4, angle=2.8)), (("left_leaf",), ps(-3, -4, angle=-8.0)), (("right_leaf",), ps(4, -3, angle=7.0)))),
+                        pf(78, pm((("head_back",), ps(-8, -4, angle=4.0)), (("head_face",), ps(-7, -5, angle=5.0)), (("snout",), ps(-18, -6, angle=7.0, scale=1.10)), (("stem",), ps(-2, -2, angle=1.4)), (("left_leaf",), ps(-1, -1, angle=-3.0)), (("right_leaf",), ps(2, -1, angle=3.0)))),
+                        pf(92, pm((("head_back",), ps(0, -1, angle=0.0)), (("head_face",), ps(0, -1, angle=0.0)), (("snout",), ps(-1, -1, angle=0.0)), (("stem",), ps(0, 0, angle=0.0)), (("left_leaf",), ps(0, 0, angle=-1.0)), (("right_leaf",), ps(0, 0, angle=1.0)))),
+                    ),
+                    loop=False,
+                    next_clip="idle",
+                    event_markers=("shoot",),
+                    hold_last_frame_ms=132,
+                    impact_marker="shoot",
+                    impact_frame_index=2,
+                    lock_until_end=True,
+                ),
+                "hit": pose_clip(
+                    (
+                        pf(82, pm((("head_back", "head_face", "snout"), ps(4, 1, angle=7.0)), (("stem",), ps(2, 1, angle=2.0)), (("left_leaf",), ps(2, 2, angle=10.0)), (("right_leaf",), ps(1, 1, angle=4.0)))),
+                        pf(100, pm((("head_back", "head_face", "snout"), ps(1, 0, angle=2.0)), (("stem",), ps(1, 0)), (("left_leaf",), ps(1, 1, angle=4.0)), (("right_leaf",), ps(0, 0, angle=1.0)))),
+                    ),
+                    loop=False,
+                    next_clip="idle",
+                    hold_last_frame_ms=112,
+                    impact_marker="hit",
+                    impact_frame_index=0,
+                    lock_until_end=True,
+                ),
+                "death": pose_clip(
+                    (
+                        pf(84, pm((("head_back", "head_face", "snout"), ps(5, 6, angle=14.0, alpha=220)), (("stem",), ps(3, 8, angle=10.0, alpha=220)), (("left_leaf",), ps(-4, 10, angle=-16.0, alpha=220)), (("right_leaf",), ps(5, 10, angle=20.0, alpha=220)))),
+                        pf(96, pm((("head_back", "head_face"), ps(13, 18, angle=30.0, alpha=150)), (("snout",), ps(16, 20, angle=38.0, alpha=150)), (("stem",), ps(8, 18, angle=18.0, alpha=150)), (("left_leaf",), ps(-6, 18, angle=-24.0, alpha=150)), (("right_leaf",), ps(10, 18, angle=28.0, alpha=150)))),
+                        pf(114, pm((("head_back", "head_face"), ps(21, 30, angle=42.0, alpha=88)), (("snout",), ps(25, 32, angle=48.0, alpha=88)), (("stem",), ps(14, 30, angle=26.0, alpha=88)), (("left_leaf",), ps(-8, 24, angle=-32.0, alpha=88)), (("right_leaf",), ps(14, 26, angle=34.0, alpha=88)))),
+                    ),
+                    loop=False,
+                    hold_last_frame_ms=204,
+                    impact_marker="death",
+                    impact_frame_index=2,
+                    lock_until_end=True,
+                ),
+            },
+            output_size=output_size_for("plant", "repeater"),
+            anchor=(78, 122),
+        ),
+        "chomper": PoseAnimationSet(
+            parts={
+                "head_back": PartDef(r(42, 58, 218, 124), 2),
+                "mouth_upper": PartDef(r(54, 66, 194, 84), 4),
+                "mouth_lower": PartDef(r(86, 136, 156, 76), 5),
+                "stem": PartDef(r(128, 182, 54, 102), 1),
+                "left_leaf": PartDef(r(44, 224, 102, 60), 1),
+                "right_leaf": PartDef(r(176, 220, 100, 62), 1),
+            },
+            clips={
+                "idle": pose_clip(_plant_idle_frames(("head_back", "mouth_upper", "mouth_lower"), ("stem",), "left_leaf", "right_leaf")),
+                "attack": pose_clip(
+                    (
+                        pf(74, pm((("head_back", "mouth_upper"), ps(-12, -2, angle=-10.0)), (("mouth_lower",), ps(-8, 7, angle=14.0)), (("stem",), ps(-3, 1, angle=-1.4)), (("left_leaf",), ps(-11, 5, angle=-20.0)), (("right_leaf",), ps(10, 5, angle=18.0)))),
+                        pf(62, pm((("head_back", "mouth_upper"), ps(8, -7, angle=-20.0, scale=1.05)), (("mouth_lower",), ps(20, 16, angle=34.0, scale=1.10)), (("stem",), ps(3, -4, angle=-3.0)), (("left_leaf",), ps(-6, -2, angle=-14.0)), (("right_leaf",), ps(5, -2, angle=12.0)))),
+                        pf(54, pm((("head_back", "mouth_upper"), ps(30, -12, angle=-30.0, scale=1.14)), (("mouth_lower",), ps(40, 21, angle=48.0, scale=1.18)), (("stem",), ps(7, -8, angle=-4.6)), (("left_leaf",), ps(2, -7, angle=-2.0)), (("right_leaf",), ps(-2, -6, angle=2.0)))),
+                        pf(64, pm((("head_back", "mouth_upper"), ps(22, -9, angle=-22.0, scale=1.08)), (("mouth_lower",), ps(30, 17, angle=38.0, scale=1.12)), (("stem",), ps(5, -5, angle=-3.0)), (("left_leaf",), ps(-1, -5, angle=-5.0)), (("right_leaf",), ps(1, -4, angle=5.0)))),
+                        pf(80, pm((("head_back", "mouth_upper"), ps(6, -3, angle=-8.0)), (("mouth_lower",), ps(8, 8, angle=14.0)), (("stem",), ps(2, -2, angle=-1.0)), (("left_leaf",), ps(-4, -1, angle=-6.0)), (("right_leaf",), ps(4, -1, angle=6.0)))),
+                    ),
+                    loop=False,
+                    next_clip="chew",
+                    hold_last_frame_ms=144,
+                    impact_marker="chomp",
+                    impact_frame_index=2,
+                    lock_until_end=True,
+                ),
+                "chew": pose_clip(
+                    (
+                        pf(118, pm((("head_back", "mouth_upper"), ps(-4, 0, angle=-6.0)), (("mouth_lower",), ps(0, 10, angle=18.0)), (("stem",), ps(0, 0, angle=-1.0)), (("left_leaf",), ps(-5, 2, angle=-8.0)), (("right_leaf",), ps(5, 2, angle=8.0)))),
+                        pf(84, pm((("head_back", "mouth_upper"), ps(-1, -2, angle=-2.0)), (("mouth_lower",), ps(0, 2, angle=5.0)), (("stem",), ps(0, -1, angle=-0.4)), (("left_leaf",), ps(-2, 0, angle=-3.0)), (("right_leaf",), ps(2, 0, angle=3.0)))),
+                        pf(112, pm((("head_back", "mouth_upper"), ps(-4, 0, angle=-6.0)), (("mouth_lower",), ps(0, 11, angle=18.0)), (("stem",), ps(0, 0, angle=-1.0)), (("left_leaf",), ps(-5, 2, angle=-8.0)), (("right_leaf",), ps(5, 2, angle=8.0)))),
+                        pf(88, pm((("head_back", "mouth_upper"), ps(-1, -1, angle=-2.0)), (("mouth_lower",), ps(0, 3, angle=7.0)), (("stem",), ps(0, -1, angle=-0.2)), (("left_leaf",), ps(-2, 0, angle=-3.0)), (("right_leaf",), ps(2, 0, angle=3.0)))),
+                    ),
+                    loop=True,
+                ),
+                "swallow": pose_clip(
+                    (
+                        pf(88, pm((("head_back", "mouth_upper", "mouth_lower"), ps(-3, 5, angle=-4.0)), (("stem",), ps(0, 6, angle=-1.4)), (("left_leaf",), ps(-6, 5, angle=-10.0)), (("right_leaf",), ps(6, 5, angle=10.0)))),
+                        pf(100, pm((("head_back", "mouth_upper", "mouth_lower"), ps(0, -8, angle=3.0)), (("stem",), ps(0, -8, angle=1.6)), (("left_leaf",), ps(6, -5, angle=10.0)), (("right_leaf",), ps(-6, -5, angle=-10.0)))),
+                        pf(82, pm((("head_back", "mouth_upper", "mouth_lower"), ps(0, -4, angle=1.0)), (("stem",), ps(0, -4, angle=0.6)), (("left_leaf",), ps(3, -2, angle=5.0)), (("right_leaf",), ps(-3, -2, angle=-5.0)))),
+                        pf(104, pm((("head_back", "mouth_upper", "mouth_lower"), ps(0, -1, angle=0.0)), (("stem",), ps(0, -1, angle=0.0)), (("left_leaf",), ps(0, 0, angle=0.0)), (("right_leaf",), ps(0, 0, angle=0.0)))),
+                    ),
+                    loop=False,
+                    next_clip="idle",
+                    hold_last_frame_ms=132,
+                    impact_marker="swallow",
+                    impact_frame_index=1,
+                    lock_until_end=True,
+                ),
+                "hit": pose_clip(
+                    (
+                        pf(82, pm((("head_back", "mouth_upper", "mouth_lower"), ps(4, 1, angle=7.0)), (("stem",), ps(2, 1, angle=2.0)), (("left_leaf",), ps(2, 2, angle=10.0)), (("right_leaf",), ps(1, 1, angle=4.0)))),
+                        pf(100, pm((("head_back", "mouth_upper", "mouth_lower"), ps(1, 0, angle=2.0)), (("stem",), ps(1, 0)), (("left_leaf",), ps(1, 1, angle=4.0)), (("right_leaf",), ps(0, 0, angle=1.0)))),
+                    ),
+                    loop=False,
+                    next_clip="idle",
+                    hold_last_frame_ms=118,
+                    impact_marker="hit",
+                    impact_frame_index=0,
+                    lock_until_end=True,
+                ),
+                "death": pose_clip(
+                    (
+                        pf(88, pm((("head_back", "mouth_upper", "mouth_lower"), ps(6, 8, angle=16.0, alpha=220)), (("stem",), ps(3, 10, angle=10.0, alpha=220)), (("left_leaf",), ps(-5, 12, angle=-20.0, alpha=220)), (("right_leaf",), ps(6, 12, angle=20.0, alpha=220)))),
+                        pf(96, pm((("head_back", "mouth_upper", "mouth_lower"), ps(16, 20, angle=30.0, alpha=148)), (("stem",), ps(9, 20, angle=18.0, alpha=148)), (("left_leaf",), ps(-8, 20, angle=-28.0, alpha=148)), (("right_leaf",), ps(11, 20, angle=30.0, alpha=148)))),
+                        pf(112, pm((("head_back", "mouth_upper", "mouth_lower"), ps(28, 34, angle=42.0, alpha=88)), (("stem",), ps(16, 32, angle=26.0, alpha=88)), (("left_leaf",), ps(-11, 28, angle=-36.0, alpha=88)), (("right_leaf",), ps(15, 30, angle=36.0, alpha=88)))),
+                    ),
+                    loop=False,
+                    hold_last_frame_ms=210,
+                    impact_marker="death",
+                    impact_frame_index=2,
+                    lock_until_end=True,
+                ),
+            },
+            output_size=output_size_for("plant", "chomper"),
+            anchor=(88, 138),
+        ),
+        "jalapeno": PoseAnimationSet(
+            parts={
+                "body": PartDef(r(96, 38, 126, 232), 2),
+                "cap": PartDef(r(110, 16, 102, 56), 3),
+                "shine": PartDef(r(132, 72, 54, 126), 4),
+            },
+            clips={
+                "idle": pose_clip(
+                    (
+                        pf(104, pm((("body",), ps(-1, 0, angle=-2.0)), (("cap",), ps(-1, -1, angle=-3.0)), (("shine",), ps(-1, -1, angle=-2.0)))),
+                        pf(108, pm((("body",), ps(0, -4, angle=-0.6)), (("cap",), ps(0, -5, angle=-1.0)), (("shine",), ps(0, -5, angle=-0.5)))),
+                        pf(104, pm((("body",), ps(1, -7, angle=2.2)), (("cap",), ps(1, -8, angle=3.0)), (("shine",), ps(1, -8, angle=1.8)))),
+                        pf(110, pm((("body",), ps(0, -2, angle=0.4)), (("cap",), ps(0, -2, angle=0.8)), (("shine",), ps(0, -2, angle=0.4)))),
+                    )
+                ),
+                "detonate": pose_clip(
+                    (
+                        pf(48, pm((("body",), ps(0, 0, scale=0.98, angle=-6.0)), (("cap",), ps(0, -2, angle=-9.0)), (("shine",), ps(0, 0, scale=1.00)))),
+                        pf(54, pm((("body",), ps(0, -8, scale=1.10, angle=-1.0)), (("cap",), ps(0, -13, angle=-2.0)), (("shine",), ps(0, -8, scale=1.14)))),
+                        pf(58, pm((("body",), ps(0, -18, scale=1.28, angle=4.0, alpha=224)), (("cap",), ps(0, -24, scale=1.10, angle=5.0, alpha=224)), (("shine",), ps(0, -18, scale=1.42, alpha=250)))),
+                        pf(74, pm((("body",), ps(0, -32, scale=1.62, angle=9.0, alpha=112)), (("cap",), ps(0, -40, scale=1.30, angle=10.0, alpha=112)), (("shine",), ps(0, -32, scale=1.76, alpha=156)))),
+                        pf(92, pm((("body",), ps(0, -24, scale=1.30, angle=4.0, alpha=42)), (("cap",), ps(0, -30, scale=1.14, angle=5.0, alpha=42)), (("shine",), ps(0, -24, scale=1.38, alpha=68)))),
+                    ),
+                    loop=False,
+                    hold_last_frame_ms=182,
+                    impact_marker="row_blast",
+                    impact_frame_index=2,
+                    lock_until_end=True,
+                ),
+                "hit": pose_clip(
+                    (
+                        pf(80, pm((("body", "cap", "shine"), ps(4, 1, angle=6.0)))),
+                        pf(100, pm((("body", "cap", "shine"), ps(1, 0, angle=2.0)))),
+                    ),
+                    loop=False,
+                    next_clip="idle",
+                    hold_last_frame_ms=108,
+                    impact_marker="hit",
+                    impact_frame_index=0,
+                    lock_until_end=True,
+                ),
+                "death": pose_clip(
+                    (
+                        pf(86, pm((("body", "cap", "shine"), ps(4, 8, angle=14.0, alpha=210)))),
+                        pf(96, pm((("body", "cap", "shine"), ps(14, 20, angle=28.0, alpha=146)))),
+                        pf(112, pm((("body", "cap", "shine"), ps(24, 34, angle=42.0, alpha=84)))),
+                    ),
+                    loop=False,
+                    hold_last_frame_ms=200,
+                    impact_marker="death",
+                    impact_frame_index=2,
+                    lock_until_end=True,
+                ),
+            },
+            output_size=output_size_for("plant", "jalapeno"),
+            anchor=(76, 124),
+        ),
+        "ice_shroom": PoseAnimationSet(
+            parts={
+                "cap_back": PartDef(r(66, 56, 186, 92), 2),
+                "cap_front": PartDef(r(82, 88, 152, 90), 4),
+                "face": PartDef(r(118, 104, 82, 54), 5),
+                "stem": PartDef(r(126, 164, 58, 84), 1),
+            },
+            clips={
+                "idle": pose_clip(
+                    (
+                        pf(102, pm((("cap_back",), ps(-1, -1, angle=-2.0)), (("cap_front",), ps(-1, -1, angle=-1.0)), (("face",), ps(-1, -2, angle=-1.0)), (("stem",), ps(0, 0, angle=-0.6)))),
+                        pf(108, pm((("cap_back",), ps(0, -5, angle=-0.8)), (("cap_front",), ps(0, -6, angle=-0.4)), (("face",), ps(0, -6, angle=-0.4)), (("stem",), ps(0, -2, angle=-0.2)))),
+                        pf(102, pm((("cap_back",), ps(1, -8, angle=1.8)), (("cap_front",), ps(1, -9, angle=2.2)), (("face",), ps(1, -10, angle=2.4)), (("stem",), ps(0, -4, angle=0.8)))),
+                        pf(108, pm((("cap_back",), ps(0, -3, angle=0.4)), (("cap_front",), ps(0, -4, angle=0.8)), (("face",), ps(0, -4, angle=0.8)), (("stem",), ps(0, -1, angle=0.2)))),
+                    )
+                ),
+                "freeze_cast": pose_clip(
+                    (
+                        pf(62, pm((("cap_back",), ps(0, 3, angle=-6.0, scale=0.94)), (("cap_front",), ps(0, 6, angle=-5.0, scale=0.96)), (("face",), ps(0, 4, angle=-3.0)), (("stem",), ps(0, 5, angle=-1.0)))),
+                        pf(72, pm((("cap_back",), ps(0, -6, angle=1.0, scale=1.00)), (("cap_front",), ps(0, -10, angle=3.0, scale=1.06)), (("face",), ps(0, -11, angle=3.0)), (("stem",), ps(0, -1, angle=0.4)))),
+                        pf(82, pm((("cap_back",), ps(0, -16, angle=6.0, scale=1.08)), (("cap_front",), ps(0, -24, angle=10.0, scale=1.18)), (("face",), ps(0, -24, angle=8.0, alpha=246)), (("stem",), ps(0, -8, angle=1.2)))),
+                        pf(92, pm((("cap_back",), ps(0, -24, angle=10.0, scale=1.16, alpha=232)), (("cap_front",), ps(0, -34, angle=14.0, scale=1.28, alpha=238)), (("face",), ps(0, -34, angle=12.0, alpha=252)), (("stem",), ps(0, -12, angle=2.2)))),
+                        pf(108, pm((("cap_back",), ps(0, -14, angle=3.0, scale=1.04, alpha=210)), (("cap_front",), ps(0, -18, angle=5.0, scale=1.08, alpha=216)), (("face",), ps(0, -18, angle=4.0, alpha=216)), (("stem",), ps(0, -6, angle=0.8, alpha=220)))),
+                    ),
+                    loop=False,
+                    hold_last_frame_ms=182,
+                    impact_marker="freeze",
+                    impact_frame_index=3,
+                    lock_until_end=True,
+                ),
+                "hit": pose_clip(
+                    (
+                        pf(82, pm((("cap_back", "cap_front", "face"), ps(4, 1, angle=7.0)), (("stem",), ps(2, 1, angle=2.0)))),
+                        pf(100, pm((("cap_back", "cap_front", "face"), ps(1, 0, angle=2.0)), (("stem",), ps(1, 0)))),
+                    ),
+                    loop=False,
+                    next_clip="idle",
+                    hold_last_frame_ms=110,
+                    impact_marker="hit",
+                    impact_frame_index=0,
+                    lock_until_end=True,
+                ),
+                "death": pose_clip(
+                    (
+                        pf(86, pm((("cap_back", "cap_front", "face"), ps(4, 8, angle=14.0, alpha=210)), (("stem",), ps(2, 8, angle=8.0, alpha=210)))),
+                        pf(96, pm((("cap_back", "cap_front", "face"), ps(12, 20, angle=28.0, alpha=148)), (("stem",), ps(7, 18, angle=18.0, alpha=148)))),
+                        pf(112, pm((("cap_back", "cap_front", "face"), ps(22, 34, angle=42.0, alpha=88)), (("stem",), ps(12, 30, angle=24.0, alpha=88)))),
+                    ),
+                    loop=False,
+                    hold_last_frame_ms=206,
+                    impact_marker="death",
+                    impact_frame_index=2,
+                    lock_until_end=True,
+                ),
+            },
+            output_size=output_size_for("plant", "ice_shroom"),
+            anchor=(78, 122),
         ),
         "wallnut": PoseAnimationSet(
             parts={
@@ -467,6 +742,7 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
                     next_clip="idle_healthy",
                     hold_last_frame_ms=100,
                     impact_marker="hit",
+                    impact_frame_index=0,
                     lock_until_end=True,
                 ),
                 "death": pose_clip(
@@ -478,6 +754,7 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
                     loop=False,
                     hold_last_frame_ms=180,
                     impact_marker="death",
+                    impact_frame_index=2,
                     lock_until_end=True,
                 ),
             },
@@ -521,6 +798,7 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
                     loop=False,
                     hold_last_frame_ms=150,
                     impact_marker="detonate",
+                    impact_frame_index=1,
                     lock_until_end=True,
                 ),
             },
@@ -663,6 +941,7 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
                     event_markers=("vault",),
                     hold_last_frame_ms=132,
                     impact_marker="vault",
+                    impact_frame_index=1,
                     lock_until_end=True,
                 ),
                 "post_vault_walk": pose_clip(
@@ -745,6 +1024,7 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
                     next_clip="enraged_walk",
                     hold_last_frame_ms=188,
                     impact_marker="paper_loss",
+                    impact_frame_index=1,
                     lock_until_end=True,
                 ),
                 "enraged_walk": pose_clip(
@@ -843,6 +1123,7 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
                     next_clip="exit",
                     hold_last_frame_ms=110,
                     impact_marker="steal",
+                    impact_frame_index=1,
                     lock_until_end=True,
                 ),
                 "exit": pose_clip(
@@ -900,6 +1181,7 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
                     next_clip="grounded_walk",
                     hold_last_frame_ms=140,
                     impact_marker="fall",
+                    impact_frame_index=1,
                     lock_until_end=True,
                 ),
                 "grounded_walk": pose_clip(
@@ -936,6 +1218,7 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
                     next_clip="underground_travel",
                     hold_last_frame_ms=110,
                     impact_marker="burrow",
+                    impact_frame_index=1,
                     lock_until_end=True,
                 ),
                 "underground_travel": pose_clip(
@@ -956,6 +1239,7 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
                     next_clip="surface_attack",
                     hold_last_frame_ms=110,
                     impact_marker="emerge",
+                    impact_frame_index=1,
                     lock_until_end=True,
                 ),
                 "surface_attack": pose_clip(_biped_walk_frames(extra_follow_torso=("pick",), duration_ms=84)),
@@ -985,6 +1269,7 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
                     next_clip="placed_walk",
                     hold_last_frame_ms=120,
                     impact_marker="place",
+                    impact_frame_index=2,
                     lock_until_end=True,
                 ),
                 "placed_walk": pose_clip(_biped_walk_frames(duration_ms=90)),
@@ -1057,6 +1342,7 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
                     next_clip="recover",
                     hold_last_frame_ms=120,
                     impact_marker="lob",
+                    impact_frame_index=1,
                     lock_until_end=True,
                 ),
                 "recover": pose_clip(
@@ -1103,6 +1389,7 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
                     next_clip="recover",
                     hold_last_frame_ms=120,
                     impact_marker="vault",
+                    impact_frame_index=1,
                     lock_until_end=True,
                 ),
                 "recover": pose_clip(
@@ -1178,6 +1465,7 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
                     next_clip="idle",
                     hold_last_frame_ms=164,
                     impact_marker="launch_fire",
+                    impact_frame_index=0,
                     lock_until_end=True,
                 ),
                 "release_ice": pose_clip(
@@ -1190,6 +1478,7 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
                     next_clip="idle",
                     hold_last_frame_ms=164,
                     impact_marker="launch_ice",
+                    impact_frame_index=0,
                     lock_until_end=True,
                 ),
                 "bungee_call": pose_clip(
@@ -1198,7 +1487,12 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
                         pf(94, pm((("cab_shell", "cab_trim"), ps(0, -8, angle=-1.0)), ("body", ps(0, -12)), ("face", ps(0, -16, angle=0.0)), ("jaw", ps(0, 18, angle=24.0)), ("eye_left", ps(0, -12, alpha=255)), ("eye_right", ps(0, -12, alpha=255)), ("left_arm_upper", ps(-42, -34, angle=-112.0)), ("left_arm_lower", ps(-58, -48, angle=-148.0)), ("right_arm_upper", ps(42, -34, angle=112.0)), ("right_arm_lower", ps(58, -48, angle=148.0)))),
                         pf(96, pm((("cab_shell", "cab_trim"), ps(0, -2, angle=0.0)), ("body", ps(0, -3)), ("face", ps(0, -4, angle=0.0)), ("jaw", ps(0, 6, angle=8.0)), ("eye_left", ps(0, -4, alpha=244)), ("eye_right", ps(0, -4, alpha=244)), ("left_arm_upper", ps(-18, -10, angle=-38.0)), ("left_arm_lower", ps(-24, -16, angle=-52.0)), ("right_arm_upper", ps(18, -10, angle=38.0)), ("right_arm_lower", ps(24, -16, angle=52.0)))),
                     ),
-                    loop=True,
+                    loop=False,
+                    next_clip="idle",
+                    hold_last_frame_ms=132,
+                    impact_marker="bungee_call",
+                    impact_frame_index=1,
+                    lock_until_end=True,
                 ),
                 "rv_call": pose_clip(
                     (
@@ -1206,7 +1500,12 @@ def build_pose_animation_registry() -> Dict[str, Dict[str, PoseAnimationSet]]:
                         pf(92, pm((("cab_shell", "cab_trim"), ps(0, 14, angle=-8.0)), ("body", ps(0, 18, angle=-7.0)), ("face", ps(0, 10, angle=0.0)), ("jaw", ps(0, 18, angle=20.0)), ("eye_left", ps(0, 8, alpha=255)), ("eye_right", ps(0, 8, alpha=255)), ("left_arm_upper", ps(-52, 20, angle=-76.0)), ("left_arm_lower", ps(-70, 34, angle=-108.0)), ("right_arm_upper", ps(52, 20, angle=76.0)), ("right_arm_lower", ps(70, 34, angle=108.0)))),
                         pf(98, pm((("cab_shell", "cab_trim"), ps(0, 2, angle=0.0)), ("body", ps(0, 3, angle=0.0)), ("face", ps(0, 0, angle=0.0)), ("jaw", ps(0, 4, angle=4.0)), ("eye_left", ps(0, 0, alpha=236)), ("eye_right", ps(0, 0, alpha=236)), ("left_arm_upper", ps(-16, 2, angle=-18.0)), ("left_arm_lower", ps(-20, 2, angle=-24.0)), ("right_arm_upper", ps(16, 2, angle=18.0)), ("right_arm_lower", ps(20, 2, angle=24.0)))),
                     ),
-                    loop=True,
+                    loop=False,
+                    next_clip="idle",
+                    hold_last_frame_ms=156,
+                    impact_marker="stomp_smash",
+                    impact_frame_index=1,
+                    lock_until_end=True,
                 ),
                 "stomp_smash": pose_clip(
                     (

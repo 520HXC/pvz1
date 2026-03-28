@@ -1,0 +1,382 @@
+{
+  "anchor": [
+    88,
+    138
+  ],
+  "clips": {
+    "idle": {
+      "frames": [
+        {
+          "surface_path": "idle_00.png",
+          "duration_ms": 100,
+          "content_bbox": [
+            30,
+            45,
+            122,
+            113
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        },
+        {
+          "surface_path": "idle_01.png",
+          "duration_ms": 104,
+          "content_bbox": [
+            31,
+            43,
+            120,
+            114
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        },
+        {
+          "surface_path": "idle_02.png",
+          "duration_ms": 100,
+          "content_bbox": [
+            31,
+            41,
+            119,
+            115
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        },
+        {
+          "surface_path": "idle_03.png",
+          "duration_ms": 104,
+          "content_bbox": [
+            31,
+            44,
+            120,
+            114
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "impact_frame_index": -1,
+      "lock_until_end": false
+    },
+    "attack": {
+      "frames": [
+        {
+          "surface_path": "attack_00.png",
+          "duration_ms": 74,
+          "content_bbox": [
+            26,
+            45,
+            130,
+            119
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        },
+        {
+          "surface_path": "attack_01.png",
+          "duration_ms": 62,
+          "content_bbox": [
+            28,
+            41,
+            125,
+            117
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        },
+        {
+          "surface_path": "attack_02.png",
+          "duration_ms": 54,
+          "content_bbox": [
+            32,
+            35,
+            118,
+            118
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        },
+        {
+          "surface_path": "attack_03.png",
+          "duration_ms": 64,
+          "content_bbox": [
+            30,
+            39,
+            122,
+            116
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        },
+        {
+          "surface_path": "attack_04.png",
+          "duration_ms": 80,
+          "content_bbox": [
+            29,
+            44,
+            124,
+            113
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "chew",
+      "event_markers": [],
+      "hold_last_frame_ms": 144,
+      "impact_marker": "chomp",
+      "impact_frame_index": 2,
+      "lock_until_end": true
+    },
+    "chew": {
+      "frames": [
+        {
+          "surface_path": "chew_00.png",
+          "duration_ms": 118,
+          "content_bbox": [
+            28,
+            46,
+            126,
+            113
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        },
+        {
+          "surface_path": "chew_01.png",
+          "duration_ms": 84,
+          "content_bbox": [
+            30,
+            45,
+            122,
+            112
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        },
+        {
+          "surface_path": "chew_02.png",
+          "duration_ms": 112,
+          "content_bbox": [
+            28,
+            46,
+            126,
+            113
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        },
+        {
+          "surface_path": "chew_03.png",
+          "duration_ms": 88,
+          "content_bbox": [
+            30,
+            45,
+            122,
+            112
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        }
+      ],
+      "loop": true,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 0,
+      "impact_marker": "",
+      "impact_frame_index": -1,
+      "lock_until_end": false
+    },
+    "swallow": {
+      "frames": [
+        {
+          "surface_path": "swallow_00.png",
+          "duration_ms": 88,
+          "content_bbox": [
+            28,
+            48,
+            126,
+            113
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        },
+        {
+          "surface_path": "swallow_01.png",
+          "duration_ms": 100,
+          "content_bbox": [
+            34,
+            40,
+            114,
+            115
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        },
+        {
+          "surface_path": "swallow_02.png",
+          "duration_ms": 82,
+          "content_bbox": [
+            32,
+            43,
+            118,
+            113
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        },
+        {
+          "surface_path": "swallow_03.png",
+          "duration_ms": 104,
+          "content_bbox": [
+            31,
+            45,
+            120,
+            112
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "idle",
+      "event_markers": [],
+      "hold_last_frame_ms": 132,
+      "impact_marker": "swallow",
+      "impact_frame_index": 1,
+      "lock_until_end": true
+    },
+    "hit": {
+      "frames": [
+        {
+          "surface_path": "hit_00.png",
+          "duration_ms": 82,
+          "content_bbox": [
+            32,
+            45,
+            120,
+            114
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        },
+        {
+          "surface_path": "hit_01.png",
+          "duration_ms": 100,
+          "content_bbox": [
+            31,
+            45,
+            120,
+            113
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "idle",
+      "event_markers": [],
+      "hold_last_frame_ms": 118,
+      "impact_marker": "hit",
+      "impact_frame_index": 0,
+      "lock_until_end": true
+    },
+    "death": {
+      "frames": [
+        {
+          "surface_path": "death_00.png",
+          "duration_ms": 88,
+          "content_bbox": [
+            30,
+            46,
+            123,
+            122
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        },
+        {
+          "surface_path": "death_01.png",
+          "duration_ms": 96,
+          "content_bbox": [
+            29,
+            48,
+            125,
+            128
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        },
+        {
+          "surface_path": "death_02.png",
+          "duration_ms": 112,
+          "content_bbox": [
+            29,
+            51,
+            125,
+            125
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        }
+      ],
+      "loop": false,
+      "next_clip": "",
+      "event_markers": [],
+      "hold_last_frame_ms": 210,
+      "impact_marker": "death",
+      "impact_frame_index": 2,
+      "lock_until_end": true
+    }
+  }
+}

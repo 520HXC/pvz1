@@ -68,6 +68,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "placing": {
@@ -120,6 +121,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 120,
       "impact_marker": "place",
+      "impact_frame_index": 2,
       "lock_until_end": true
     },
     "placed_walk": {
@@ -186,6 +188,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "eat": {
@@ -252,6 +255,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "death": {
@@ -318,6 +322,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 220,
       "impact_marker": "death",
+      "impact_frame_index": 2,
       "lock_until_end": true
     }
   }

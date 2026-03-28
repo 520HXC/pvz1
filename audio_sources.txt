@@ -1,0 +1,39 @@
+﻿# Audio source manifest
+# SELF-MADE APPROX entries generated in this round. Replace paths later if higher-fidelity assets are added.
+
+music/menu -> assets/audio/music/menu.wav # SELF-MADE APPROX
+music/day -> assets/audio/music/day.wav # SELF-MADE APPROX
+music/night -> assets/audio/music/night.wav # SELF-MADE APPROX
+music/pool -> assets/audio/music/pool.wav # SELF-MADE APPROX
+music/fog -> assets/audio/music/fog.wav # SELF-MADE APPROX
+music/roof -> assets/audio/music/roof.wav # SELF-MADE APPROX
+music/zomboss -> assets/audio/music/zomboss.wav # SELF-MADE APPROX
+
+sfx/ui_click -> assets/audio/sfx/ui_click.wav # SELF-MADE APPROX
+sfx/ui_back -> assets/audio/sfx/ui_back.wav # SELF-MADE APPROX
+sfx/ui_toggle -> assets/audio/sfx/ui_toggle.wav # SELF-MADE APPROX
+sfx/pause_toggle -> assets/audio/sfx/pause_toggle.wav # SELF-MADE APPROX
+sfx/plant_place -> assets/audio/sfx/plant_place.wav # SELF-MADE APPROX
+sfx/shovel -> assets/audio/sfx/shovel.wav # SELF-MADE APPROX
+sfx/collect_sun -> assets/audio/sfx/collect_sun.wav # SELF-MADE APPROX
+sfx/collect_coin -> assets/audio/sfx/collect_coin.wav # SELF-MADE APPROX
+sfx/sun_spawn -> assets/audio/sfx/sun_spawn.wav # SELF-MADE APPROX
+sfx/pea_shoot -> assets/audio/sfx/pea_shoot.wav # SELF-MADE APPROX
+sfx/zombie_hit -> assets/audio/sfx/zombie_hit.wav # SELF-MADE APPROX
+sfx/plant_hit -> assets/audio/sfx/plant_hit.wav # SELF-MADE APPROX
+sfx/newspaper_rip -> assets/audio/sfx/newspaper_rip.wav # SELF-MADE APPROX
+sfx/grave_spawn -> assets/audio/sfx/grave_spawn.wav # SELF-MADE APPROX
+sfx/wave_warning -> assets/audio/sfx/wave_warning.wav # SELF-MADE APPROX
+sfx/final_wave -> assets/audio/sfx/final_wave.wav # SELF-MADE APPROX
+sfx/slot_spin -> assets/audio/sfx/slot_spin.wav # SELF-MADE APPROX
+sfx/last_stand_start -> assets/audio/sfx/last_stand_start.wav # SELF-MADE APPROX
+sfx/big_boom -> assets/audio/sfx/big_boom.wav # SELF-MADE APPROX
+sfx/battle_win -> assets/audio/sfx/battle_win.wav # SELF-MADE APPROX
+sfx/battle_lose -> assets/audio/sfx/battle_lose.wav # SELF-MADE APPROX
+sfx/shop_buy -> assets/audio/sfx/shop_buy.wav # SELF-MADE APPROX
+sfx/zomboss_fireball -> assets/audio/sfx/zomboss_fireball.wav # SELF-MADE APPROX
+sfx/zomboss_iceball -> assets/audio/sfx/zomboss_iceball.wav # SELF-MADE APPROX
+sfx/zomboss_stomp -> assets/audio/sfx/zomboss_stomp.wav # SELF-MADE APPROX
+sfx/zomboss_bungee -> assets/audio/sfx/zomboss_bungee.wav # SELF-MADE APPROX
+sfx/zomboss_rv -> assets/audio/sfx/zomboss_rv.wav # SELF-MADE APPROX
+sfx/zomboss_counter -> assets/audio/sfx/zomboss_counter.wav # SELF-MADE APPROX

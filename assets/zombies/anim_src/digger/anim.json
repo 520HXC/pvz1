@@ -87,6 +87,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 110,
       "impact_marker": "burrow",
+      "impact_frame_index": 1,
       "lock_until_end": true,
       "frames": [
         {
@@ -325,6 +326,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false,
       "frames": [
         {
@@ -563,6 +565,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 110,
       "impact_marker": "emerge",
+      "impact_frame_index": 1,
       "lock_until_end": true,
       "frames": [
         {
@@ -801,6 +804,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false,
       "frames": [
         {
@@ -1115,6 +1119,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 220,
       "impact_marker": "death",
+      "impact_frame_index": 2,
       "lock_until_end": true,
       "frames": [
         {

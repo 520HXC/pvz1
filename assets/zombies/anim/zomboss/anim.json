@@ -68,6 +68,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "head_dip_row_select": {
@@ -106,6 +107,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "windup_fire": {
@@ -158,6 +160,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "windup_ice": {
@@ -210,6 +213,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "release_fire": {
@@ -262,6 +266,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 164,
       "impact_marker": "launch_fire",
+      "impact_frame_index": 0,
       "lock_until_end": true
     },
     "release_ice": {
@@ -314,6 +319,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 164,
       "impact_marker": "launch_ice",
+      "impact_frame_index": 0,
       "lock_until_end": true
     },
     "bungee_call": {
@@ -361,12 +367,13 @@
           ]
         }
       ],
-      "loop": true,
-      "next_clip": "",
+      "loop": false,
+      "next_clip": "idle",
       "event_markers": [],
-      "hold_last_frame_ms": 0,
-      "impact_marker": "",
-      "lock_until_end": false
+      "hold_last_frame_ms": 132,
+      "impact_marker": "bungee_call",
+      "impact_frame_index": 1,
+      "lock_until_end": true
     },
     "rv_call": {
       "frames": [
@@ -413,12 +420,13 @@
           ]
         }
       ],
-      "loop": true,
-      "next_clip": "",
+      "loop": false,
+      "next_clip": "idle",
       "event_markers": [],
-      "hold_last_frame_ms": 0,
-      "impact_marker": "",
-      "lock_until_end": false
+      "hold_last_frame_ms": 156,
+      "impact_marker": "stomp_smash",
+      "impact_frame_index": 1,
+      "lock_until_end": true
     },
     "stomp_smash": {
       "frames": [
@@ -470,6 +478,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "recover_exposed": {
@@ -508,6 +517,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "hurt": {
@@ -560,6 +570,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 116,
       "impact_marker": "hit",
+      "impact_frame_index": 2,
       "lock_until_end": true
     },
     "defeat": {
@@ -612,6 +623,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 240,
       "impact_marker": "defeat",
+      "impact_frame_index": 2,
       "lock_until_end": true
     }
   }
