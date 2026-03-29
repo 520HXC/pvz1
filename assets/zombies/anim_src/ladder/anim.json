@@ -400,13 +400,13 @@
       "loop": false,
       "next_clip": "placed_walk",
       "event_markers": [],
-      "hold_last_frame_ms": 120,
+      "hold_last_frame_ms": 142,
       "impact_marker": "place",
       "impact_frame_index": 2,
       "lock_until_end": true,
       "frames": [
         {
-          "duration_ms": 84,
+          "duration_ms": 82,
           "parts": {
             "head": {
               "offset": [
@@ -414,7 +414,7 @@
                 -2
               ],
               "scale": 1.0,
-              "angle": -6.0,
+              "angle": -7.0,
               "alpha": 255,
               "z_index": null
             },
@@ -424,7 +424,7 @@
                 4
               ],
               "scale": 1.0,
-              "angle": -8.0,
+              "angle": -9.0,
               "alpha": 255,
               "z_index": null
             },
@@ -434,7 +434,7 @@
                 8
               ],
               "scale": 1.0,
-              "angle": -38.0,
+              "angle": -40.0,
               "alpha": 255,
               "z_index": null
             },
@@ -444,7 +444,7 @@
                 8
               ],
               "scale": 1.0,
-              "angle": 34.0,
+              "angle": 36.0,
               "alpha": 255,
               "z_index": null
             },
@@ -482,7 +482,7 @@
           "markers": []
         },
         {
-          "duration_ms": 90,
+          "duration_ms": 88,
           "parts": {
             "head": {
               "offset": [
@@ -497,7 +497,7 @@
             "torso": {
               "offset": [
                 0,
-                6
+                7
               ],
               "scale": 1.0,
               "angle": -4.0,
@@ -510,7 +510,7 @@
                 10
               ],
               "scale": 1.0,
-              "angle": -52.0,
+              "angle": -56.0,
               "alpha": 255,
               "z_index": null
             },
@@ -520,7 +520,7 @@
                 10
               ],
               "scale": 1.0,
-              "angle": 44.0,
+              "angle": 46.0,
               "alpha": 255,
               "z_index": null
             },
@@ -546,11 +546,11 @@
             },
             "ladder": {
               "offset": [
-                18,
-                16
+                20,
+                18
               ],
               "scale": 1.0,
-              "angle": 54.0,
+              "angle": 60.0,
               "alpha": 255,
               "z_index": null
             }
@@ -558,12 +558,12 @@
           "markers": []
         },
         {
-          "duration_ms": 96,
+          "duration_ms": 108,
           "parts": {
             "head": {
               "offset": [
                 0,
-                0
+                2
               ],
               "scale": 1.0,
               "angle": -2.0,
@@ -573,7 +573,7 @@
             "torso": {
               "offset": [
                 0,
-                2
+                5
               ],
               "scale": 1.0,
               "angle": -1.0,
@@ -583,17 +583,17 @@
             "left_arm": {
               "offset": [
                 -2,
-                0
+                2
               ],
               "scale": 1.0,
-              "angle": -14.0,
+              "angle": -16.0,
               "alpha": 255,
               "z_index": null
             },
             "right_arm": {
               "offset": [
                 2,
-                0
+                2
               ],
               "scale": 1.0,
               "angle": 12.0,
@@ -603,30 +603,30 @@
             "left_leg": {
               "offset": [
                 0,
-                2
+                3
               ],
               "scale": 1.0,
-              "angle": 2.0,
+              "angle": 3.0,
               "alpha": 255,
               "z_index": null
             },
             "right_leg": {
               "offset": [
                 0,
-                2
+                3
               ],
               "scale": 1.0,
-              "angle": -2.0,
+              "angle": -3.0,
               "alpha": 255,
               "z_index": null
             },
             "ladder": {
               "offset": [
-                20,
-                20
+                26,
+                26
               ],
               "scale": 1.0,
-              "angle": 84.0,
+              "angle": 92.0,
               "alpha": 255,
               "z_index": null
             }

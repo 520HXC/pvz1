@@ -200,31 +200,31 @@
       "loop": false,
       "next_clip": "",
       "event_markers": [],
-      "hold_last_frame_ms": 182,
+      "hold_last_frame_ms": 188,
       "impact_marker": "row_blast",
       "impact_frame_index": 2,
       "lock_until_end": true,
       "frames": [
         {
-          "duration_ms": 48,
+          "duration_ms": 46,
           "parts": {
             "body": {
               "offset": [
-                0,
-                0
+                -1,
+                1
               ],
-              "scale": 0.98,
-              "angle": -6.0,
+              "scale": 0.96,
+              "angle": -8.0,
               "alpha": 255,
               "z_index": null
             },
             "cap": {
               "offset": [
-                0,
+                -1,
                 -2
               ],
               "scale": 1.0,
-              "angle": -9.0,
+              "angle": -12.0,
               "alpha": 255,
               "z_index": null
             },
@@ -233,7 +233,7 @@
                 0,
                 0
               ],
-              "scale": 1.0,
+              "scale": 1.02,
               "angle": 0.0,
               "alpha": 255,
               "z_index": null
@@ -242,34 +242,34 @@
           "markers": []
         },
         {
-          "duration_ms": 54,
+          "duration_ms": 50,
           "parts": {
             "body": {
               "offset": [
                 0,
-                -8
+                -11
               ],
-              "scale": 1.1,
-              "angle": -1.0,
-              "alpha": 255,
-              "z_index": null
-            },
-            "cap": {
-              "offset": [
-                0,
-                -13
-              ],
-              "scale": 1.0,
+              "scale": 1.12,
               "angle": -2.0,
               "alpha": 255,
               "z_index": null
             },
+            "cap": {
+              "offset": [
+                0,
+                -17
+              ],
+              "scale": 1.0,
+              "angle": -3.0,
+              "alpha": 255,
+              "z_index": null
+            },
             "shine": {
               "offset": [
                 0,
-                -8
+                -10
               ],
-              "scale": 1.14,
+              "scale": 1.2,
               "angle": 0.0,
               "alpha": 255,
               "z_index": null
@@ -278,108 +278,108 @@
           "markers": []
         },
         {
-          "duration_ms": 58,
+          "duration_ms": 56,
           "parts": {
             "body": {
-              "offset": [
-                0,
-                -18
-              ],
-              "scale": 1.28,
-              "angle": 4.0,
-              "alpha": 224,
-              "z_index": null
-            },
-            "cap": {
-              "offset": [
-                0,
-                -24
-              ],
-              "scale": 1.1,
-              "angle": 5.0,
-              "alpha": 224,
-              "z_index": null
-            },
-            "shine": {
-              "offset": [
-                0,
-                -18
-              ],
-              "scale": 1.42,
-              "angle": 0.0,
-              "alpha": 250,
-              "z_index": null
-            }
-          },
-          "markers": []
-        },
-        {
-          "duration_ms": 74,
-          "parts": {
-            "body": {
-              "offset": [
-                0,
-                -32
-              ],
-              "scale": 1.62,
-              "angle": 9.0,
-              "alpha": 112,
-              "z_index": null
-            },
-            "cap": {
-              "offset": [
-                0,
-                -40
-              ],
-              "scale": 1.3,
-              "angle": 10.0,
-              "alpha": 112,
-              "z_index": null
-            },
-            "shine": {
-              "offset": [
-                0,
-                -32
-              ],
-              "scale": 1.76,
-              "angle": 0.0,
-              "alpha": 156,
-              "z_index": null
-            }
-          },
-          "markers": []
-        },
-        {
-          "duration_ms": 92,
-          "parts": {
-            "body": {
-              "offset": [
-                0,
-                -24
-              ],
-              "scale": 1.3,
-              "angle": 4.0,
-              "alpha": 42,
-              "z_index": null
-            },
-            "cap": {
-              "offset": [
-                0,
-                -30
-              ],
-              "scale": 1.14,
-              "angle": 5.0,
-              "alpha": 42,
-              "z_index": null
-            },
-            "shine": {
               "offset": [
                 0,
                 -24
               ],
               "scale": 1.38,
+              "angle": 6.0,
+              "alpha": 230,
+              "z_index": null
+            },
+            "cap": {
+              "offset": [
+                0,
+                -31
+              ],
+              "scale": 1.14,
+              "angle": 7.0,
+              "alpha": 230,
+              "z_index": null
+            },
+            "shine": {
+              "offset": [
+                0,
+                -24
+              ],
+              "scale": 1.56,
               "angle": 0.0,
-              "alpha": 68,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 72,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                -38
+              ],
+              "scale": 1.74,
+              "angle": 11.0,
+              "alpha": 120,
+              "z_index": null
+            },
+            "cap": {
+              "offset": [
+                0,
+                -48
+              ],
+              "scale": 1.36,
+              "angle": 12.0,
+              "alpha": 120,
+              "z_index": null
+            },
+            "shine": {
+              "offset": [
+                0,
+                -38
+              ],
+              "scale": 1.94,
+              "angle": 0.0,
+              "alpha": 164,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
+        {
+          "duration_ms": 96,
+          "parts": {
+            "body": {
+              "offset": [
+                0,
+                -26
+              ],
+              "scale": 1.34,
+              "angle": 4.0,
+              "alpha": 48,
+              "z_index": null
+            },
+            "cap": {
+              "offset": [
+                0,
+                -32
+              ],
+              "scale": 1.16,
+              "angle": 5.0,
+              "alpha": 48,
+              "z_index": null
+            },
+            "shine": {
+              "offset": [
+                0,
+                -26
+              ],
+              "scale": 1.42,
+              "angle": 0.0,
+              "alpha": 76,
               "z_index": null
             }
           },

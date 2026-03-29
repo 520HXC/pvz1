@@ -155,8 +155,8 @@ SCENARIOS: List[Dict[str, Any]] = [
         "name": "5-10",
         "type": "level",
         "cards": [],
-        "duration": 34.0,
-        "screens": [3.0, 16.0, 28.0],
+        "duration": 38.0,
+        "screens": [4.0, 18.0, 32.0],
         "placements": [
             (0.20, "flower_pot", 1, 1),
             (0.25, "flower_pot", 2, 1),
@@ -172,8 +172,8 @@ SCENARIOS: List[Dict[str, Any]] = [
         "name": "mini_dr_zomboss_revenge",
         "type": "special",
         "entry_id": "mini_dr_zomboss_revenge",
-        "duration": 32.0,
-        "screens": [3.0, 14.0, 26.0],
+        "duration": 34.0,
+        "screens": [3.0, 15.0, 28.0],
         "placements": [
             (0.20, "flower_pot", 1, 1),
             (0.25, "flower_pot", 2, 1),

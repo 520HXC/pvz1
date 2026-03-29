@@ -75,12 +75,12 @@
       "frames": [
         {
           "surface_path": "attack_00.png",
-          "duration_ms": 74,
+          "duration_ms": 72,
           "content_bbox": [
             26,
             45,
             130,
-            119
+            120
           ],
           "anchor": [
             88,
@@ -89,25 +89,11 @@
         },
         {
           "surface_path": "attack_01.png",
-          "duration_ms": 62,
+          "duration_ms": 58,
           "content_bbox": [
             28,
-            41,
-            125,
-            117
-          ],
-          "anchor": [
-            88,
-            138
-          ]
-        },
-        {
-          "surface_path": "attack_02.png",
-          "duration_ms": 54,
-          "content_bbox": [
-            32,
-            35,
-            118,
+            40,
+            126,
             118
           ],
           "anchor": [
@@ -116,11 +102,25 @@
           ]
         },
         {
+          "surface_path": "attack_02.png",
+          "duration_ms": 58,
+          "content_bbox": [
+            33,
+            31,
+            123,
+            121
+          ],
+          "anchor": [
+            88,
+            138
+          ]
+        },
+        {
           "surface_path": "attack_03.png",
-          "duration_ms": 64,
+          "duration_ms": 68,
           "content_bbox": [
             30,
-            39,
+            38,
             122,
             116
           ],
@@ -131,7 +131,7 @@
         },
         {
           "surface_path": "attack_04.png",
-          "duration_ms": 80,
+          "duration_ms": 84,
           "content_bbox": [
             29,
             44,
@@ -147,7 +147,7 @@
       "loop": false,
       "next_clip": "chew",
       "event_markers": [],
-      "hold_last_frame_ms": 144,
+      "hold_last_frame_ms": 152,
       "impact_marker": "chomp",
       "impact_frame_index": 2,
       "lock_until_end": true
@@ -156,7 +156,7 @@
       "frames": [
         {
           "surface_path": "chew_00.png",
-          "duration_ms": 118,
+          "duration_ms": 126,
           "content_bbox": [
             28,
             46,
@@ -170,12 +170,12 @@
         },
         {
           "surface_path": "chew_01.png",
-          "duration_ms": 84,
+          "duration_ms": 80,
           "content_bbox": [
             30,
-            45,
+            44,
             122,
-            112
+            113
           ],
           "anchor": [
             88,
@@ -184,7 +184,7 @@
         },
         {
           "surface_path": "chew_02.png",
-          "duration_ms": 112,
+          "duration_ms": 118,
           "content_bbox": [
             28,
             46,
@@ -198,7 +198,7 @@
         },
         {
           "surface_path": "chew_03.png",
-          "duration_ms": 88,
+          "duration_ms": 92,
           "content_bbox": [
             30,
             45,
@@ -223,10 +223,10 @@
       "frames": [
         {
           "surface_path": "swallow_00.png",
-          "duration_ms": 88,
+          "duration_ms": 92,
           "content_bbox": [
             28,
-            48,
+            49,
             126,
             113
           ],
@@ -237,11 +237,11 @@
         },
         {
           "surface_path": "swallow_01.png",
-          "duration_ms": 100,
+          "duration_ms": 108,
           "content_bbox": [
-            34,
-            40,
-            114,
+            35,
+            39,
+            112,
             115
           ],
           "anchor": [
@@ -251,12 +251,12 @@
         },
         {
           "surface_path": "swallow_02.png",
-          "duration_ms": 82,
+          "duration_ms": 88,
           "content_bbox": [
             32,
-            43,
+            42,
             118,
-            113
+            114
           ],
           "anchor": [
             88,
@@ -265,7 +265,7 @@
         },
         {
           "surface_path": "swallow_03.png",
-          "duration_ms": 104,
+          "duration_ms": 108,
           "content_bbox": [
             31,
             45,
@@ -281,7 +281,7 @@
       "loop": false,
       "next_clip": "idle",
       "event_markers": [],
-      "hold_last_frame_ms": 132,
+      "hold_last_frame_ms": 140,
       "impact_marker": "swallow",
       "impact_frame_index": 1,
       "lock_until_end": true

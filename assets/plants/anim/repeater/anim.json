@@ -89,12 +89,12 @@
       "frames": [
         {
           "surface_path": "shoot_00.png",
-          "duration_ms": 54,
+          "duration_ms": 52,
           "content_bbox": [
             24,
-            39,
-            127,
-            106
+            40,
+            128,
+            105
           ],
           "anchor": [
             78,
@@ -103,12 +103,12 @@
         },
         {
           "surface_path": "shoot_01.png",
-          "duration_ms": 54,
+          "duration_ms": 50,
           "content_bbox": [
             23,
             40,
             133,
-            107
+            108
           ],
           "anchor": [
             78,
@@ -117,12 +117,12 @@
         },
         {
           "surface_path": "shoot_02.png",
-          "duration_ms": 48,
+          "duration_ms": 54,
           "content_bbox": [
             21,
-            37,
+            32,
             135,
-            109
+            114
           ],
           "anchor": [
             78,
@@ -131,12 +131,12 @@
         },
         {
           "surface_path": "shoot_03.png",
-          "duration_ms": 52,
+          "duration_ms": 50,
           "content_bbox": [
             23,
-            35,
+            32,
             133,
-            106
+            109
           ],
           "anchor": [
             78,
@@ -145,12 +145,12 @@
         },
         {
           "surface_path": "shoot_04.png",
-          "duration_ms": 64,
+          "duration_ms": 68,
           "content_bbox": [
             26,
-            26,
-            110,
-            112
+            24,
+            109,
+            113
           ],
           "anchor": [
             78,
@@ -159,12 +159,12 @@
         },
         {
           "surface_path": "shoot_05.png",
-          "duration_ms": 78,
+          "duration_ms": 82,
           "content_bbox": [
             27,
-            31,
-            111,
-            108
+            30,
+            110,
+            109
           ],
           "anchor": [
             78,
@@ -191,7 +191,7 @@
       "event_markers": [
         "shoot"
       ],
-      "hold_last_frame_ms": 132,
+      "hold_last_frame_ms": 138,
       "impact_marker": "shoot",
       "impact_frame_index": 2,
       "lock_until_end": true

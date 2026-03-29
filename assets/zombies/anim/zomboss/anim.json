@@ -225,7 +225,7 @@
             0,
             0,
             232,
-            213
+            212
           ],
           "anchor": [
             116,
@@ -234,12 +234,12 @@
         },
         {
           "surface_path": "release_fire_01.png",
-          "duration_ms": 72,
+          "duration_ms": 74,
           "content_bbox": [
             0,
-            12,
+            5,
             232,
-            201
+            209
           ],
           "anchor": [
             116,
@@ -248,7 +248,7 @@
         },
         {
           "surface_path": "release_fire_02.png",
-          "duration_ms": 92,
+          "duration_ms": 90,
           "content_bbox": [
             13,
             17,
@@ -264,9 +264,9 @@
       "loop": false,
       "next_clip": "idle",
       "event_markers": [],
-      "hold_last_frame_ms": 164,
+      "hold_last_frame_ms": 184,
       "impact_marker": "launch_fire",
-      "impact_frame_index": 0,
+      "impact_frame_index": 1,
       "lock_until_end": true
     },
     "release_ice": {
@@ -287,12 +287,12 @@
         },
         {
           "surface_path": "release_ice_01.png",
-          "duration_ms": 72,
+          "duration_ms": 74,
           "content_bbox": [
-            18,
-            10,
-            214,
-            204
+            11,
+            7,
+            221,
+            207
           ],
           "anchor": [
             116,
@@ -301,7 +301,7 @@
         },
         {
           "surface_path": "release_ice_02.png",
-          "duration_ms": 92,
+          "duration_ms": 90,
           "content_bbox": [
             13,
             17,
@@ -317,9 +317,9 @@
       "loop": false,
       "next_clip": "idle",
       "event_markers": [],
-      "hold_last_frame_ms": 164,
+      "hold_last_frame_ms": 184,
       "impact_marker": "launch_ice",
-      "impact_frame_index": 0,
+      "impact_frame_index": 1,
       "lock_until_end": true
     },
     "bungee_call": {
@@ -340,10 +340,10 @@
         },
         {
           "surface_path": "bungee_call_01.png",
-          "duration_ms": 94,
+          "duration_ms": 100,
           "content_bbox": [
             0,
-            11,
+            8,
             232,
             198
           ],
@@ -354,7 +354,7 @@
         },
         {
           "surface_path": "bungee_call_02.png",
-          "duration_ms": 96,
+          "duration_ms": 100,
           "content_bbox": [
             6,
             15,
@@ -370,7 +370,7 @@
       "loop": false,
       "next_clip": "idle",
       "event_markers": [],
-      "hold_last_frame_ms": 132,
+      "hold_last_frame_ms": 150,
       "impact_marker": "bungee_call",
       "impact_frame_index": 1,
       "lock_until_end": true
@@ -393,12 +393,12 @@
         },
         {
           "surface_path": "rv_call_01.png",
-          "duration_ms": 92,
+          "duration_ms": 100,
           "content_bbox": [
             0,
-            29,
-            215,
-            202
+            36,
+            212,
+            196
           ],
           "anchor": [
             116,
@@ -407,7 +407,7 @@
         },
         {
           "surface_path": "rv_call_02.png",
-          "duration_ms": 98,
+          "duration_ms": 104,
           "content_bbox": [
             13,
             18,
@@ -423,8 +423,8 @@
       "loop": false,
       "next_clip": "idle",
       "event_markers": [],
-      "hold_last_frame_ms": 156,
-      "impact_marker": "stomp_smash",
+      "hold_last_frame_ms": 172,
+      "impact_marker": "rv_call",
       "impact_frame_index": 1,
       "lock_until_end": true
     },
@@ -432,12 +432,12 @@
       "frames": [
         {
           "surface_path": "stomp_smash_00.png",
-          "duration_ms": 88,
+          "duration_ms": 116,
           "content_bbox": [
             0,
-            25,
+            28,
             232,
-            201
+            202
           ],
           "anchor": [
             116,
@@ -446,12 +446,12 @@
         },
         {
           "surface_path": "stomp_smash_01.png",
-          "duration_ms": 94,
+          "duration_ms": 138,
           "content_bbox": [
             0,
-            35,
-            232,
-            197
+            45,
+            211,
+            187
           ],
           "anchor": [
             116,
@@ -460,11 +460,11 @@
         },
         {
           "surface_path": "stomp_smash_02.png",
-          "duration_ms": 88,
+          "duration_ms": 120,
           "content_bbox": [
-            4,
-            23,
-            228,
+            2,
+            24,
+            230,
             199
           ],
           "anchor": [
@@ -477,8 +477,8 @@
       "next_clip": "",
       "event_markers": [],
       "hold_last_frame_ms": 0,
-      "impact_marker": "",
-      "impact_frame_index": -1,
+      "impact_marker": "stomp_smash",
+      "impact_frame_index": 1,
       "lock_until_end": false
     },
     "recover_exposed": {
@@ -570,7 +570,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 116,
       "impact_marker": "hit",
-      "impact_frame_index": 2,
+      "impact_frame_index": 0,
       "lock_until_end": true
     },
     "defeat": {
