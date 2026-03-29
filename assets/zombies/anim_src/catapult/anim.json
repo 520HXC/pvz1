@@ -67,6 +67,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false,
       "frames": [
         {
@@ -245,6 +246,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false,
       "frames": [
         {
@@ -365,12 +367,13 @@
       "loop": false,
       "next_clip": "recover",
       "event_markers": [],
-      "hold_last_frame_ms": 120,
+      "hold_last_frame_ms": 138,
       "impact_marker": "lob",
+      "impact_frame_index": 1,
       "lock_until_end": true,
       "frames": [
         {
-          "duration_ms": 70,
+          "duration_ms": 64,
           "parts": {
             "cart": {
               "offset": [
@@ -385,17 +388,17 @@
             "driver_head": {
               "offset": [
                 1,
-                -3
+                -4
               ],
               "scale": 1.0,
-              "angle": 2.0,
+              "angle": 3.0,
               "alpha": 255,
               "z_index": null
             },
             "driver_body": {
               "offset": [
                 1,
-                -2
+                -3
               ],
               "scale": 1.0,
               "angle": 0.0,
@@ -405,20 +408,20 @@
             "arm": {
               "offset": [
                 4,
-                -4
+                -5
               ],
               "scale": 1.0,
-              "angle": 14.0,
+              "angle": 16.0,
               "alpha": 255,
               "z_index": null
             },
             "bucket": {
               "offset": [
                 10,
-                -10
+                -11
               ],
               "scale": 1.0,
-              "angle": 18.0,
+              "angle": 20.0,
               "alpha": 255,
               "z_index": null
             }
@@ -426,7 +429,7 @@
           "markers": []
         },
         {
-          "duration_ms": 80,
+          "duration_ms": 78,
           "parts": {
             "cart": {
               "offset": [
@@ -440,17 +443,17 @@
             },
             "driver_head": {
               "offset": [
-                2,
+                3,
                 -1
               ],
               "scale": 1.0,
-              "angle": 4.0,
+              "angle": 6.0,
               "alpha": 255,
               "z_index": null
             },
             "driver_body": {
               "offset": [
-                2,
+                3,
                 0
               ],
               "scale": 1.0,
@@ -460,21 +463,21 @@
             },
             "arm": {
               "offset": [
-                16,
-                2
+                24,
+                5
               ],
               "scale": 1.0,
-              "angle": 34.0,
+              "angle": 46.0,
               "alpha": 255,
               "z_index": null
             },
             "bucket": {
               "offset": [
-                24,
-                -1
+                36,
+                1
               ],
               "scale": 1.0,
-              "angle": 44.0,
+              "angle": 60.0,
               "alpha": 255,
               "z_index": null
             }
@@ -482,7 +485,7 @@
           "markers": []
         },
         {
-          "duration_ms": 94,
+          "duration_ms": 92,
           "parts": {
             "cart": {
               "offset": [
@@ -516,21 +519,21 @@
             },
             "arm": {
               "offset": [
-                6,
+                8,
                 0
               ],
               "scale": 1.0,
-              "angle": 10.0,
+              "angle": 13.0,
               "alpha": 255,
               "z_index": null
             },
             "bucket": {
               "offset": [
-                10,
+                14,
                 -2
               ],
               "scale": 1.0,
-              "angle": 14.0,
+              "angle": 18.0,
               "alpha": 255,
               "z_index": null
             }
@@ -545,6 +548,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 100,
       "impact_marker": "recover",
+      "impact_frame_index": 1,
       "lock_until_end": true,
       "frames": [
         {
@@ -667,6 +671,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 116,
       "impact_marker": "hit",
+      "impact_frame_index": 0,
       "lock_until_end": true,
       "frames": [
         {
@@ -845,6 +850,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 220,
       "impact_marker": "death",
+      "impact_frame_index": 2,
       "lock_until_end": true,
       "frames": [
         {

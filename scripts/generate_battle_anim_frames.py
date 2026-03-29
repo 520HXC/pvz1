@@ -98,6 +98,7 @@ def export_pose_source(entity_kind: str, variant: str, sprite: pygame.Surface, p
             "event_markers": list(clip.event_markers),
             "hold_last_frame_ms": int(clip.hold_last_frame_ms),
             "impact_marker": clip.impact_marker,
+            "impact_frame_index": int(clip.impact_frame_index),
             "lock_until_end": bool(clip.lock_until_end),
             "frames": clip_frames,
         }
@@ -140,6 +141,7 @@ def export_battle_animation(entity_kind: str, variant: str, sprite: pygame.Surfa
             "event_markers": list(clip.event_markers),
             "hold_last_frame_ms": int(clip.hold_last_frame_ms),
             "impact_marker": clip.impact_marker,
+            "impact_frame_index": int(clip.impact_frame_index),
             "lock_until_end": bool(clip.lock_until_end),
         }
     payload = {

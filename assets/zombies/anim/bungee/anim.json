@@ -54,6 +54,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "lock_target": {
@@ -92,18 +93,19 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "steal_lift": {
       "frames": [
         {
           "surface_path": "steal_lift_00.png",
-          "duration_ms": 78,
+          "duration_ms": 68,
           "content_bbox": [
-            53,
-            15,
-            123,
-            171
+            49,
+            14,
+            134,
+            172
           ],
           "anchor": [
             118,
@@ -112,12 +114,12 @@
         },
         {
           "surface_path": "steal_lift_01.png",
-          "duration_ms": 88,
+          "duration_ms": 86,
           "content_bbox": [
-            58,
-            1,
-            114,
-            173
+            54,
+            0,
+            122,
+            166
           ],
           "anchor": [
             118,
@@ -126,12 +128,12 @@
         },
         {
           "surface_path": "steal_lift_02.png",
-          "duration_ms": 88,
+          "duration_ms": 96,
           "content_bbox": [
-            62,
+            61,
             0,
-            107,
-            159
+            110,
+            152
           ],
           "anchor": [
             118,
@@ -142,8 +144,9 @@
       "loop": false,
       "next_clip": "exit",
       "event_markers": [],
-      "hold_last_frame_ms": 110,
+      "hold_last_frame_ms": 134,
       "impact_marker": "steal",
+      "impact_frame_index": 1,
       "lock_until_end": true
     },
     "exit": {
@@ -194,8 +197,9 @@
       "loop": false,
       "next_clip": "",
       "event_markers": [],
-      "hold_last_frame_ms": 120,
+      "hold_last_frame_ms": 140,
       "impact_marker": "exit",
+      "impact_frame_index": 2,
       "lock_until_end": true
     },
     "blocked_exit": {
@@ -248,6 +252,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 120,
       "impact_marker": "blocked",
+      "impact_frame_index": 2,
       "lock_until_end": true
     }
   }

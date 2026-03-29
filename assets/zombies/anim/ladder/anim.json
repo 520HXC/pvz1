@@ -68,13 +68,14 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "placing": {
       "frames": [
         {
           "surface_path": "placing_00.png",
-          "duration_ms": 84,
+          "duration_ms": 82,
           "content_bbox": [
             21,
             2,
@@ -88,12 +89,12 @@
         },
         {
           "surface_path": "placing_01.png",
-          "duration_ms": 90,
+          "duration_ms": 88,
           "content_bbox": [
             19,
             5,
             183,
-            191
+            187
           ],
           "anchor": [
             101,
@@ -102,11 +103,11 @@
         },
         {
           "surface_path": "placing_02.png",
-          "duration_ms": 96,
+          "duration_ms": 108,
           "content_bbox": [
-            28,
-            6,
-            174,
+            29,
+            7,
+            173,
             181
           ],
           "anchor": [
@@ -118,8 +119,9 @@
       "loop": false,
       "next_clip": "placed_walk",
       "event_markers": [],
-      "hold_last_frame_ms": 120,
+      "hold_last_frame_ms": 142,
       "impact_marker": "place",
+      "impact_frame_index": 2,
       "lock_until_end": true
     },
     "placed_walk": {
@@ -186,6 +188,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "eat": {
@@ -252,6 +255,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "death": {
@@ -318,6 +322,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 220,
       "impact_marker": "death",
+      "impact_frame_index": 2,
       "lock_until_end": true
     }
   }

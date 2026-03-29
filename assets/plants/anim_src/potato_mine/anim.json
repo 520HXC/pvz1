@@ -6,7 +6,7 @@
   ],
   "anchor": [
     78,
-    78
+    118
   ],
   "parts": {
     "body": {
@@ -37,6 +37,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false,
       "frames": [
         {
@@ -99,6 +100,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false,
       "frames": [
         {
@@ -213,6 +215,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false,
       "frames": [
         {
@@ -327,6 +330,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 150,
       "impact_marker": "detonate",
+      "impact_frame_index": 1,
       "lock_until_end": true,
       "frames": [
         {

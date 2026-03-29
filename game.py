@@ -6,9 +6,10 @@ import re
 import struct
 import sys
 import zlib
+from array import array
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 from urllib.request import Request, urlopen
 
 import pygame
@@ -28,7 +29,7 @@ COLS = 9
 CELL_W = 96
 CELL_H = 88
 LAWN_X = SIDE_W + 18
-LAWN_Y = 168
+LAWN_Y = 162
 CARD_W = 210
 CARD_H = 54
 CARD_GAP = 8
@@ -36,8 +37,8 @@ SPEED_CHOICES = (0.5, 1.0, 1.5, 2.0, 3.0, 5.0)
 UPGRADE_PLANT_KEYS = {"twin_sunflower", "gloom_shroom", "winter_melon", "spikerock", "cob_cannon", "gatling"}
 
 UI_PALETTE = {
-    "bg_sky_top": (148, 218, 252),
-    "bg_sky_bot": (82, 158, 218),
+    "bg_sky_top": (130, 210, 255),
+    "bg_sky_bot": (78, 152, 214),
     "panel_fill": (232, 210, 166),
     "panel_border": (124, 86, 40),
     "panel_inner": (244, 230, 198),
@@ -62,9 +63,15 @@ UI_PALETTE = {
     "wood_fill": (176, 126, 66),
     "wood_border": (104, 66, 28),
     "wood_inner": (196, 144, 82),
-    "hud_fill": (160, 110, 56),
-    "hud_border": (84, 52, 24),
-    "hud_inner": (194, 138, 80),
+    "hud_fill": (172, 118, 62),
+    "hud_border": (72, 44, 18),
+    "hud_inner": (204, 152, 92),
+    "pvz_label_fill": (255, 244, 180),
+    "pvz_label_outline": (32, 22, 8),
+    "pvz_label_fill_dim": (255, 228, 150),
+    "seed_bank_wood": (176, 118, 58),
+    "seed_bank_wood_dark": (92, 54, 22),
+    "seed_bank_channel": (118, 72, 36),
     "parchment_fill": (244, 229, 190),
     "parchment_border": (136, 96, 46),
     "parchment_inner": (248, 237, 204),
@@ -73,6 +80,315 @@ UI_PALETTE = {
     "red_accent": (204, 56, 52),
     "shadow": (20, 12, 8),
 }
+
+
+class AudioManager:
+    SOUND_EXTS = (".ogg", ".wav", ".mp3")
+    SFX_COOLDOWNS_MS = {
+        "pea_shoot": 55,
+        "zombie_hit": 45,
+        "plant_hit": 70,
+        "collect_sun": 45,
+        "collect_coin": 55,
+        "sun_spawn": 120,
+        "wave_warning": 900,
+        "final_wave": 1400,
+        "grave_spawn": 420,
+        "zomboss_fireball": 900,
+        "zomboss_iceball": 900,
+        "zomboss_stomp": 900,
+        "zomboss_bungee": 900,
+        "zomboss_rv": 900,
+        "zomboss_counter": 700,
+        "battle_win": 1200,
+        "battle_lose": 1200,
+    }
+
+    def __init__(self, assets_root: Path):
+        self.assets_root = assets_root
+        self.project_root = assets_root.parent
+        self.music_root = assets_root / "audio" / "music"
+        self.sfx_root = assets_root / "audio" / "sfx"
+        self.available = False
+        self.music_enabled = True
+        self.sfx_enabled = True
+        self.source_manifest = self._load_source_manifest()
+        self.sound_cache: Dict[Tuple[str, str], Optional[pygame.mixer.Sound]] = {}
+        self.missing_cache: set[Tuple[str, str]] = set()
+        self.loaded_cache: set[Tuple[str, str]] = set()
+        self.last_played_ms: Dict[str, int] = {}
+        self.music_channel: Optional[pygame.mixer.Channel] = None
+        self.current_music_key = ""
+        self.current_music_sound: Optional[pygame.mixer.Sound] = None
+        self.sample_rate = 22050
+        self._init_mixer()
+
+    def _init_mixer(self) -> None:
+        try:
+            if not pygame.mixer.get_init():
+                pygame.mixer.init(frequency=self.sample_rate, size=-16, channels=1, buffer=512)
+            self.sample_rate = int(pygame.mixer.get_init()[0]) if pygame.mixer.get_init() else self.sample_rate
+            pygame.mixer.set_num_channels(max(16, pygame.mixer.get_num_channels()))
+            self.music_channel = pygame.mixer.Channel(0)
+            self.music_channel.set_volume(0.42)
+            self.available = True
+        except Exception as exc:
+            self.available = False
+            print(f"[audio disabled] {exc}")
+
+    def set_enabled(self, music_on: bool, sfx_on: bool) -> None:
+        self.music_enabled = bool(music_on)
+        self.sfx_enabled = bool(sfx_on)
+        if not self.music_enabled:
+            self.stop_music(180)
+
+    def _load_source_manifest(self) -> Dict[str, str]:
+        mapping: Dict[str, str] = {}
+        manifest_path = self.project_root / "audio_sources.txt"
+        if not manifest_path.exists():
+            return mapping
+        try:
+            for line in manifest_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line or line.startswith("#") or "->" not in line:
+                    continue
+                key, value = line.split("->", 1)
+                key = key.strip().lower()
+                value = value.strip()
+                if "#" in value:
+                    value = value.split("#", 1)[0].rstrip()
+                if key:
+                    mapping[key] = value
+        except Exception:
+            return {}
+        return mapping
+
+    def _manifest_asset_path(self, category: str, key: str) -> Optional[Path]:
+        manifest_key = f"{category}/{str(key).lower()}"
+        raw = str(self.source_manifest.get(manifest_key, "")).strip()
+        if not raw or raw.upper() == "NOT FOUND":
+            return None
+        candidate = Path(raw)
+        if not candidate.is_absolute():
+            candidate = self.project_root / candidate
+        return candidate if candidate.exists() else None
+
+    def _find_asset_path(self, category: str, key: str) -> Optional[Path]:
+        manifest_path = self._manifest_asset_path(category, key)
+        if manifest_path is not None:
+            return manifest_path
+        root = self.music_root if category == "music" else self.sfx_root
+        lowered = str(key).lower()
+        for ext in self.SOUND_EXTS:
+            direct = root / f"{lowered}{ext}"
+            if direct.exists():
+                return direct
+        for ext in self.SOUND_EXTS:
+            matches = list(root.rglob(f"{lowered}*{ext}"))
+            if matches:
+                return matches[0]
+        return None
+
+    def _log_audio_status(self, category: str, key: str, path: Optional[Path]) -> None:
+        cache_key = (category, key)
+        if path is None:
+            if cache_key not in self.missing_cache:
+                print(f"[audio fallback] {category} {key}")
+                self.missing_cache.add(cache_key)
+        else:
+            if cache_key not in self.loaded_cache:
+                print(f"[audio loaded] {category} {key} -> {path}")
+                self.loaded_cache.add(cache_key)
+
+    def _env(self, i: int, total: int, attack: float = 0.10, release: float = 0.22) -> float:
+        if total <= 1:
+            return 1.0
+        progress = i / max(1, total - 1)
+        if progress < attack:
+            return progress / max(0.001, attack)
+        if progress > 1.0 - release:
+            return max(0.0, (1.0 - progress) / max(0.001, release))
+        return 1.0
+
+    def _tone(self, freq: float, duration: float, *, volume: float = 0.35, wave_kind: str = "sine", vibrato: float = 0.0, slide: float = 0.0) -> array:
+        count = max(1, int(self.sample_rate * max(0.02, duration)))
+        buf = array("h")
+        for i in range(count):
+            t = i / float(self.sample_rate)
+            prog = i / max(1, count - 1)
+            freq_now = max(20.0, freq * (1.0 + slide * prog))
+            if vibrato > 0.0:
+                freq_now *= 1.0 + math.sin(t * math.tau * vibrato) * 0.02
+            phase = t * math.tau * freq_now
+            if wave_kind == "square":
+                raw = 1.0 if math.sin(phase) >= 0.0 else -1.0
+            elif wave_kind == "triangle":
+                cyc = (phase / math.tau) % 1.0
+                raw = 2.0 * abs(2.0 * cyc - 1.0) - 1.0
+            else:
+                raw = math.sin(phase)
+            sample = max(-1.0, min(1.0, raw * self._env(i, count) * volume))
+            buf.append(int(sample * 32767))
+        return buf
+
+    def _noise(self, duration: float, *, volume: float = 0.22, decay: float = 4.6) -> array:
+        count = max(1, int(self.sample_rate * max(0.02, duration)))
+        buf = array("h")
+        rng = random.Random(int(duration * 1000) + 17)
+        for i in range(count):
+            prog = i / max(1, count - 1)
+            amp = volume * max(0.0, (1.0 - prog) ** decay)
+            raw = rng.uniform(-1.0, 1.0)
+            sample = max(-1.0, min(1.0, raw * amp))
+            buf.append(int(sample * 32767))
+        return buf
+
+    def _concat(self, *parts: array) -> bytes:
+        out = array("h")
+        for part in parts:
+            out.extend(part)
+        return out.tobytes()
+
+    def _sequence(self, specs: List[Tuple[float, float, float, str]]) -> bytes:
+        out = array("h")
+        for freq, dur, vol, wave_kind in specs:
+            if freq <= 0.0 or vol <= 0.0:
+                out.extend(array("h", [0] * max(1, int(self.sample_rate * max(0.02, dur)))))
+            else:
+                out.extend(self._tone(freq, dur, volume=vol, wave_kind=wave_kind))
+        return out.tobytes()
+
+    def _build_procedural_sfx(self, key: str) -> Optional[pygame.mixer.Sound]:
+        if not self.available:
+            return None
+        key = str(key)
+        if key in {"ui_click", "ui_back", "ui_toggle", "pause_toggle"}:
+            specs = [(620, 0.040, 0.24, "triangle"), (880 if key != "ui_back" else 520, 0.055, 0.22, "triangle")]
+            return pygame.mixer.Sound(buffer=self._sequence(specs))
+        if key == "plant_place":
+            return pygame.mixer.Sound(buffer=self._concat(self._noise(0.050, volume=0.16), self._tone(220, 0.060, volume=0.22, wave_kind="triangle")))
+        if key == "shovel":
+            return pygame.mixer.Sound(buffer=self._concat(self._noise(0.045, volume=0.18), self._tone(180, 0.050, volume=0.18, wave_kind="square")))
+        if key == "collect_sun":
+            return pygame.mixer.Sound(buffer=self._sequence([(880, 0.045, 0.26, "sine"), (1174, 0.065, 0.24, "sine")]))
+        if key == "collect_coin":
+            return pygame.mixer.Sound(buffer=self._sequence([(740, 0.045, 0.24, "triangle"), (988, 0.060, 0.22, "triangle"), (1480, 0.080, 0.20, "triangle")]))
+        if key == "sun_spawn":
+            return pygame.mixer.Sound(buffer=self._sequence([(660, 0.060, 0.14, "sine"), (988, 0.080, 0.13, "sine")]))
+        if key == "pea_shoot":
+            return pygame.mixer.Sound(buffer=self._concat(self._tone(520, 0.040, volume=0.16, wave_kind="square"), self._tone(380, 0.035, volume=0.18, wave_kind="triangle", slide=-0.15)))
+        if key in {"zombie_hit", "plant_hit"}:
+            return pygame.mixer.Sound(buffer=self._concat(self._noise(0.035, volume=0.12), self._tone(150 if key == "plant_hit" else 230, 0.040, volume=0.12, wave_kind="triangle")))
+        if key == "newspaper_rip":
+            return pygame.mixer.Sound(buffer=self._concat(self._noise(0.070, volume=0.22), self._tone(260, 0.050, volume=0.10, wave_kind="square")))
+        if key == "grave_spawn":
+            return pygame.mixer.Sound(buffer=self._sequence([(180, 0.12, 0.18, "triangle"), (140, 0.16, 0.15, "triangle")]))
+        if key == "wave_warning":
+            return pygame.mixer.Sound(buffer=self._sequence([(494, 0.11, 0.18, "square"), (0.0, 0.04, 0.0, "sine"), (554, 0.11, 0.20, "square")]))
+        if key == "final_wave":
+            return pygame.mixer.Sound(buffer=self._sequence([(392, 0.10, 0.18, "square"), (523, 0.11, 0.20, "square"), (659, 0.14, 0.22, "square")]))
+        if key in {"battle_win", "shop_buy"}:
+            return pygame.mixer.Sound(buffer=self._sequence([(523, 0.08, 0.18, "triangle"), (659, 0.09, 0.18, "triangle"), (784, 0.13, 0.22, "triangle")]))
+        if key == "battle_lose":
+            return pygame.mixer.Sound(buffer=self._sequence([(392, 0.10, 0.18, "triangle"), (330, 0.11, 0.18, "triangle"), (247, 0.14, 0.18, "triangle")]))
+        if key in {"big_boom", "zomboss_stomp"}:
+            return pygame.mixer.Sound(buffer=self._concat(self._noise(0.11, volume=0.30, decay=2.8), self._tone(92, 0.18, volume=0.20, wave_kind="triangle", slide=-0.18)))
+        if key in {"slot_spin", "last_stand_start"}:
+            return pygame.mixer.Sound(buffer=self._sequence([(740, 0.05, 0.18, "triangle"), (880, 0.05, 0.18, "triangle"), (1046, 0.07, 0.20, "triangle")]))
+        if key == "zomboss_fireball":
+            return pygame.mixer.Sound(buffer=self._sequence([(220, 0.12, 0.18, "square"), (294, 0.14, 0.20, "square")]))
+        if key == "zomboss_iceball":
+            return pygame.mixer.Sound(buffer=self._sequence([(392, 0.10, 0.14, "sine"), (330, 0.14, 0.16, "sine")]))
+        if key == "zomboss_bungee":
+            return pygame.mixer.Sound(buffer=self._sequence([(523, 0.08, 0.14, "triangle"), (659, 0.08, 0.18, "triangle"), (523, 0.08, 0.14, "triangle")]))
+        if key == "zomboss_rv":
+            return pygame.mixer.Sound(buffer=self._sequence([(147, 0.12, 0.20, "square"), (131, 0.15, 0.20, "square")]))
+        if key == "zomboss_counter":
+            return pygame.mixer.Sound(buffer=self._sequence([(784, 0.08, 0.18, "triangle"), (988, 0.10, 0.20, "triangle")]))
+        return pygame.mixer.Sound(buffer=self._sequence([(600, 0.05, 0.16, "triangle")]))
+
+    def _build_procedural_music(self, key: str) -> Optional[pygame.mixer.Sound]:
+        if not self.available:
+            return None
+        tracks: Dict[str, List[Tuple[float, float, float, str]]] = {
+            "menu": [(392, 0.22, 0.10, "triangle"), (523, 0.22, 0.09, "triangle"), (659, 0.26, 0.09, "triangle"), (523, 0.22, 0.08, "triangle")] * 3,
+            "day": [(523, 0.18, 0.10, "triangle"), (659, 0.18, 0.10, "triangle"), (784, 0.22, 0.09, "triangle"), (659, 0.18, 0.08, "triangle")] * 4,
+            "night": [(330, 0.22, 0.09, "sine"), (392, 0.22, 0.08, "sine"), (494, 0.28, 0.08, "triangle"), (392, 0.22, 0.08, "sine")] * 4,
+            "pool": [(440, 0.18, 0.09, "triangle"), (494, 0.18, 0.09, "triangle"), (659, 0.24, 0.08, "sine"), (494, 0.18, 0.08, "triangle")] * 4,
+            "fog": [(294, 0.22, 0.08, "sine"), (349, 0.22, 0.08, "sine"), (440, 0.28, 0.08, "triangle"), (349, 0.22, 0.08, "sine")] * 4,
+            "roof": [(494, 0.18, 0.10, "square"), (587, 0.18, 0.09, "triangle"), (740, 0.20, 0.09, "triangle"), (587, 0.18, 0.08, "triangle")] * 4,
+            "zomboss": [(220, 0.18, 0.10, "square"), (262, 0.18, 0.10, "square"), (330, 0.20, 0.10, "triangle"), (262, 0.18, 0.09, "square")] * 5,
+        }
+        specs = tracks.get(key, tracks["menu"])
+        return pygame.mixer.Sound(buffer=self._sequence(specs))
+
+    def _load_sound(self, key: str, category: str) -> Optional[pygame.mixer.Sound]:
+        cache_key = (category, key)
+        if cache_key in self.sound_cache:
+            return self.sound_cache[cache_key]
+        sound: Optional[pygame.mixer.Sound] = None
+        path = self._find_asset_path(category, key)
+        if path is not None and self.available:
+            try:
+                sound = pygame.mixer.Sound(str(path))
+            except Exception:
+                sound = None
+        if sound is None:
+            sound = self._build_procedural_music(key) if category == "music" else self._build_procedural_sfx(key)
+        self._log_audio_status(category, key, path)
+        self.sound_cache[cache_key] = sound
+        return sound
+
+    def play_sfx(self, key: str, *, volume: float = 1.0, force: bool = False) -> None:
+        if not self.available or not self.sfx_enabled:
+            return
+        now = pygame.time.get_ticks()
+        cooldown = self.SFX_COOLDOWNS_MS.get(key, 0)
+        if (not force) and cooldown > 0 and now - self.last_played_ms.get(key, -99999) < cooldown:
+            return
+        sound = self._load_sound(key, "sfx")
+        if sound is None:
+            return
+        channel: Optional[pygame.mixer.Channel] = None
+        channel_count = max(1, pygame.mixer.get_num_channels())
+        for idx in range(1, channel_count):
+            probe = pygame.mixer.Channel(idx)
+            if not probe.get_busy():
+                channel = probe
+                break
+        if channel is None:
+            channel = pygame.mixer.Channel(1 if channel_count > 1 else 0)
+        if channel is None:
+            return
+        channel.set_volume(max(0.0, min(1.0, float(volume))))
+        channel.play(sound)
+        self.last_played_ms[key] = now
+
+    def play_music(self, key: str, *, loop: bool = True, fade_ms: int = 350, force: bool = False) -> None:
+        if not self.available:
+            return
+        if not self.music_enabled:
+            self.stop_music(fade_ms)
+            return
+        if (not force) and key == self.current_music_key and self.music_channel is not None and self.music_channel.get_busy():
+            return
+        sound = self._load_sound(key, "music")
+        if sound is None or self.music_channel is None:
+            return
+        self.current_music_key = str(key)
+        self.current_music_sound = sound
+        self.music_channel.set_volume(0.42)
+        self.music_channel.play(sound, loops=-1 if loop else 0, fade_ms=max(0, int(fade_ms)))
+
+    def stop_music(self, fade_ms: int = 250) -> None:
+        if not self.available or self.music_channel is None:
+            self.current_music_key = ""
+            self.current_music_sound = None
+            return
+        if self.music_channel.get_busy():
+            self.music_channel.fadeout(max(0, int(fade_ms)))
+        self.current_music_key = ""
+        self.current_music_sound = None
 
 EXPANDED_PLANT_KEYS = [
     "snowpea",
@@ -671,17 +987,17 @@ ZOMBOSS_BOSS_RULESETS: Dict[str, Dict[str, object]] = {
         "zombie_speed_scale": 1.0,
         "zombie_dps_scale": 1.0,
         "boss_intro_phase": (
-            {"time": 2.4, "spawns": (("normal", 2),)},
-            {"time": 8.2, "spawns": (("normal", 2), ("conehead", 1))},
-            {"time": 14.4, "spawns": (("conehead", 2),)},
-            {"time": 20.6, "spawns": (("buckethead", 1),)},
+            {"time": 1.8, "spawns": (("normal", 2),)},
+            {"time": 5.4, "spawns": (("normal", 2), ("conehead", 1))},
+            {"time": 9.6, "spawns": (("conehead", 2),)},
+            {"time": 14.6, "spawns": (("buckethead", 1),)},
         ),
         "boss_pattern_pool": (
-            ("fireball", "iceball", "stomp_smash", "fireball"),
-            ("fireball", "stomp_smash", "iceball", "fireball"),
-            ("iceball", "fireball", "stomp_smash", "iceball"),
+            ("fireball", "iceball", "fireball", "iceball"),
+            ("fireball", "iceball", "fireball", "stomp_smash"),
+            ("iceball", "fireball", "iceball", "stomp_smash"),
         ),
-        "boss_attack_interval": 8.9,
+        "boss_attack_interval": 5.7,
         "boss_attack_warning": 1.85,
         "boss_fire_warning": 0.74,
         "boss_ice_warning": 0.82,
@@ -699,9 +1015,9 @@ ZOMBOSS_BOSS_RULESETS: Dict[str, Dict[str, object]] = {
             "mid": (("conehead", "buckethead"), ("buckethead", "conehead"), ("buckethead", "imp")),
             "late": (("buckethead", "imp"), ("buckethead", "buckethead"), ("gargantuar",)),
         },
-        "boss_bungee_cycle": {"interval": 20.5, "count": 1},
-        "boss_stomp_cycle": {"interval": 23.5, "width": 2},
-        "boss_rv_cycle": {"interval": 31.0, "width": 2},
+        "boss_bungee_cycle": {"interval": 11.2, "unlock_after": 20.5, "count": 3},
+        "boss_stomp_cycle": {"interval": 10.8, "width": 4, "height": 2},
+        "boss_rv_cycle": {"interval": 15.2, "unlock_after": 33.0, "hp_pressure_threshold": 0.24, "width": 3, "height": 2},
         "boss_result_title_key": "zomboss_boss_result_title",
         "boss_result_summary_key": "zomboss_boss_result_summary",
         "boss_fail_title_key": "zomboss_boss_fail_title",
@@ -736,17 +1052,17 @@ ZOMBOSS_BOSS_RULESETS: Dict[str, Dict[str, object]] = {
         "zombie_speed_scale": 1.06,
         "zombie_dps_scale": 1.08,
         "boss_intro_phase": (
-            {"time": 1.8, "spawns": (("normal", 2), ("conehead", 1))},
-            {"time": 6.4, "spawns": (("conehead", 2),)},
-            {"time": 11.8, "spawns": (("buckethead", 1), ("conehead", 1))},
-            {"time": 16.2, "spawns": (("buckethead", 1), ("imp", 1))},
+            {"time": 1.4, "spawns": (("normal", 2), ("conehead", 1))},
+            {"time": 4.6, "spawns": (("conehead", 2),)},
+            {"time": 8.4, "spawns": (("buckethead", 1), ("conehead", 1))},
+            {"time": 11.8, "spawns": (("buckethead", 1), ("imp", 1))},
         ),
         "boss_pattern_pool": (
             ("fireball", "iceball", "stomp_smash", "fireball", "iceball"),
             ("iceball", "fireball", "stomp_smash", "iceball", "fireball"),
             ("fireball", "stomp_smash", "iceball", "stomp_smash", "fireball"),
         ),
-        "boss_attack_interval": 7.6,
+        "boss_attack_interval": 4.8,
         "boss_attack_warning": 1.68,
         "boss_fire_warning": 0.62,
         "boss_ice_warning": 0.70,
@@ -764,9 +1080,9 @@ ZOMBOSS_BOSS_RULESETS: Dict[str, Dict[str, object]] = {
             "mid": (("buckethead", "imp"), ("buckethead", "buckethead"), ("conehead", "imp")),
             "late": (("buckethead", "imp"), ("gargantuar", "imp"), ("buckethead", "gargantuar")),
         },
-        "boss_bungee_cycle": {"interval": 16.5, "count": 2},
-        "boss_stomp_cycle": {"interval": 18.6, "width": 2},
-        "boss_rv_cycle": {"interval": 24.5, "width": 2},
+        "boss_bungee_cycle": {"interval": 8.8, "unlock_after": 14.5, "count": 3},
+        "boss_stomp_cycle": {"interval": 9.2, "width": 4, "height": 2},
+        "boss_rv_cycle": {"interval": 11.6, "unlock_after": 18.0, "hp_pressure_threshold": 0.14, "width": 3, "height": 2},
         "boss_result_title_key": "zomboss_revenge_result_title",
         "boss_result_summary_key": "zomboss_revenge_result_summary",
         "boss_fail_title_key": "zomboss_revenge_fail_title",
@@ -1457,9 +1773,15 @@ I18N = {
         "beghouled_score": "Matches",
         "beghouled_goal": "Goal",
         "beghouled_combo": "Combo",
-        "seeing_stars_goal": "Fill all stars with Starfruit.",
-        "seeing_stars_done": "Stars Completed",
-        "seeing_stars_hint": "Only Starfruit planted on marked stars counts.",
+"seeing_stars_goal": "Fill all stars with Starfruit.",
+"seeing_stars_done": "Stars Completed",
+"seeing_stars_hint": "Only Starfruit planted on marked stars counts.",
+"zomboss_intro_dave_1": "Crazy Dave: That giant machine again? This roof is about to get ugly.",
+"zomboss_intro_dave_2": "Crazy Dave: Keep your cool. Ice-shroom for fire, Jalapeno for ice.",
+"zomboss_intro_dave_3": "Crazy Dave: HEY! Let go of my hat!",
+"zomboss_intro_reveal": "Dr. Zomboss drops onto the roof and starts the real fight.",
+"zomboss_intro_reveal_short": "Dr. Zomboss Arrives",
+"press_space_skip_intro": "Space / Enter to continue",
 "zomboss_boss_hint": "Save Ice-shroom for fireballs and Jalapeno for iceballs.",
 "zomboss_boss_hint_2": "Spread Melon-pult and Kernel-pult so one smash does not wipe the roof.",
 "zomboss_boss_result_title": "Dr. Zomboss Defeated",
@@ -1852,9 +2174,15 @@ I18N = {
         "beghouled_score": "消除数",
         "beghouled_goal": "目标",
         "beghouled_combo": "连锁",
-        "seeing_stars_goal": "把所有星位种上杨桃。",
-        "seeing_stars_done": "星位完成",
-        "seeing_stars_hint": "只有种在星位上的活杨桃才会计数。",
+"seeing_stars_goal": "把所有星位种上杨桃。",
+"seeing_stars_done": "星位完成",
+"seeing_stars_hint": "只有种在星位上的活杨桃才会计数。",
+"zomboss_intro_dave_1": "疯狂戴夫：那台大机器又来了？这回屋顶要热闹了。",
+"zomboss_intro_dave_2": "疯狂戴夫：先稳住。寒冰菇接火球，火爆辣椒专门留给冰球。",
+"zomboss_intro_dave_3": "疯狂戴夫：喂！别抓我的帽子！",
+"zomboss_intro_reveal": "僵王博士压到屋顶上，真正的首领战开始了。",
+"zomboss_intro_reveal_short": "僵王博士登场",
+"press_space_skip_intro": "按空格 / 回车继续",
 "zomboss_boss_hint": "把寒冰菇留给火球，把火爆辣椒留给冰球。",
 "zomboss_boss_hint_2": "西瓜和玉米投手要分散摆，别让一次砸车把整片屋顶带走。",
 "zomboss_boss_result_title": "僵王博士被击退了",
@@ -2163,6 +2491,8 @@ PLANT_BEHAVIOR_LABELS = {
     "torch": {"en": "Projectile Booster", "zh": "增伤火炬"},
     "block": {"en": "Defensive Blocker", "zh": "防线阻挡"},
     "pult": {"en": "Lobber", "zh": "抛投弹道"},
+    "kernel_pult": {"en": "Control Lobber", "zh": "控制抛投"},
+    "melon_pult": {"en": "Heavy Splash Lobber", "zh": "重型溅射抛投"},
     "cob": {"en": "Heavy Artillery", "zh": "重炮轰击"},
     "scaredy": {"en": "Long Range Coward", "zh": "远程胆小菇"},
     "fume": {"en": "Piercing Fume", "zh": "穿透烟雾"},
@@ -2661,6 +2991,7 @@ class AnimationClip:
     event_markers: Tuple[str, ...] = ()
     hold_last_frame_ms: int = 0
     impact_marker: str = ""
+    impact_frame_index: int = -1
     lock_until_end: bool = False
 
 
@@ -2678,6 +3009,7 @@ class AnimationState:
     locked: bool = False
     pending_clip: str = ""
     hold_timer_ms: float = 0.0
+    impact_fired: bool = False
 
 
 def make_animation_clip(
@@ -2688,6 +3020,7 @@ def make_animation_clip(
     event_markers: Tuple[str, ...] = (),
     hold_last_frame_ms: int = 0,
     impact_marker: str = "",
+    impact_frame_index: int = -1,
     lock_until_end: bool = False,
     anchor: Tuple[int, int] = (0, 0),
 ) -> AnimationClip:
@@ -2728,6 +3061,11 @@ def make_animation_clip(
         event_markers=tuple(event_markers),
         hold_last_frame_ms=max(0, int(hold_last_frame_ms)),
         impact_marker=str(impact_marker),
+        impact_frame_index=(
+            max(0, min(len(frames) - 1, int(impact_frame_index)))
+            if frames and int(impact_frame_index) >= 0
+            else (len(frames) - 1 if frames and impact_marker and not loop else -1)
+        ),
         lock_until_end=bool(lock_until_end),
     )
 
@@ -3490,12 +3828,12 @@ def build_plants() -> Dict[str, PlantType]:
     _add(p, PlantType("magnet_shroom", "Magnet-shroom", 100, 100, 7.5, "magnet", is_mushroom=True))
     _add(p, PlantType("cabbage_pult", "Cabbage-pult", 100, 140, 7.5, "pult", damage=40, lobbed=True))
     _add(p, PlantType("flower_pot", "Flower Pot", 25, 260, 7.5, "support", is_support=True))
-    _add(p, PlantType("kernel_pult", "Kernel-pult", 100, 140, 7.5, "pult", damage=30, lobbed=True))
+    _add(p, PlantType("kernel_pult", "Kernel-pult", 100, 140, 7.5, "kernel_pult", damage=30, lobbed=True))
     _add(p, PlantType("coffee_bean", "Coffee Bean", 75, 80, 7.5, "coffee"))
     _add(p, PlantType("garlic", "Garlic", 50, 350, 7.5, "garlic"))
     _add(p, PlantType("umbrella_leaf", "Umbrella Leaf", 100, 300, 7.5, "support", is_support=True))
     _add(p, PlantType("marigold", "Marigold", 50, 120, 7.5, "marigold"))
-    _add(p, PlantType("melon_pult", "Melon-pult", 300, 180, 7.5, "pult", damage=80, lobbed=True))
+    _add(p, PlantType("melon_pult", "Melon-pult", 300, 180, 7.5, "melon_pult", damage=80, lobbed=True))
     _add(p, PlantType("twin_sunflower", "Twin Sunflower", 150, 150, 50.0, "sun", sun_amount=50, interval=9.0))
     _add(p, PlantType("gloom_shroom", "Gloom-shroom", 150, 170, 50.0, "gloom", damage=28, is_mushroom=True))
     _add(p, PlantType("cattail", "Cattail", 225, 220, 50.0, "cattail", damage=20))
@@ -3525,13 +3863,76 @@ def build_plants() -> Dict[str, PlantType]:
         "pumpkin": PlantType("pumpkin", "Pumpkin", 125, 400, 30.0, "armor", is_overlay=True),
         "cactus": PlantType("cactus", "Cactus", 125, 300, 7.5, "shoot_balloon", damage=20),
         "starfruit": PlantType("starfruit", "Starfruit", 125, 130, 7.5, "star", damage=20),
-        "melon_pult": PlantType("melon_pult", "Melon-pult", 300, 180, 7.5, "pult", damage=80, lobbed=True),
-        "kernel_pult": PlantType("kernel_pult", "Kernel-pult", 100, 140, 7.5, "pult", damage=30, lobbed=True),
+        "melon_pult": PlantType("melon_pult", "Melon-pult", 300, 180, 7.5, "melon_pult", damage=80, lobbed=True),
+        "kernel_pult": PlantType("kernel_pult", "Kernel-pult", 100, 140, 7.5, "kernel_pult", damage=30, lobbed=True),
     }
     for k in EXPANDED_PLANT_KEYS:
         if k not in p and k in ensure_types:
             _add(p, ensure_types[k])
     return p
+
+
+DEFAULT_PLANT_GROUNDING_PROFILE: Dict[str, float | str] = {
+    "anchor_mode": "bbox_bottom",
+    "foot_inset_y": 0.0,
+    "shadow_family": "standard",
+    "shadow_scale_x": 1.0,
+}
+
+
+def build_plant_grounding_profiles() -> Dict[str, Dict[str, float | str]]:
+    profiles: Dict[str, Dict[str, float | str]] = {}
+
+    def add(
+        names: Iterable[str],
+        *,
+        anchor_mode: str = "bbox_bottom",
+        foot_inset_y: float = 0.0,
+        shadow_family: str = "standard",
+        shadow_scale_x: float = 1.0,
+    ) -> None:
+        for name in names:
+            profiles[str(name)] = {
+                "anchor_mode": anchor_mode,
+                "foot_inset_y": float(foot_inset_y),
+                "shadow_family": shadow_family,
+                "shadow_scale_x": float(shadow_scale_x),
+            }
+
+    add(("sunflower", "twin_sunflower", "marigold"), anchor_mode="anim_anchor", foot_inset_y=10.0)
+    add(("peashooter", "snowpea"), anchor_mode="anim_anchor", foot_inset_y=7.0)
+    add(("repeater",), anchor_mode="anim_anchor", foot_inset_y=8.0)
+    add(("gatling", "threepeater", "split_pea", "starfruit"), foot_inset_y=8.0)
+    add(("plantern", "umbrella_leaf"), foot_inset_y=8.0)
+    add(("cactus",), foot_inset_y=6.0)
+    add(("torchwood",), foot_inset_y=5.0, shadow_family="wide", shadow_scale_x=1.08)
+    add(("wallnut",), anchor_mode="anim_anchor", foot_inset_y=8.0, shadow_family="wide", shadow_scale_x=1.08)
+    add(("tall_nut",), foot_inset_y=10.0, shadow_family="wide", shadow_scale_x=1.14)
+    add(("chomper",), anchor_mode="anim_anchor", foot_inset_y=8.0, shadow_family="wide", shadow_scale_x=1.10)
+    add(("pumpkin",), anchor_mode="overlay_shell", foot_inset_y=4.0, shadow_family="wide", shadow_scale_x=1.16)
+    add(("potato_mine",), anchor_mode="anim_anchor", foot_inset_y=7.0, shadow_family="standard", shadow_scale_x=0.94)
+    add(("spikeweed",), foot_inset_y=3.0, shadow_family="flat", shadow_scale_x=1.18)
+    add(("spikerock",), foot_inset_y=4.0, shadow_family="flat", shadow_scale_x=1.22)
+    add(("tangle_kelp",), foot_inset_y=4.0, shadow_family="flat", shadow_scale_x=1.08)
+    add(("jalapeno",), anchor_mode="anim_anchor", foot_inset_y=2.0, shadow_family="standard", shadow_scale_x=0.92)
+    add(("cherrybomb", "squash", "blover"), foot_inset_y=6.0)
+    add(("puff_shroom", "sun_shroom", "hypno_shroom", "scaredy_shroom", "sea_shroom"), foot_inset_y=5.0)
+    add(("fume_shroom", "magnet_shroom", "gloom_shroom", "gold_magnet"), foot_inset_y=5.0, shadow_family="wide", shadow_scale_x=1.08)
+    add(("ice_shroom",), anchor_mode="anim_anchor", foot_inset_y=1.0)
+    add(("doom_shroom",), foot_inset_y=5.0, shadow_family="wide", shadow_scale_x=1.06)
+    add(("grave_buster",), foot_inset_y=6.0)
+    add(("lily_pad", "flower_pot"), anchor_mode="support_flat", foot_inset_y=2.0, shadow_family="flat", shadow_scale_x=1.10)
+    add(("coffee_bean",), anchor_mode="support_flat", foot_inset_y=4.0, shadow_family="flat", shadow_scale_x=0.90)
+    add(("cabbage_pult", "kernel_pult"), foot_inset_y=8.0, shadow_family="wide", shadow_scale_x=1.04)
+    add(("melon_pult", "winter_melon"), foot_inset_y=8.0, shadow_family="wide", shadow_scale_x=1.12)
+    add(("cob_cannon",), foot_inset_y=8.0, shadow_family="wide", shadow_scale_x=1.22)
+    add(("garlic",), foot_inset_y=4.0)
+    add(("cattail",), foot_inset_y=5.0, shadow_family="standard", shadow_scale_x=1.04)
+    add(("imitater",), anchor_mode="anim_anchor", foot_inset_y=8.0)
+    return profiles
+
+
+PLANT_GROUNDING_PROFILES = build_plant_grounding_profiles()
 
 
 def build_zombies() -> Dict[str, ZombieType]:
@@ -3812,43 +4213,77 @@ def build_levels(total: int = 50) -> List[LevelConfig]:
     return levels[: min(total, len(levels))]
 
 
+def almanac_desc(en_short: str, en_summary: str, zh_short: str, zh_summary: str) -> Dict[str, Tuple[str, str]]:
+    return {"en": (en_short, en_summary), "zh": (zh_short, zh_summary)}
+
+
+PLANT_ALMANAC_OVERRIDES: Dict[str, Dict[str, Tuple[str, str]]] = {
+    "sunflower": almanac_desc("Primary sun engine that turns setup into tempo.", "Open with it, protect the first copies, and let the rest of the defense come online off its economy.", "主力阳光引擎，负责把开局节奏真正转起来。", "它的价值不是输出，而是把前期经济站稳。先保住第一批向日葵，后面的整套防线才会顺起来。"),
+    "peashooter": almanac_desc("Reliable single-lane baseline firepower.", "Use it as the clean default answer for a lane that only needs steady chip and no special tech.", "稳定单线火力的标准答案。", "它不是爆发牌，而是最干净的基础射手。当前线只需要持续火力时，豌豆射手就是最省心的起手。"),
+    "wallnut": almanac_desc("Pure stall wall that buys time for the backline.", "It does not solve a push by itself; it exists to keep a lane standing while real damage cards work.", "纯粹的拖时间前排，用来给后排争取输出。", "坚果墙本身不负责解场，它的职责是把僵尸拦住，让后排火力和功能牌把节奏抢回来。"),
+    "potato_mine": almanac_desc("Delayed ambush that trades far above its cost.", "Plant it before pressure arrives. Once armed, it punishes the first heavy body that walks into the lane.", "延时埋伏型瞬杀牌，成熟后能低费换大怪。", "土豆雷不是临场救火牌，而是预判牌。提前埋好，等第一只重型目标自己踩上来，就是它最赚钱的时候。"),
+    "snowpea": almanac_desc("Basic lane shooter with built-in slow.", "Its damage is familiar, but the real value is dragging a lane down so the rest of your defense has more time.", "带减速的基础线性射手。", "寒冰射手和豌豆射手一样好上手，但它真正强的地方是把整条线的推进速度压慢，让后排有更多反应空间。"),
+    "repeater": almanac_desc("Double-beat lane DPS that melts one line faster.", "It wins by stronger sustained burst on a single lane, not by fancy coverage. Put it where you want one corridor to stay dead.", "双发节奏更强的单线压制射手。", "双发射手不是单纯“豌豆更多”，而是把一条线的持续压制抬高一档。想让某一行稳定清干净，它比基础射手更值得投资。"),
+    "cherrybomb": almanac_desc("Immediate local nuke for crowded emergencies.", "Use it when two or more tiles are about to collapse. It is the fastest way to erase a bad cluster.", "局部瞬间清场的应急炸弹。", "樱桃炸弹适合处理已经挤成一团的危机。当前线眼看要崩、而且是一个小区域一起爆掉时，它最省节奏。"),
+    "gatling": almanac_desc("Expensive lane shredder that turns support into real burst.", "It is the premium upgrade for a lane you are committed to holding. Feed it protection and it pays back in raw damage.", "高投入高回报的重火力升级。", "机枪射手要价高，但能把一条已经站稳的线变成真正的绞肉机。给它足够保护，它就能把纯火力上限拉到很高。"),
+    "chomper": almanac_desc("Single-target execution plant with a real downtime window.", "It removes one dangerous zombie cleanly, then becomes exposed while chewing and swallowing.", "单点处决型植物，吞掉目标后会出现明显空窗。", "大嘴花的价值在于直接抹掉一个关键目标，但吞下去以后会进入长空窗，所以它是点杀工具，不是持续火力。"),
+    "puff_shroom": almanac_desc("Free short-range filler that stabilizes early night lanes.", "Its range is tiny, but zero cost lets it cover early pressure while your economy develops.", "免费的短程夜间填线牌。", "小喷菇输出不远，但胜在白送。夜晚前期缺经济时，它能先把最前面的压力顶住，帮你把节奏拖起来。"),
+    "sun_shroom": almanac_desc("Night economy that starts small and scales upward.", "It is slower than Sunflower early, but it keeps paying better once the lane phase lasts long enough.", "夜间成长型经济牌，前期弱、后期赚。", "阳光菇刚种下时产量不高，但只要局面能拖住，它会慢慢长大，最后变成比早期经济更划算的长期收益。"),
+    "fume_shroom": almanac_desc("Short lane pressure that pierces shield-style blocking.", "Its cloud is built for dense frontal fights, especially when screen-door style armor would waste normal shots.", "短距离穿透输出，专克前排顶盾。", "大喷菇打得不远，但烟雾不会被门板这类阻挡浪费掉。当前排越厚、越挤，它的输出就越有价值。"),
+    "grave_buster": almanac_desc("Dedicated grave remover that clears board clutter.", "You bring it to reopen space and deny grave-based pressure, not for direct combat.", "专门处理墓碑、重新腾格子的工具牌。", "墓碑吞噬者不参与正面交火，它的作用是把夜间最烦人的场地占用点清掉，给你的布阵重新腾出空间。"),
+    "hypno_shroom": almanac_desc("Trap mushroom that turns one attacker back around.", "It is best saved for a specific high-value eater, not thrown into random chip damage.", "反转关键目标的心理陷阱。", "魅惑菇最适合拿来处理单个高价值僵尸。把它用在真正值得“策反”的目标上，收益才会比普通伤害更高。"),
+    "scaredy_shroom": almanac_desc("Cheap long-range night DPS that collapses when threatened.", "It pays for itself from safety, but the line must stay protected or it stops contributing.", "便宜的长程夜间火力，但怕近身。", "胆小菇远距离输出很划算，可一旦僵尸靠近就会缩起来。所以它适合放在稳线后排，而不是单独扛压。"),
+    "ice_shroom": almanac_desc("Global freeze reset that buys every lane time at once.", "It is a tempo button, not a bomb. Use it when the whole board needs one calm breath.", "全屏冻结的节奏重置牌。", "寒冰菇不是另一种炸弹，它强在把全场一起按停。全盘都快喘不过气时，一颗寒冰菇能把整局节奏重新拉回安全区。"),
+    "doom_shroom": almanac_desc("Huge area wipe that leaves a crater behind.", "It deletes an entire danger cluster, but the crater means you are also spending future board space.", "大范围核爆，但会留下不能立刻再种的坑。", "毁灭菇的价值是一次性把局部压力彻底清空，可代价是留下弹坑。它适合拿来换掉真正值得牺牲格子的场面。"),
+    "lily_pad": almanac_desc("Water platform that turns pool tiles into real planting space.", "By itself it does nothing, but every pool strategy starts with giving your real units somewhere to stand.", "把水路变成可布阵地面的基础平台。", "睡莲不会直接输出，但没有它，水路就根本搭不起完整防线。所有水路玩法，第一步都是先把站位造出来。"),
+    "squash": almanac_desc("Reactive single-target crusher.", "It is the quick answer to a zombie that slipped too close and must disappear right now.", "近距离反应型单点秒杀。", "窝瓜最适合处理已经闯进前线的目标。它不讲持续收益，讲的是“这只必须现在死”。"),
+    "threepeater": almanac_desc("Three-lane coverage shooter for stacked middle rows.", "It pays off when one plant can support multiple active lanes, especially in pool layouts.", "同时覆盖三行的多线射手。", "三线射手的强项不是单线极限输出，而是一个位置同时照顾多条线。水池和多线同步受压时，它的性价比会特别高。"),
+    "tangle_kelp": almanac_desc("Water ambush that drags one swimmer straight down.", "It is the pool version of a trap kill: cheap, immediate, and best used on the right target.", "水路埋伏型秒杀牌，专门把目标拖下水。", "缠绕海藻是水路的伏击工具。它花费低、出手快，适合拿来定点处理真正值得一换一的水路威胁。"),
+    "jalapeno": almanac_desc("Instant full-row burn that resets one lane on demand.", "Use it when one row has already gone bad and you need a clean horizontal reset immediately.", "即时整行烧穿的重置牌。", "火爆辣椒适合在某一整行已经出事时直接横向清空。它的意义是整排重置，而不是精细换怪。"),
+    "spikeweed": almanac_desc("Ground hazard that chips walkers and punishes vehicles.", "Place it where repeated foot traffic matters; it is steady attrition, not burst damage.", "铺地持续磨血，同时特别克制地面车辆。", "地刺不是爆发牌，而是靠持续磨血赚钱。只要僵尸会从这里反复踩过去，它就能把整条线的耐久慢慢刮空。"),
+    "torchwood": almanac_desc("Support log that upgrades peas into stronger fire shots.", "It does not carry damage alone, but it greatly amplifies pea lanes that are already firing through it.", "把普通豌豆升级成火豌豆的增幅支点。", "火炬树桩自己不打人，可只要前后搭好射手，它就会把原本普通的线性火力抬成更有穿透感的压制。"),
+    "tall_nut": almanac_desc("Heavy wall that hard-stops jumpers and lane skippers.", "Use it when a lane needs a blocker that stays a blocker even against leap-style threats.", "更高更硬的防线锚点，专门拦跳跃和越线。", "高坚果不只是更厚，它的意义是把那些会跳、会越障的威胁也钉在前排，不让它们轻松穿过去。"),
+    "sea_shroom": almanac_desc("Free short-range pool filler.", "It plays the same cheap early-stall role as Puff-shroom, but only where water lanes need bodies now.", "水路版免费短程填线牌。", "海蘑菇和小喷菇一样，强在零费拖前期，只不过它专门负责把水路最开始那段真空期顶过去。"),
+    "plantern": almanac_desc("Vision support that restores information in fog maps.", "Its job is not damage - it lets the rest of your tools fire at the right threats early enough.", "雾关信息支点，用来把视野拿回来。", "路灯花不负责输出，它的价值在于让你重新看见该处理的目标。雾一散，整套防守的判断都会轻松很多。"),
+    "cactus": almanac_desc("Straight shooter that also answers balloon lanes.", "It keeps normal lane pressure while making sure flying zombies do not turn into a free loss.", "兼顾地面输出和防气球的专职射手。", "仙人掌平时就是正常火力点，但它额外承担防气球职责。带上它，飞行威胁就不再逼你额外拆阵。"),
+    "blover": almanac_desc("Air-control utility that blows away balloon pressure.", "It is a tactical answer, not a lane DPS card. Hold it for the exact air window you want to erase.", "针对飞行压力的战术功能牌。", "三叶草不是拿来补输出的，而是拿来消掉特定的空中窗口。什么时候交，决定它值不值这一格和这一费。"),
+    "split_pea": almanac_desc("Two-direction shooter that protects front and rear at once.", "Its value appears when backline harassment or split pressure makes one-direction fire feel unsafe.", "同时照顾前后两个方向的双向射手。", "双向射手适合那些后排也会被摸到的局面。当前后都可能来压力时，它能省下额外回防位置。"),
+    "starfruit": almanac_desc("Multi-angle crossfire plant that threads shots through odd lanes.", "It is best when the board layout creates diagonal value and you want one slot to influence several paths.", "多角度散射的交叉火力植物。", "杨桃的强项不是某一条线，而是利用斜线和侧线把多个区域一起摸到。格子越刁钻，它越容易打出存在感。"),
+    "pumpkin": almanac_desc("Protective shell that lets a planted role stay on the board longer.", "Use it to preserve high-value utility or DPS pieces without changing what they fundamentally do.", "覆盖在外层的防护壳，用来保关键植物活得更久。", "南瓜头不会改变里面植物的职责，它做的是把重要火力、经济或功能位的存活时间再往后拖一截。"),
+    "magnet_shroom": almanac_desc("Metal disarm specialist that strips armor and tools.", "It is less about raw damage and more about removing what makes certain zombies unfair to fight head-on.", "专门拆金属装备的克制牌。", "磁力菇强的不是直接伤害，而是把铁桶、门板、梯子这类最烦人的装备先拆掉，让后续火力真正开始赚。"),
+    "cabbage_pult": almanac_desc("Basic roof lobber that starts your arc-fire package.", "It is the simplest answer to roof geometry: reliable lobbed damage without extra setup.", "屋顶最基础的抛投火力。", "卷心菜投手就是屋顶的起手炮台。地形会吃掉直线射击时，它是最稳定、最好铺开的基础抛投。"),
+    "flower_pot": almanac_desc("Roof platform that turns sloped tiles into usable positions.", "Like Lily Pad for pools, its job is enabling the real plant that comes after it.", "把屋顶斜坡格变成可种位置的基础平台。", "花盆本身不打伤害，但没有它，屋顶很多位置就根本没法经营。它是屋顶防线的地基。"),
+    "kernel_pult": almanac_desc("Control lobber that trades some damage for butter stuns.", "Choose it when stopping or interrupting a key target matters more than maximizing raw splash.", "带黄油控制的抛投植物。", "玉米投手的重点不是把伤害堆满，而是用黄油把关键目标定住。需要打断、控节奏时，它比纯输出更有价值。"),
+    "coffee_bean": almanac_desc("Wake-up support that unlocks mushroom tools during the day.", "It spends one slot to convert night utility into daytime access. Use it only when the mushroom payoff is worth the extra tax.", "让夜间蘑菇在白天也能工作的唤醒器。", "咖啡豆自己没有战斗力，但它能把夜间体系搬到白天来。只有当那株蘑菇足够值时，这笔额外成本才划算。"),
+    "garlic": almanac_desc("Lane-routing blocker that bends walkers into other rows.", "It is a traffic sign more than a wall. Use it to redirect pressure into the lane you are prepared to punish.", "把僵尸导流到其他行的路线控制牌。", "大蒜的重点不是硬吃伤害，而是改路。把麻烦的僵尸赶到你准备最充分的那条线，整盘就会顺很多。"),
+    "umbrella_leaf": almanac_desc("Protective canopy against air raids and lobbed picks.", "It keeps Bungee and siege pressure from freely deleting your most valuable backline pieces.", "专门防空降和抛投偷家的保护伞。", "保护伞叶的意义，是让蹦极和投石类威胁没法轻松点掉你的关键后排。它是在替整片阵地兜底。"),
+    "marigold": almanac_desc("Coin-generation plant for long-run economy rather than combat.", "It is not for surviving the lane right now - it is for turning stable boards into future shop progress.", "把稳定局面转成金币收益的经济植物。", "金盏花不是拿来救场的，而是用在局势已经稳住以后，把多余空间转换成长期收益。"),
+    "melon_pult": almanac_desc("Heavy splash artillery built to punish packed pushes.", "Its direct hit is strong, but the real payoff comes from crushing clustered waves and thick fronts together.", "重型范围压制炮，最擅长处理成团推进。", "西瓜投手的优势不只是单发重，更在于溅射能把扎堆的前排和后排一起压住，是最典型的范围重炮。"),
+    "twin_sunflower": almanac_desc("High-yield economy upgrade for slots you can already protect.", "It asks for a safer board than Sunflower, but it repays that safety by compressing more sun into the same tile.", "更高产的经济升级，用安全格换更高收益。", "双子向日葵需要比普通向日葵更稳的站位，但回报也更直接：同一格里榨出更多阳光，让中后期经济更饱。"),
+    "gloom_shroom": almanac_desc("Short-radius area damage that punishes anything crowding close.", "It is the mushroom answer to dense melee pressure, especially when enemies are already pushing onto the front tile.", "近身范围绞杀型蘑菇，专打贴脸堆怪。", "忧郁菇不靠远程点杀，而是靠近身圆形范围持续清场。当前排已经贴住、防线需要就地绞碎时，它特别好用。"),
+    "cattail": almanac_desc("Homing support that reaches awkward air and water threats from one pad.", "It is flexible map-wide cleanup: not the heaviest damage, but excellent at catching what straight lanes miss.", "带追踪能力的水路升级火力，擅长补死角。", "香蒲的魅力在于追踪。它未必是最高伤害，但能从一个睡莲位照顾很多直线火力碰不到的目标。"),
+    "winter_melon": almanac_desc("Heavy splash artillery with a built-in slow field.", "It keeps melon's crushing area damage while also dragging every hit group down to a safer pace.", "带群体减速的重型范围炮。", "冰西瓜保留了西瓜的高额溅射，还额外把整团敌人的速度一起压下来，是火力和控制兼具的顶级后期炮台。"),
+    "gold_magnet": almanac_desc("Auto-loot specialist that converts coin drops into effortless income.", "It does not help lanes win directly; it makes a stable board much less annoying to maintain financially.", "自动吸取金币战利品的辅助牌。", "吸金磁主要解决的是运营体验：阵地稳住以后，它能帮你把满地金币自动收掉，把收益更平滑地拿到手。"),
+    "spikerock": almanac_desc("Upgraded floor shredder that punishes vehicles and repeated contact harder.", "It keeps the lane-tax role of Spikeweed, but survives longer and hits heavier when traffic is constant.", "强化版地刺，抗打也更克制反复碾压。", "地刺王延续了铺地磨血的定位，但更耐久、伤害也更高。只要对面要一直从这条路压过来，它就会越来越赚。"),
+    "cob_cannon": almanac_desc("Delayed super-artillery for chosen high-value windows.", "It demands setup and patience, but nothing else deletes a chosen area with the same authority.", "需要蓄力的超重炮，专门处理高价值目标区。", "玉米加农炮准备慢、代价高，可只要等到真正值得的窗口，它就是最干脆的指定区域终结手段。"),
+    "imitater": almanac_desc("Flex slot that copies the exact plant your current plan wants more of.", "Its power is not a new role - it is breaking deck limits so one important job can appear twice.", "复制关键植物的弹性卡位。", "模仿者本身没有新职责，它强在把你最需要的那张牌再多带一份，让经济、功能或关键解场都能更稳定出现。"),
+}
+
+
 def ensure_localized_descriptions(plants: Dict[str, PlantType], zombies: Dict[str, ZombieType]) -> None:
-    plant_special: Dict[str, Dict[str, Tuple[str, str]]] = {
-        "sunflower": {
-            "en": ("Produces sunlight for your economy.", "Build two to four early to stabilize the mid game."),
-            "zh": ("生产阳光，是经济核心。", "前期优先种两到四株，保证中期展开。"),
-        },
-        "peashooter": {
-            "en": ("Reliable lane DPS with simple timing.", "Use as baseline damage, then add utility support."),
-            "zh": ("稳定的单线输出。", "先用它站稳防线，再叠控制与功能卡。"),
-        },
-        "wallnut": {
-            "en": ("Durable blocker that buys time.", "Place ahead of fragile attackers to absorb pressure."),
-            "zh": ("高耐久前排，负责拖时间。", "放在后排输出前面，吸收关键压力。"),
-        },
-        "potato_mine": {
-            "en": ("Cheap trap that arms before exploding.", "Pre-place in predicted lanes for efficient trades."),
-            "zh": ("低费陷阱，成熟后爆炸。", "提前埋在预判线路，换怪效率很高。"),
-        },
-    }
+    plant_special = PLANT_ALMANAC_OVERRIDES
 
     zombie_special: Dict[str, Dict[str, Tuple[str, str]]] = {
-        "normal": {
-            "en": ("Basic frontline zombie.", "Low threat alone, but dangerous in groups."),
-            "zh": ("基础前排僵尸。", "单体威胁低，成群后压迫明显。"),
-        },
-        "conehead": {
-            "en": ("Extra head armor increases durability.", "Needs earlier focus fire than normal zombies."),
-            "zh": ("头部有额外护甲。", "需要比普通僵尸更早集火。"),
-        },
-        "buckethead": {
-            "en": ("Heavy armored frontline unit.", "Checks whether your lane DPS is sufficient."),
-            "zh": ("重装前排单位。", "会直接考验线路火力是否足够。"),
-        },
-        "newspaper": {
-            "en": ("Gets enraged after losing the newspaper.", "Prepare for the second speed phase after paper loss."),
-            "zh": ("报纸掉落后会狂暴。", "要预留应对二段加速的手段。"),
-        },
+        "normal": {"en": ("Baseline frontline pressure.", "Alone it is simple. In numbers it tests whether your lane fundamentals are actually stable."), "zh": ("最基础的前排推进。", "单体不强，但数量一多就会直接考基础火力够不够。")},
+        "conehead": {"en": ("Early armor check.", "It exists to force earlier focus fire than a normal zombie and punish under-built lanes."), "zh": ("前期护甲检查。", "它会比普通僵尸更早逼你交火力，专门抓火力不够的线路。")},
+        "buckethead": {"en": ("Heavy armor wall.", "This is the lane DPS exam. If your line cannot chew through it, the whole wave stacks behind it."), "zh": ("重装厚甲前排。", "它是真正的线路火力考试：打不穿它，后面的整波压力就会一起堆上来。")},
+        "newspaper": {"en": ("Two-stage threat: slow paper advance, then enraged sprint.", "The real danger starts after the paper rips. Treat the second phase as a different zombie entirely."), "zh": ("两段式威胁：拿报推进，掉纸后狂暴。", "真正危险的是掉纸之后。它前后几乎是两种不同的僵尸，不能只按同一节奏处理。")},
+        "bungee": {"en": ("Raid threat that steals value from above.", "It does not win by damage - it wins by deleting your economy or backline support at the wrong moment."), "zh": ("从天而降的偷取威胁。", "它不是靠伤害压线，而是专门抓你的经济和后排关键位。")},
+        "ladder": {"en": ("Frontline breaker that invalidates blockers.", "Once the ladder lands, your safe wall stops being safe. Kill it before the placement completes."), "zh": ("专门破前排锚点的突破手。", "梯子一旦放下，坚果墙就不再安全，所以重点不是磨死它，而是尽量阻止它把梯子放稳。")},
+        "catapult": {"en": ("Backline siege pick-off.", "It pressures fragile support and artillery behind the wall, not the wall itself."), "zh": ("专门点杀后排的攻城僵尸。", "它不是来拆前排的，而是隔着前排直接威胁后排输出和辅助位。")},
+        "pogo": {"en": ("Frontline bypass threat.", "It wins by skipping your first layer and forcing a second answer behind the wall."), "zh": ("直接越过前排的突破手。", "它的意义是跳过第一层防线，逼你在后排也准备反制。")},
+        "zomboni": {"en": ("Vehicle pressure that redraws the lane with ice.", "It pushes forward while changing future movement through the ice trail."), "zh": ("推进型车辆威胁，还会留下冰道。", "它不仅自己往前压，还会把后续整条线路的节奏一起改掉。")},
+        "zomboss": {"en": ("Pattern boss built around row pressure, raids, and resource checks.", "The fight is about reading the next pattern and holding the right counter card, not just surviving damage."), "zh": ("围绕循环压迫、空投干扰和资源调度展开的首领。", "这场战斗的核心不是单纯扛伤害，而是读懂下一拍并把对策卡留在正确窗口。")},
     }
 
     for key, cfg in plants.items():
@@ -3858,18 +4293,18 @@ def ensure_localized_descriptions(plants: Dict[str, PlantType], zombies: Dict[st
         behavior = PLANT_BEHAVIOR_LABELS.get(cfg.behavior, {"en": "Special Utility", "zh": "特殊功能"})
         names = PLANT_NAMES.get(key, {"en": cfg.name, "zh": cfg.name})
         special = plant_special.get(key)
-        if special:
+        if special is not None:
             en_short, en_summary = special["en"]
             zh_short, zh_summary = special["zh"]
         else:
-            en_short = f"{names.get('en', cfg.name)} focuses on {behavior.get('en', 'special utility').lower()}."
-            en_summary = "Use it with lane timing and synergy to keep pressure manageable."
-            zh_short = f"{names.get('zh', cfg.name)}，定位：{behavior.get('zh', '特殊功能')}。"
-            zh_summary = "请结合线路节奏和阵容协同使用，保持防线稳定。"
-        en.setdefault("short", en_short)
-        en.setdefault("summary", en_summary)
-        zh.setdefault("short", zh_short)
-        zh.setdefault("summary", zh_summary)
+            en_short = f"{names.get('en', cfg.name)} fills a {behavior.get('en', 'special utility').lower()} role."
+            en_summary = "Use it for its lane job and pair it with the unit that covers its weakness."
+            zh_short = f"{names.get('zh', cfg.name)}的定位是{behavior.get('zh', '特殊功能')}。"
+            zh_summary = "围绕它的线路职责使用，再用其它植物补掉它处理不了的压力。"
+        en["short"] = en_short
+        en["summary"] = en_summary
+        zh["short"] = zh_short
+        zh["summary"] = zh_summary
 
     for key, cfg in zombies.items():
         desc = ZOMBIE_DESCRIPTIONS.setdefault(key, {})
@@ -3878,18 +4313,18 @@ def ensure_localized_descriptions(plants: Dict[str, PlantType], zombies: Dict[st
         behavior = ZOMBIE_BEHAVIOR_LABELS.get(cfg.behavior, {"en": "Special Attack", "zh": "特殊进攻"})
         names = ZOMBIE_NAMES.get(key, {"en": cfg.name, "zh": cfg.name})
         special = zombie_special.get(key)
-        if special:
+        if special is not None:
             en_short, en_threat = special["en"]
             zh_short, zh_threat = special["zh"]
         else:
-            en_short = f"{names.get('en', cfg.name)} uses {behavior.get('en', 'special attack').lower()} behavior."
-            en_threat = "Match lane control, burst, and timing to avoid line collapse."
-            zh_short = f"{names.get('zh', cfg.name)}，特性：{behavior.get('zh', '特殊进攻')}。"
-            zh_threat = "请用减速、爆发和节奏控制配合处理，避免单线崩盘。"
-        en.setdefault("short", en_short)
-        en.setdefault("threat", en_threat)
-        zh.setdefault("short", zh_short)
-        zh.setdefault("threat", zh_threat)
+            en_short = f"{names.get('en', cfg.name)} applies {behavior.get('en', 'special attack').lower()} pressure."
+            en_threat = "Read its lane job early and answer with the counter that breaks that specific pressure type."
+            zh_short = f"{names.get('zh', cfg.name)}的主要威胁是{behavior.get('zh', '特殊进攻')}。"
+            zh_threat = "先看清它是哪一类压力，再用对应的反制去拆，不要把不同威胁都当成同一种怪。"
+        en["short"] = en_short
+        en["threat"] = en_threat
+        zh["short"] = zh_short
+        zh["threat"] = zh_threat
 class SaveManager:
     def __init__(self, path: Path):
         self.path = path
@@ -4057,6 +4492,7 @@ class BattleState:
         self.notice_request_key = ""
         self.notice_request_color: Tuple[int, int, int] = (58, 42, 24)
         self.notice_request_duration_ms = 0
+        self.audio_request_keys: List[str] = []
         self.zomboss_hp = 0.0
         self.zomboss_hp_max = 0.0
         self.zomboss_intro_elapsed = 0.0
@@ -4077,6 +4513,15 @@ class BattleState:
         self.zomboss_pending_attack: Dict[str, object] = {}
         self.zomboss_night_tint = 0.0
         self.zomboss_actor: Optional[Zombie] = None
+        self.battle_intro_phase = ""
+        self.battle_intro_step_t = 0.0
+        self.battle_intro_skip_ready_t = 0.0
+        self.battle_intro_dave_x = -140.0
+        self.battle_intro_dave_y = float(LAWN_Y + 72)
+        self.battle_intro_bungee_y = -160.0
+        self.battle_intro_grabbed = False
+        self.battle_intro_overlay_t = 0.0
+        self.battle_intro_queued_reveal_notice = False
         self.animation_clip_provider = None
 
     def mode_bool(self, key: str, default: bool = False) -> bool:
@@ -4254,6 +4699,15 @@ class BattleState:
         self.notice_request_color = color
         self.notice_request_duration_ms = max(400, int(duration_ms))
 
+    def queue_audio_key(self, key: str) -> None:
+        if key:
+            self.audio_request_keys.append(str(key))
+
+    def consume_audio_requests(self) -> List[str]:
+        items = list(self.audio_request_keys)
+        self.audio_request_keys.clear()
+        return items
+
     def consume_notice_request(self) -> Tuple[str, str, Tuple[int, int, int], int]:
         text = self.notice_request_text
         key = self.notice_request_key
@@ -4263,6 +4717,121 @@ class BattleState:
         self.notice_request_key = ""
         self.notice_request_duration_ms = 0
         return text, key, color, duration
+
+    def battle_intro_target_pos(self) -> Tuple[float, float]:
+        x = float(LAWN_X + CELL_W * 1.1)
+        y = float(LAWN_Y + CELL_H * 0.55)
+        return x, y
+
+    def is_battle_intro_active(self) -> bool:
+        return bool(self.battle_intro_phase) and self.battle_intro_phase != "combat_live"
+
+    def battle_intro_dialog_key(self) -> str:
+        if self.battle_intro_phase == "dave_dialog_1":
+            return "zomboss_intro_dave_1"
+        if self.battle_intro_phase == "dave_dialog_2":
+            return "zomboss_intro_dave_2"
+        if self.battle_intro_phase == "boss_reveal":
+            return "zomboss_intro_reveal"
+        return ""
+
+    def battle_intro_can_skip(self) -> bool:
+        return self.battle_intro_phase in {"dave_dialog_1", "dave_dialog_2", "boss_reveal"} and self.battle_intro_skip_ready_t <= 0.0
+
+    def enter_battle_intro_phase(self, phase: str) -> None:
+        self.battle_intro_phase = phase
+        self.battle_intro_grabbed = phase in {"bungee_snatch", "boss_reveal"}
+        phase_durations = {
+            "dave_enter": 1.12,
+            "dave_dialog_1": 2.20,
+            "dave_dialog_2": 2.55,
+            "bungee_snatch": 1.10,
+            "boss_reveal": 1.20,
+            "combat_live": 0.0,
+        }
+        self.battle_intro_step_t = float(phase_durations.get(phase, 0.0))
+        self.battle_intro_skip_ready_t = 0.28 if phase in {"dave_dialog_1", "dave_dialog_2", "boss_reveal"} else 9999.0
+        if phase == "dave_enter":
+            self.battle_intro_dave_x = -140.0
+            self.battle_intro_bungee_y = -180.0
+            self.battle_intro_grabbed = False
+            self.battle_intro_overlay_t = 0.0
+            self.battle_intro_queued_reveal_notice = False
+        elif phase == "bungee_snatch":
+            self.battle_intro_bungee_y = -120.0
+            self.queue_audio_key("zomboss_bungee")
+        elif phase == "boss_reveal":
+            self.battle_intro_overlay_t = 1.0
+            if not self.battle_intro_queued_reveal_notice:
+                self.queue_notice_key("zomboss_intro_reveal", color=(186, 78, 52), duration_ms=1280)
+                self.battle_intro_queued_reveal_notice = True
+        elif phase == "combat_live":
+            self.battle_intro_overlay_t = 0.0
+            self.battle_intro_step_t = 0.0
+            self.battle_intro_skip_ready_t = 0.0
+
+    def setup_battle_intro(self) -> None:
+        self.battle_intro_phase = ""
+        self.battle_intro_step_t = 0.0
+        self.battle_intro_skip_ready_t = 0.0
+        self.battle_intro_overlay_t = 0.0
+        self.battle_intro_queued_reveal_notice = False
+        self.battle_intro_grabbed = False
+        self.battle_intro_dave_x = -140.0
+        self.battle_intro_bungee_y = -180.0
+        _tx, ty = self.battle_intro_target_pos()
+        self.battle_intro_dave_y = ty
+        if self.zomboss_stage_key() == "adventure_zomboss_boss":
+            self.enter_battle_intro_phase("dave_enter")
+        else:
+            self.enter_battle_intro_phase("boss_reveal")
+
+    def skip_battle_intro_step(self) -> bool:
+        if not self.is_battle_intro_active() or not self.battle_intro_can_skip():
+            return False
+        phase = self.battle_intro_phase
+        if phase == "dave_dialog_1":
+            self.enter_battle_intro_phase("dave_dialog_2")
+            return True
+        if phase == "dave_dialog_2":
+            self.enter_battle_intro_phase("bungee_snatch")
+            return True
+        if phase == "boss_reveal":
+            self.enter_battle_intro_phase("combat_live")
+            return True
+        return False
+
+    def update_battle_intro(self, dt: float) -> None:
+        if not self.is_battle_intro_active():
+            return
+        target_x, target_y = self.battle_intro_target_pos()
+        self.battle_intro_skip_ready_t = max(0.0, self.battle_intro_skip_ready_t - dt)
+        self.battle_intro_overlay_t = max(0.0, self.battle_intro_overlay_t - dt * 0.85)
+        phase = self.battle_intro_phase
+        if phase == "dave_enter":
+            self.battle_intro_dave_x = min(target_x, self.battle_intro_dave_x + dt * 360.0)
+        elif phase in {"dave_dialog_1", "dave_dialog_2"}:
+            self.battle_intro_dave_x += (target_x - self.battle_intro_dave_x) * min(1.0, dt * 8.0)
+            self.battle_intro_dave_y = target_y + math.sin(pygame.time.get_ticks() * 0.008) * 2.0
+        elif phase == "bungee_snatch":
+            self.battle_intro_bungee_y = min(target_y - 44.0, self.battle_intro_bungee_y + dt * 520.0)
+            self.battle_intro_dave_y -= dt * 118.0
+            self.battle_intro_dave_x = min(self.lawn_right() - 64.0, self.battle_intro_dave_x + dt * 26.0)
+        elif phase == "boss_reveal":
+            self.battle_intro_bungee_y = max(-160.0, self.battle_intro_bungee_y - dt * 380.0)
+        self.battle_intro_step_t = max(0.0, self.battle_intro_step_t - dt)
+        if self.battle_intro_step_t > 0.0:
+            return
+        if phase == "dave_enter":
+            self.enter_battle_intro_phase("dave_dialog_1")
+        elif phase == "dave_dialog_1":
+            self.enter_battle_intro_phase("dave_dialog_2")
+        elif phase == "dave_dialog_2":
+            self.enter_battle_intro_phase("bungee_snatch")
+        elif phase == "bungee_snatch":
+            self.enter_battle_intro_phase("boss_reveal")
+        elif phase == "boss_reveal":
+            self.enter_battle_intro_phase("combat_live")
 
     def zomboss_progress_ratio(self) -> float:
         if self.zomboss_hp_max <= 0.0:
@@ -4339,6 +4908,18 @@ class BattleState:
 
     def zomboss_exposed_window(self) -> float:
         return max(0.25, float(self.zomboss_ruleset().get("boss_exposed_window", 0.66)))
+
+    def zomboss_cycle_unlock_time(self, cycle_key: str, default: float = 0.0) -> float:
+        raw = self.zomboss_ruleset().get(cycle_key, {})
+        if not isinstance(raw, dict):
+            return max(0.0, float(default))
+        return max(0.0, float(raw.get("unlock_after", default)))
+
+    def zomboss_cycle_value(self, cycle_key: str, value_key: str, default: float) -> float:
+        raw = self.zomboss_ruleset().get(cycle_key, {})
+        if not isinstance(raw, dict):
+            return max(0.0, float(default))
+        return max(0.0, float(raw.get(value_key, default)))
 
     def zomboss_notice_key(self, kind: str) -> str:
         notice_map = {
@@ -4432,20 +5013,27 @@ class BattleState:
             row = int(payload.get("row", random.randrange(self.rows())))
             self.spawn_zomboss_lane_projectile("iceball", row)
         elif kind == "stomp_smash":
+            row = int(payload.get("row", max(0, self.rows() // 2 - 1)))
             col = int(payload.get("col", 5))
             width = max(1, int(float(payload.get("width", 2.0))))
-            for row in range(self.rows()):
-                self.damage_zomboss_cells(row, col, col + width - 1, 9999.0, flash_t=0.30)
+            height = max(1, int(float(payload.get("height", 2.0))))
+            for rr in range(row, min(self.rows(), row + height)):
+                self.damage_zomboss_cells(rr, col, col + width - 1, 9999.0, flash_t=0.30)
+            self.queue_audio_key("zomboss_stomp")
         elif kind == "rv_call":
+            row = int(payload.get("row", max(0, self.rows() // 2 - 1)))
             col = int(payload.get("col", 5))
             width = max(2, int(float(payload.get("width", 2.0))))
-            for row in range(self.rows()):
-                self.damage_zomboss_cells(row, col, col + width - 1, 9999.0, flash_t=0.26)
+            height = max(1, int(float(payload.get("height", 2.0))))
+            for rr in range(row, min(self.rows(), row + height)):
+                self.damage_zomboss_cells(rr, col, col + width - 1, 9999.0, flash_t=0.26)
             self.spawn_zombie(wave_idx=1, forced_kind="imp")
+            self.queue_audio_key("zomboss_rv")
         elif kind == "bungee_call":
             count = max(1, int(self.zomboss_ruleset().get("boss_bungee_cycle", {}).get("count", 1)))
             for _ in range(count):
                 self.spawn_zombie(wave_idx=1, forced_kind="bungee")
+            self.queue_audio_key("zomboss_bungee")
 
     def damage_zomboss(self, amount: float) -> None:
         if self.zomboss_hp_max <= 0.0 or self.result:
@@ -4506,6 +5094,9 @@ class BattleState:
         self.grave_t = 0.0
         self.sky_t = 0.0
         self.cleaners = [True for _ in range(self.rows())]
+        self.setup_battle_intro()
+        if self.is_battle_intro_active() and isinstance(rules.get("boss_intro_phase", ()), (list, tuple)):
+            self.zomboss_intro_index = len(tuple(rules.get("boss_intro_phase", ())))
 
     def queue_zomboss_attack(self, kind: str) -> None:
         if self.zomboss_pending_attack or self.result:
@@ -4521,11 +5112,16 @@ class BattleState:
         elif kind == "stomp_smash":
             stomp_cycle = self.zomboss_ruleset().get("boss_stomp_cycle", {})
             width = max(1, int(float(stomp_cycle.get("width", 2)) if isinstance(stomp_cycle, dict) else 2.0))
+            height = max(1, int(float(stomp_cycle.get("height", 2)) if isinstance(stomp_cycle, dict) else 2.0))
             min_col = max(4, COLS - 3)
             max_col = 6 if COLS >= 8 else max(4, COLS - width)
             col = random.randint(min_col, max_col) if max_col >= min_col else min_col
+            row_max = max(0, self.rows() - height)
+            row = random.randint(0, row_max) if row_max > 0 else 0
+            payload["row"] = float(row)
             payload["col"] = float(col)
             payload["width"] = float(width)
+            payload["height"] = float(height)
             self.set_zomboss_attack_phase(payload, "stomp_smash", self.zomboss_phase_window(kind, "warning", 0.68), eye_mode="smash")
             self.zomboss_stomp_t = 0.0
         elif kind == "bungee_call":
@@ -4533,10 +5129,15 @@ class BattleState:
         elif kind == "rv_call":
             rv_cycle = self.zomboss_ruleset().get("boss_rv_cycle", {})
             width = max(2, int(float(rv_cycle.get("width", 2)) if isinstance(rv_cycle, dict) else 2.0))
+            height = max(1, int(float(rv_cycle.get("height", 2)) if isinstance(rv_cycle, dict) else 2.0))
             max_col = 6 if COLS >= 8 else max(4, COLS - width)
             col = random.randint(5, max_col) if max_col >= 5 else max_col
+            row_max = max(0, self.rows() - height)
+            row = random.randint(0, row_max) if row_max > 0 else 0
+            payload["row"] = float(row)
             payload["col"] = float(col)
             payload["width"] = float(width)
+            payload["height"] = float(height)
             self.set_zomboss_attack_phase(payload, "rv_call", self.zomboss_phase_window(kind, "windup", 0.90), eye_mode="smash")
         else:
             return
@@ -4590,10 +5191,11 @@ class BattleState:
                 return
             if phase in {"windup_fire", "windup_ice"}:
                 release_phase = "release_fire" if kind == "fireball" else "release_ice"
-                self.execute_zomboss_attack_payload(payload)
                 self.set_zomboss_attack_phase(payload, release_phase, self.zomboss_phase_window(kind, "release", 0.16), eye_mode=eye_mode, row=row)
                 return
             if phase in {"release_fire", "release_ice"}:
+                if not bool(payload.get("resolved", False)):
+                    self.execute_zomboss_attack_payload(payload)
                 recover_t = self.zomboss_phase_window(kind, "recover", self.zomboss_exposed_window())
                 self.zomboss_exposed_t = max(self.zomboss_exposed_t, max(recover_t, self.zomboss_exposed_window()))
                 self.set_zomboss_attack_phase(payload, "recover_exposed", recover_t, eye_mode="exposed", row=row)
@@ -4603,7 +5205,8 @@ class BattleState:
                 return
         if kind == "stomp_smash":
             if phase == "stomp_smash":
-                self.execute_zomboss_attack_payload(payload)
+                if not bool(payload.get("resolved", False)):
+                    self.execute_zomboss_attack_payload(payload)
                 recover_t = self.zomboss_phase_window(kind, "recover", self.zomboss_exposed_window())
                 self.zomboss_exposed_t = max(self.zomboss_exposed_t, max(recover_t, self.zomboss_exposed_window()))
                 self.set_zomboss_attack_phase(payload, "recover_exposed", recover_t, eye_mode="exposed")
@@ -4612,16 +5215,20 @@ class BattleState:
                 self.clear_zomboss_attack_state()
                 return
         if kind == "bungee_call":
-            self.execute_zomboss_attack_payload(payload)
+            if not bool(payload.get("resolved", False)):
+                self.execute_zomboss_attack_payload(payload)
             self.clear_zomboss_attack_state()
             return
         if kind == "rv_call":
-            self.execute_zomboss_attack_payload(payload)
+            if not bool(payload.get("resolved", False)):
+                self.execute_zomboss_attack_payload(payload)
             self.clear_zomboss_attack_state()
             return
         self.clear_zomboss_attack_state()
 
     def update_zomboss_boss_mode(self, dt: float) -> None:
+        if self.is_battle_intro_active():
+            return
         rules = self.zomboss_ruleset()
         self.zomboss_exposed_t = max(0.0, self.zomboss_exposed_t - dt)
         intro = rules.get("boss_intro_phase", ())
@@ -4651,18 +5258,6 @@ class BattleState:
             self.zomboss_eye_mode = "exposed" if self.zomboss_exposed_t > 0.0 else "idle"
             if not intro_active:
                 self.zomboss_attack_t += dt
-                attack_interval = max(4.0, float(rules.get("boss_attack_interval", 8.5)))
-                if self.zomboss_attack_t >= attack_interval:
-                    self.zomboss_attack_t = 0.0
-                    next_attack = self.next_zomboss_pattern_attack()
-                    if next_attack == "stomp_smash":
-                        stomp_cycle = rules.get("boss_stomp_cycle", {})
-                        stomp_interval = max(10.0, float(stomp_cycle.get("interval", 20.0))) if isinstance(stomp_cycle, dict) else 20.0
-                        if self.zomboss_stomp_t < stomp_interval:
-                            next_attack = "fireball" if (self.zomboss_attack_index % 2 == 0) else "iceball"
-                    if next_attack:
-                        self.zomboss_attack_index += 1
-                        self.queue_zomboss_attack(next_attack)
         if not intro_active:
             self.zomboss_stomp_t += dt
             spawn_cycle = self.zomboss_spawn_cycle()
@@ -4681,26 +5276,55 @@ class BattleState:
                 active_cap = 6 if self.zomboss_stage_key() == "adventure_zomboss_boss" else 7
                 if active_ground < active_cap:
                     self.spawn_zomboss_pack(self.zomboss_spawn_pack(), wave_idx=1)
+            attack_interval = max(4.0, float(rules.get("boss_attack_interval", 8.5)))
             bungee_cycle = rules.get("boss_bungee_cycle", {})
+            bungee_interval = 0.0
+            bungee_due = False
             if isinstance(bungee_cycle, dict):
                 self.zomboss_bungee_t += dt
                 bungee_interval = max(8.0, float(bungee_cycle.get("interval", 0.0)))
-                if bungee_interval > 0.0 and self.zomboss_bungee_t >= bungee_interval and not self.zomboss_pending_attack:
-                    self.zomboss_bungee_t -= bungee_interval
-                    self.queue_zomboss_attack("bungee_call")
+                bungee_due = (
+                    bungee_interval > 0.0
+                    and self.zomboss_bungee_t >= bungee_interval
+                    and self.elapsed >= self.zomboss_cycle_unlock_time("boss_bungee_cycle", 0.0)
+                )
             rv_cycle = rules.get("boss_rv_cycle", {})
+            rv_interval = 0.0
+            rv_due = False
             if isinstance(rv_cycle, dict):
                 self.zomboss_rv_t += dt
                 rv_interval = max(10.0, float(rv_cycle.get("interval", 0.0)))
                 progress_pressure = 1.0 - self.zomboss_progress_ratio()
-                rv_ready = progress_pressure >= (0.48 if self.zomboss_stage_key() == "adventure_zomboss_boss" else 0.34)
-                if rv_interval > 0.0 and rv_ready and self.zomboss_rv_t >= rv_interval and not self.zomboss_pending_attack:
+                default_pressure = 0.48 if self.zomboss_stage_key() == "adventure_zomboss_boss" else 0.34
+                rv_ready = progress_pressure >= self.zomboss_cycle_value("boss_rv_cycle", "hp_pressure_threshold", default_pressure)
+                rv_time_ready = self.elapsed >= self.zomboss_cycle_unlock_time("boss_rv_cycle", 9999.0)
+                rv_due = rv_interval > 0.0 and self.zomboss_rv_t >= rv_interval and (rv_ready or rv_time_ready)
+            stomp_cycle = rules.get("boss_stomp_cycle", {})
+            stomp_interval = max(10.0, float(stomp_cycle.get("interval", 20.0))) if isinstance(stomp_cycle, dict) else 20.0
+            stomp_overdue = self.zomboss_stomp_t >= (stomp_interval * 1.18)
+            if not self.zomboss_pending_attack:
+                if bungee_due and (self.zomboss_bungee_t >= bungee_interval * 1.08 or self.zomboss_attack_t < attack_interval * 0.76):
+                    self.zomboss_bungee_t -= bungee_interval
+                    self.queue_zomboss_attack("bungee_call")
+                elif rv_due and (self.zomboss_rv_t >= rv_interval * 1.06 or self.zomboss_progress_ratio() <= 0.86):
                     self.zomboss_rv_t -= rv_interval
                     self.queue_zomboss_attack("rv_call")
+                elif self.zomboss_attack_t >= attack_interval:
+                    self.zomboss_attack_t = 0.0
+                    next_attack = self.next_zomboss_pattern_attack()
+                    if next_attack == "stomp_smash" and self.zomboss_stomp_t < stomp_interval:
+                        next_attack = "fireball" if (self.zomboss_attack_index % 2 == 0) else "iceball"
+                    elif next_attack in {"fireball", "iceball"} and stomp_overdue:
+                        next_attack = "stomp_smash"
+                    if next_attack:
+                        self.zomboss_attack_index += 1
+                        self.queue_zomboss_attack(next_attack)
         self.update_zomboss_animation(dt)
 
     def draw_zomboss_boss_overlay(self, screen: pygame.Surface, zombie_sprite_fn=None, tr_fn=None, entity_anim_frame_fn=None) -> None:
         if not self.is_zomboss_boss_mode():
+            return
+        if self.is_battle_intro_active() and self.battle_intro_phase not in {"boss_reveal", "combat_live"}:
             return
         lawn_rect = pygame.Rect(LAWN_X, 0, COLS * CELL_W, LAWN_Y + self.lawn_h())
         tint = pygame.Surface((lawn_rect.w, lawn_rect.h), pygame.SRCALPHA)
@@ -4719,8 +5343,16 @@ class BattleState:
             screen.blit(row_overlay, row_rect.topleft)
         elif pending_kind in {"stomp_smash", "rv_call"}:
             width = max(1, int(float(pending.get("width", 2.0))))
+            height = max(1, int(float(pending.get("height", 2.0))))
             col = int(float(pending.get("col", max(4, COLS - 3))))
-            area_rect = pygame.Rect(LAWN_X + col * CELL_W, LAWN_Y, width * CELL_W, self.lawn_h())
+            row = int(float(pending.get("row", 0.0)))
+            row = max(0, min(self.rows() - height, row))
+            area_rect = pygame.Rect(
+                LAWN_X + col * CELL_W,
+                LAWN_Y + row * CELL_H,
+                width * CELL_W,
+                height * CELL_H,
+            )
             area_overlay = pygame.Surface(area_rect.size, pygame.SRCALPHA)
             area_overlay.fill((188, 96, 52, telegraph_alpha))
             screen.blit(area_overlay, area_rect.topleft)
@@ -4794,6 +5426,110 @@ class BattleState:
             label_text = tr_fn(label_key) if callable(tr_fn) else label_key
             label = pygame.font.Font(None, 16).render(label_text, True, (248, 240, 222))
             screen.blit(label, label.get_rect(center=cue.center))
+
+    def wrap_battle_intro_text(self, font: pygame.font.Font, text: str, width: int) -> List[str]:
+        words = str(text).split()
+        if not words:
+            return []
+        lines: List[str] = []
+        current = words[0]
+        for word in words[1:]:
+            candidate = f"{current} {word}"
+            if font.size(candidate)[0] <= width:
+                current = candidate
+            else:
+                lines.append(current)
+                current = word
+        if current:
+            lines.append(current)
+        return lines
+
+    def draw_battle_intro_overlay(self, screen: pygame.Surface, tr_fn=None) -> None:
+        if not self.is_battle_intro_active():
+            return
+        def draw_intro_panel(rect: pygame.Rect, fill: Tuple[int, int, int], border: Tuple[int, int, int], *, radius: int = 16, inner: Optional[Tuple[int, int, int]] = None) -> None:
+            pygame.draw.rect(screen, border, rect, border_radius=radius)
+            pygame.draw.rect(screen, fill, rect.inflate(-4, -4), border_radius=max(4, radius - 2))
+            if inner is not None:
+                inner_rect = rect.inflate(-10, -10)
+                if inner_rect.w > 0 and inner_rect.h > 0:
+                    pygame.draw.rect(screen, inner, inner_rect, border_radius=max(4, radius - 5))
+
+        def draw_intro_label(font: pygame.font.Font, text: str, pos: Tuple[int, int], *, fill: Tuple[int, int, int] = (250, 236, 206), outline: Tuple[int, int, int] = (70, 44, 18), outline_width: int = 2, center: bool = False) -> None:
+            base = font.render(text, True, fill)
+            ox_range = range(-outline_width, outline_width + 1)
+            for ox in ox_range:
+                for oy in ox_range:
+                    if ox == 0 and oy == 0:
+                        continue
+                    outline_surf = font.render(text, True, outline)
+                    rect = outline_surf.get_rect(center=pos) if center else outline_surf.get_rect(topleft=(pos[0] + ox, pos[1] + oy))
+                    screen.blit(outline_surf, rect)
+            base_rect = base.get_rect(center=pos) if center else base.get_rect(topleft=pos)
+            screen.blit(base, base_rect)
+
+        def tr_local(key: str) -> str:
+            if callable(tr_fn):
+                try:
+                    return str(tr_fn(key))
+                except Exception:
+                    pass
+            return str(I18N.get("en", {}).get(key, key))
+
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((16, 12, 10, 88))
+        screen.blit(overlay, (0, 0))
+        phase = self.battle_intro_phase
+        panel_rect = pygame.Rect(54, LAWN_Y + 8, SCREEN_WIDTH - 108, 90)
+        draw_intro_panel(panel_rect, fill=(242, 229, 194), border=(120, 84, 40), radius=18, inner=(252, 243, 216))
+        bubble = pygame.Rect(184, panel_rect.y + 8, panel_rect.w - 232, panel_rect.h - 16)
+        draw_intro_panel(bubble, fill=(252, 247, 228), border=(142, 108, 56), radius=16, inner=(255, 252, 238))
+        dave_rect = pygame.Rect(int(self.battle_intro_dave_x), int(self.battle_intro_dave_y) - 92, 92, 118)
+        hat = [(dave_rect.x + 16, dave_rect.y + 20), (dave_rect.x + 62, dave_rect.y + 10), (dave_rect.x + 74, dave_rect.y + 32), (dave_rect.x + 22, dave_rect.y + 42)]
+        beard = pygame.Rect(dave_rect.x + 18, dave_rect.y + 46, 42, 34)
+        pygame.draw.ellipse(screen, (242, 212, 176), pygame.Rect(dave_rect.x + 22, dave_rect.y + 18, 34, 38))
+        pygame.draw.polygon(screen, (118, 74, 34), hat)
+        pygame.draw.polygon(screen, (78, 46, 18), hat, 2)
+        pygame.draw.rect(screen, (98, 160, 82), pygame.Rect(dave_rect.x + 18, dave_rect.y + 58, 44, 36), border_radius=12)
+        pygame.draw.rect(screen, (64, 112, 54), pygame.Rect(dave_rect.x + 18, dave_rect.y + 58, 44, 36), 2, border_radius=12)
+        pygame.draw.ellipse(screen, (248, 246, 238), beard)
+        pygame.draw.ellipse(screen, (164, 118, 66), beard, 2)
+        pygame.draw.circle(screen, (40, 32, 20), (dave_rect.x + 32, dave_rect.y + 36), 2)
+        pygame.draw.circle(screen, (40, 32, 20), (dave_rect.x + 46, dave_rect.y + 38), 2)
+        pygame.draw.arc(screen, (92, 52, 28), pygame.Rect(dave_rect.x + 28, dave_rect.y + 46, 18, 10), math.pi * 0.15, math.pi * 0.95, 2)
+        if phase == "bungee_snatch":
+            rope_x = dave_rect.centerx + 8
+            rope_y = int(self.battle_intro_bungee_y)
+            pygame.draw.line(screen, (86, 72, 60), (rope_x, rope_y), (rope_x, dave_rect.y + 8), 3)
+            hook = [(rope_x - 8, dave_rect.y + 8), (rope_x + 7, dave_rect.y + 8), (rope_x + 2, dave_rect.y + 24), (rope_x - 4, dave_rect.y + 24)]
+            pygame.draw.polygon(screen, (214, 198, 168), hook)
+            pygame.draw.polygon(screen, (96, 82, 64), hook, 2)
+        label_font = pygame.font.Font(None, 28)
+        name_font = pygame.font.Font(None, 32)
+        draw_intro_label(name_font, "Crazy Dave", (bubble.x + 84, bubble.y + 18), outline_width=2)
+        dialog_key = self.battle_intro_dialog_key()
+        dialog_text = tr_local(dialog_key) if dialog_key else ""
+        if not dialog_text and phase == "bungee_snatch":
+            dialog_text = tr_local("zomboss_intro_dave_3")
+        lines = self.wrap_battle_intro_text(label_font, dialog_text, bubble.w - 34) if dialog_text else []
+        text_y = bubble.y + 34
+        for line in lines[:3]:
+            surf = label_font.render(line, True, (58, 40, 24))
+            screen.blit(surf, (bubble.x + 18, text_y))
+            text_y += 24
+        if self.battle_intro_can_skip():
+            hint = tr_local("press_space_skip_intro")
+            hint_font = pygame.font.Font(None, 22)
+            hint_surf = hint_font.render(hint, True, (122, 90, 50))
+            screen.blit(hint_surf, (bubble.right - hint_surf.get_width() - 16, bubble.bottom - hint_surf.get_height() - 8))
+        if phase == "boss_reveal":
+            reveal = pygame.Rect(LAWN_X + 214, LAWN_Y + 84, 316, 54)
+            alpha = int(clamp(max(self.battle_intro_overlay_t, 0.25), 0.0, 1.0) * 220)
+            plate = pygame.Surface(reveal.size, pygame.SRCALPHA)
+            plate.fill((72, 24, 18, alpha))
+            screen.blit(plate, reveal.topleft)
+            pygame.draw.rect(screen, (224, 188, 120), reveal, 3, border_radius=16)
+            draw_intro_label(pygame.font.Font(None, 34), tr_local("zomboss_intro_reveal_short"), reveal.center, fill=(255, 236, 192), outline=(44, 20, 10), outline_width=2, center=True)
 
     def special_active_cap(self) -> int:
         cap = max(0, int(self.mode_float("active_cap", 0.0)))
@@ -5136,23 +5872,87 @@ class BattleState:
         _col, pos, plant = candidates[0]
         return pos, plant
 
+    def plant_role_pressure_score(self, plant: Optional[Plant], *, pressure_kind: str = "") -> float:
+        if plant is None or plant.hp <= 0:
+            return -9999.0
+        cfg = self.plant_types.get(plant.kind)
+        if cfg is None:
+            return 0.0
+        score = 0.0
+        behavior = str(cfg.behavior)
+        if behavior in {"sun", "sun_shroom", "marigold"}:
+            score += 7.5
+        if behavior in {"shoot", "shoot_slow", "shoot_balloon", "threepeat", "split", "star"}:
+            score += 6.0
+        if behavior in {"kernel_pult", "melon_pult", "pult", "cob"}:
+            score += 8.0
+        if behavior in {"row_blast", "ice", "doom", "bomb"}:
+            score += 8.5
+        if behavior in {"support", "armor"}:
+            score += 3.5
+        if behavior in {"block", "garlic", "spike"}:
+            score += 1.6
+        if plant.kind in {"kernel_pult", "melon_pult", "repeater", "chomper", "jalapeno", "ice_shroom"}:
+            score += 2.4
+        if pressure_kind == "bungee":
+            if behavior in {"sun", "sun_shroom", "marigold"}:
+                score += 3.0
+            if behavior in {"kernel_pult", "melon_pult", "pult", "cob", "shoot", "shoot_slow", "threepeat"}:
+                score += 2.0
+            if plant.slot == "support":
+                score += 1.2
+        elif pressure_kind == "catapult":
+            score += plant.col * 0.6
+            if behavior in {"kernel_pult", "melon_pult", "pult", "cob", "shoot", "shoot_slow", "threepeat", "split", "star"}:
+                score += 2.6
+            if behavior in {"block", "garlic"}:
+                score -= 2.2
+        return score
+
+    def choose_bungee_target(self) -> Optional[Tuple[Tuple[int, int], Plant]]:
+        candidates: List[Tuple[float, Tuple[int, int], Plant]] = []
+        for collection in (self.armor, self.main, self.support):
+            for pos, plant in collection.items():
+                if plant.hp <= 0 or not self.is_plant_edible(plant):
+                    continue
+                score = self.plant_role_pressure_score(plant, pressure_kind="bungee")
+                score += random.uniform(-0.18, 0.18)
+                candidates.append((score, pos, plant))
+        if not candidates:
+            return None
+        candidates.sort(key=lambda item: item[0], reverse=True)
+        _score, pos, plant = candidates[0]
+        return pos, plant
+
+    def find_lane_backline_target(self, row: int) -> Optional[Tuple[Tuple[int, int], Plant]]:
+        candidates: List[Tuple[float, Tuple[int, int], Plant]] = []
+        for collection in (self.armor, self.main, self.support):
+            for pos, plant in collection.items():
+                if plant.row != row or plant.hp <= 0 or not self.is_plant_edible(plant):
+                    continue
+                score = self.plant_role_pressure_score(plant, pressure_kind="catapult")
+                if plant.col <= 2:
+                    score -= 3.0
+                candidates.append((score, pos, plant))
+        if not candidates:
+            return None
+        candidates.sort(key=lambda item: (item[0], item[1][1]), reverse=True)
+        _score, pos, plant = candidates[0]
+        return pos, plant
+
     def update_bungee_state(self, zombie: Zombie, dt: float) -> bool:
         state = self.bungee_state(zombie)
         phase_t = max(0.0, float(zombie.state.get("bungee_phase_t", 0.0)) - dt)
         zombie.state["bungee_phase_t"] = phase_t
         if state == "descending":
             if phase_t <= 0.0:
-                candidates: List[Tuple[Tuple[int, int], Plant]] = []
-                for collection in (self.armor, self.main, self.support):
-                    for pos, plant in collection.items():
-                        if plant.hp > 0 and self.is_plant_edible(plant):
-                            candidates.append((pos, plant))
-                if not candidates:
+                target = self.choose_bungee_target()
+                if target is None:
                     zombie.state["bungee_state"] = "exit"
                     zombie.state["bungee_phase_t"] = 0.42
                     zombie.state["bungee_phase_total"] = 0.42
                     return True
-                pos, _plant = random.choice(candidates)
+                pos, _plant = target
                 zombie.state["target_row"] = float(pos[0])
                 zombie.state["target_col"] = float(pos[1])
                 zombie.x = float(self.cell_center(pos[0], pos[1])[0])
@@ -5172,24 +5972,44 @@ class BattleState:
                 zombie.state["hit_flash"] = max(zombie.state.get("hit_flash", 0.0), 0.12)
                 return True
             if phase_t <= 0.0:
-                pos = (row, col)
-                loot = 0.0
-                if pos in self.armor:
-                    del self.armor[pos]
-                    loot = 1.0
-                elif pos in self.main:
-                    del self.main[pos]
-                    loot = 1.0
-                elif pos in self.support:
-                    del self.support[pos]
-                    loot = 1.0
-                zombie.state["has_loot"] = loot
+                variant = self.zombie_animation_variant(zombie) or ""
+                marker_driven = bool(variant) and self.animation_clip_supports_marker("zombie", variant, "steal_lift", "steal")
+                if marker_driven:
+                    zombie.state["bungee_steal_pending"] = {"row": row, "col": col}
+                    zombie.state["has_loot"] = 0.0
+                else:
+                    pos = (row, col)
+                    loot = 0.0
+                    if pos in self.armor:
+                        del self.armor[pos]
+                        loot = 1.0
+                    elif pos in self.main:
+                        del self.main[pos]
+                        loot = 1.0
+                    elif pos in self.support:
+                        del self.support[pos]
+                        loot = 1.0
+                    zombie.state["has_loot"] = loot
                 zombie.state["bungee_state"] = "steal_lift"
                 zombie.state["bungee_phase_t"] = 0.54
                 zombie.state["bungee_phase_total"] = 0.54
             return True
         if state == "steal_lift":
             if phase_t <= 0.0:
+                pending = zombie.state.pop("bungee_steal_pending", None)
+                if isinstance(pending, dict):
+                    pos = (int(pending.get("row", zombie.row)), int(pending.get("col", 0)))
+                    loot = 0.0
+                    if pos in self.armor:
+                        del self.armor[pos]
+                        loot = 1.0
+                    elif pos in self.main:
+                        del self.main[pos]
+                        loot = 1.0
+                    elif pos in self.support:
+                        del self.support[pos]
+                        loot = 1.0
+                    zombie.state["has_loot"] = loot
                 zombie.state["bungee_state"] = "exit"
                 zombie.state["bungee_phase_t"] = 0.44
                 zombie.state["bungee_phase_total"] = 0.44
@@ -5208,7 +6028,7 @@ class BattleState:
         state = self.catapult_state(zombie)
         phase_t = max(0.0, float(zombie.state.get("catapult_phase_t", 0.0)) - dt)
         zombie.state["catapult_phase_t"] = phase_t
-        lane_target = self.find_lane_plant_target(zombie.row, prefer_leftmost=True)
+        lane_target = self.find_lane_backline_target(zombie.row) or self.find_lane_plant_target(zombie.row, prefer_leftmost=True)
         if state == "walk":
             if lane_target and phase_t <= 0.0:
                 pos, _plant = lane_target
@@ -5220,17 +6040,22 @@ class BattleState:
             return False
         if state == "windup":
             if phase_t <= 0.0:
-                target = self.find_lane_plant_target(zombie.row, prefer_leftmost=True)
+                target = self.find_lane_backline_target(zombie.row) or self.find_lane_plant_target(zombie.row, prefer_leftmost=True)
                 if target:
                     pos, plant = target
-                    if not self.has_umbrella_cover(pos[0], pos[1]):
-                        plant.hp -= 140
-                        plant.state["hit_flash"] = 0.16
-                        self.hit_sparks.append({"x": float(self.cell_center(pos[0], pos[1])[0]), "y": float(self.row_y(pos[0]) - 10), "t": 0.16, "ttl": 0.16})
-                    if plant.hp <= 0:
-                        self.armor.pop(pos, None)
-                        self.main.pop(pos, None)
-                        self.support.pop(pos, None)
+                    variant = self.zombie_animation_variant(zombie) or ""
+                    marker_driven = bool(variant) and self.animation_clip_supports_marker("zombie", variant, "lob", "lob")
+                    if marker_driven:
+                        zombie.state["catapult_lob_pending"] = {"row": pos[0], "col": pos[1], "damage": 140.0}
+                    else:
+                        if not self.has_umbrella_cover(pos[0], pos[1]):
+                            plant.hp -= 140
+                            plant.state["hit_flash"] = 0.16
+                            self.hit_sparks.append({"x": float(self.cell_center(pos[0], pos[1])[0]), "y": float(self.row_y(pos[0]) - 10), "t": 0.16, "ttl": 0.16})
+                        if plant.hp <= 0:
+                            self.armor.pop(pos, None)
+                            self.main.pop(pos, None)
+                            self.support.pop(pos, None)
                 self.bump_anim_event(zombie, "lob")
                 zombie.state["catapult_state"] = "recover"
                 recover_t = random.uniform(1.04, 1.30)
@@ -5239,6 +6064,26 @@ class BattleState:
             return True
         if state == "recover":
             if phase_t <= 0.0:
+                pending = zombie.state.pop("catapult_lob_pending", None)
+                if isinstance(pending, dict):
+                    pos = (int(pending.get("row", zombie.row)), int(pending.get("col", 0)))
+                    target = self.armor.get(pos)
+                    main_target = self.main.get(pos)
+                    if target is None and self.is_plant_edible(main_target):
+                        target = main_target
+                    if target is None:
+                        support_target = self.support.get(pos)
+                        if self.is_plant_edible(support_target):
+                            target = support_target
+                    if target is not None and not self.has_umbrella_cover(pos[0], pos[1]):
+                        target.hp -= float(pending.get("damage", 140.0))
+                        target.state["hit_flash"] = 0.16
+                        self.hit_sparks.append({"x": float(self.cell_center(pos[0], pos[1])[0]), "y": float(self.row_y(pos[0]) - 10), "t": 0.16, "ttl": 0.16})
+                        self.queue_audio_key("plant_hit")
+                        if target.hp <= 0:
+                            self.armor.pop(pos, None)
+                            self.main.pop(pos, None)
+                            self.support.pop(pos, None)
                 zombie.state["catapult_state"] = "walk"
                 walk_t = random.uniform(1.72, 2.46)
                 zombie.state["catapult_phase_t"] = walk_t
@@ -5300,8 +6145,24 @@ class BattleState:
             if state == "placing":
                 phase_t = max(0.0, float(zombie.state.get("ladder_phase_t", 0.0)) - dt)
                 zombie.state["ladder_phase_t"] = phase_t
+                if float(zombie.state.get("ladder_place_done", 0.0)) <= 0.0 and self.consume_anim_marker(zombie, "place"):
+                    pending = zombie.state.pop("ladder_place_pending", None)
+                    if isinstance(pending, dict):
+                        pos = (int(pending.get("row", zombie.row)), int(pending.get("col", 0)))
+                    else:
+                        pos = (zombie.row, int(clamp((zombie.x - LAWN_X) // CELL_W, 0, COLS - 1)))
+                    zombie.state["ladder_place_done"] = 1.0
+                    if self.apply_ladder_to_pos(pos):
+                        zombie.state["ladder_state"] = "placed_attack"
+                        zombie.state["ladder_phase_t"] = 0.52
+                        zombie.state["ladder_phase_total"] = 0.52
+                    else:
+                        zombie.state["ladder_state"] = "carrying"
+                    return True
                 if phase_t <= 0.0:
                     pos = (zombie.row, int(clamp((zombie.x - LAWN_X) // CELL_W, 0, COLS - 1)))
+                    zombie.state["ladder_place_pending"] = None
+                    zombie.state["ladder_place_done"] = 1.0
                     if self.apply_ladder_to_pos(pos):
                         zombie.state["ladder_state"] = "placed_attack"
                         zombie.state["ladder_phase_t"] = 0.52
@@ -5326,6 +6187,11 @@ class BattleState:
         if zombie.kind == "pogo":
             state = self.pogo_state(zombie)
             if state == "vault_over":
+                variant = self.zombie_animation_variant(zombie) or ""
+                marker_driven = bool(variant) and self.animation_clip_supports_marker("zombie", variant, "vault_over", "vault")
+                if marker_driven and float(zombie.state.get("pogo_motion_started", 0.0)) <= 0.0:
+                    zombie.state["bite_t"] = 0.0
+                    return True
                 phase_t = max(0.0, float(zombie.state.get("pogo_phase_t", 0.0)) - dt)
                 zombie.state["pogo_phase_t"] = phase_t
                 total = max(0.01, float(zombie.state.get("pogo_total_t", 0.46)))
@@ -5718,6 +6584,7 @@ class BattleState:
         self.next_wave = 0.0
         if self.current_wave in self.large_wave_indices or self.current_wave == self.final_wave_index:
             self.wave_warning_t = 3.0
+            self.queue_audio_key("final_wave" if self.current_wave == self.final_wave_index else "wave_warning")
 
     def vasebreaker_stage_specs(self) -> Dict[str, Dict[str, object]]:
         return {
@@ -6950,6 +7817,7 @@ class BattleState:
         self.next_wave = 1.0
         self.wave_pause_t = 1.1
         self.spawn_t = 0.0
+        self.queue_audio_key("last_stand_start")
 
     def update_bungee_blitz_mode(self, dt: float) -> None:
         if self.target_duration > 0 and self.elapsed >= self.target_duration:
@@ -7198,6 +8066,8 @@ class BattleState:
     def draw_special_minigame_overlay(self, screen: pygame.Surface, plant_sprite_fn, zombie_sprite_fn=None, tr_fn=None, entity_anim_frame_fn=None) -> None:
         if self.is_zomboss_boss_mode():
             self.draw_zomboss_boss_overlay(screen, zombie_sprite_fn, tr_fn, entity_anim_frame_fn)
+        if self.is_battle_intro_active():
+            self.draw_battle_intro_overlay(screen, tr_fn)
         if self.is_portal_combat_mode():
             self.draw_portal_combat_overlay(screen)
             if self.portal_shift_notice_t > 0.0:
@@ -7479,6 +8349,7 @@ class BattleState:
             zombie.state.setdefault("pole_vault_t", 0.0)
             zombie.state.setdefault("pole_vault_total", 0.0)
             zombie.state.setdefault("pole_vault_end_x", zombie.x)
+            zombie.state.setdefault("pole_motion_started", 1.0)
         elif zombie.kind == "zomboni":
             zombie.state.setdefault("zomboni_state", "cruise")
             zombie.state.setdefault("zomboni_crush_t", 0.0)
@@ -7524,6 +8395,49 @@ class BattleState:
             return True
         return False
 
+    def bump_anim_marker(self, entity: object, key: str) -> None:
+        st = getattr(entity, "state", {})
+        seq_key = f"_marker_{key}_seq"
+        st[seq_key] = int(st.get(seq_key, 0)) + 1
+
+    def consume_anim_marker(self, entity: object, key: str) -> bool:
+        st = getattr(entity, "state", {})
+        seen = self.animation_seen(entity)
+        seq_key = f"_marker_{key}_seq"
+        current = int(st.get(seq_key, 0))
+        if current > int(seen.get(seq_key, 0)):
+            seen[seq_key] = current
+            return True
+        return False
+
+    def clip_impact_index(self, clip: Optional[AnimationClip]) -> int:
+        if clip is None or not clip.frames:
+            return -1
+        if int(clip.impact_frame_index) >= 0:
+            return max(0, min(len(clip.frames) - 1, int(clip.impact_frame_index)))
+        if clip.impact_marker and not clip.loop:
+            return len(clip.frames) - 1
+        return -1
+
+    def maybe_emit_clip_impact(self, entity: object, anim: AnimationState, clip: Optional[AnimationClip]) -> None:
+        if clip is None or not clip.frames or anim.impact_fired or not clip.impact_marker:
+            return
+        impact_index = self.clip_impact_index(clip)
+        if impact_index < 0:
+            return
+        current_index = max(0, min(anim.frame_index, len(clip.frames) - 1))
+        if current_index >= impact_index:
+            self.bump_anim_marker(entity, clip.impact_marker)
+            anim.impact_fired = True
+
+    def animation_clip_supports_marker(self, entity_kind: str, variant: str, clip_name: str, marker: str = "") -> bool:
+        clip = self.animation_clip_for(entity_kind, variant, clip_name)
+        if clip is None or not clip.frames:
+            return False
+        if marker and str(clip.impact_marker) != str(marker):
+            return False
+        return self.clip_impact_index(clip) >= 0
+
     def animation_clip_for(self, entity_kind: str, variant: str, clip_name: str) -> Optional[AnimationClip]:
         provider = self.animation_clip_provider
         if callable(provider):
@@ -7543,6 +8457,7 @@ class BattleState:
             anim.locked = False
             anim.pending_clip = ""
             anim.hold_timer_ms = 0.0
+            anim.impact_fired = False
             return anim
         anim.current_clip = clip_name
         anim.frame_index = 0
@@ -7550,10 +8465,12 @@ class BattleState:
         anim.locked = bool(clip.lock_until_end)
         anim.pending_clip = ""
         anim.hold_timer_ms = 0.0
+        anim.impact_fired = False
+        self.maybe_emit_clip_impact(entity, anim, clip)
         return anim
 
     def plant_animation_variant(self, plant: Plant) -> Optional[str]:
-        if plant.kind in {"sunflower", "peashooter", "wallnut", "potato_mine", "imitater"}:
+        if plant.kind in {"sunflower", "peashooter", "repeater", "chomper", "jalapeno", "ice_shroom", "wallnut", "potato_mine", "imitater"}:
             return plant.kind
         return None
 
@@ -7581,6 +8498,21 @@ class BattleState:
             variant = self.plant_animation_variant(entity)
             if variant is None:
                 return None, None
+            if entity.kind == "potato_mine":
+                if self.consume_anim_event(entity, "detonate"):
+                    entity.state["detonate_anim_active"] = 1.0
+                if float(entity.state.get("detonate_anim_active", 0.0)) > 0.0 or entity.state.get("detonate_pending"):
+                    return variant, "detonate"
+            if entity.kind == "jalapeno":
+                if self.consume_anim_event(entity, "row_blast"):
+                    entity.state["row_blast_anim_active"] = 1.0
+                if float(entity.state.get("row_blast_anim_active", 0.0)) > 0.0 or entity.state.get("row_blast_pending"):
+                    return variant, "detonate"
+            if entity.kind == "ice_shroom":
+                if self.consume_anim_event(entity, "freeze"):
+                    entity.state["freeze_anim_active"] = 1.0
+                if float(entity.state.get("freeze_anim_active", 0.0)) > 0.0 or entity.state.get("freeze_pending"):
+                    return variant, "freeze_cast"
             if entity.hp <= 0:
                 return variant, "death"
             if self.consume_anim_event(entity, "hit"):
@@ -7589,9 +8521,17 @@ class BattleState:
                 if self.consume_anim_event(entity, "sun"):
                     return variant, "sun_produce"
                 return variant, "idle"
-            if entity.kind == "peashooter":
+            if entity.kind in {"peashooter", "repeater"}:
                 if self.consume_anim_event(entity, "shoot"):
                     return variant, "shoot"
+                return variant, "idle"
+            if entity.kind == "chomper":
+                if self.consume_anim_event(entity, "chomp"):
+                    return variant, "attack"
+                if self.consume_anim_event(entity, "swallow"):
+                    return variant, "swallow"
+                if float(entity.state.get("chomper_chew_t", 0.0)) > 0.0:
+                    return variant, "chew"
                 return variant, "idle"
             if entity.kind == "wallnut":
                 if self.consume_anim_event(entity, "hit"):
@@ -7604,8 +8544,6 @@ class BattleState:
                     return variant, "idle_cracked"
                 return variant, "idle_healthy"
             if entity.kind == "potato_mine":
-                if self.consume_anim_event(entity, "detonate"):
-                    return variant, "detonate"
                 potato_state = str(entity.state.get("potato_state", "arming"))
                 if potato_state == "armed":
                     return variant, "armed_idle"
@@ -7765,18 +8703,23 @@ class BattleState:
             if clip is None or not clip.frames:
                 return
         anim.frame_timer_ms += dt_ms
+        self.maybe_emit_clip_impact(entity, anim, clip)
         while clip.frames and anim.frame_timer_ms >= clip.frames[min(anim.frame_index, len(clip.frames) - 1)].duration_ms:
             anim.frame_timer_ms -= clip.frames[min(anim.frame_index, len(clip.frames) - 1)].duration_ms
             anim.frame_index += 1
             if anim.frame_index < len(clip.frames):
+                self.maybe_emit_clip_impact(entity, anim, clip)
                 continue
             if clip.loop:
                 anim.frame_index = 0
+                anim.impact_fired = False
+                self.maybe_emit_clip_impact(entity, anim, clip)
                 break
             if clip.hold_last_frame_ms > 0 and anim.hold_timer_ms <= 0.0:
                 anim.frame_index = len(clip.frames) - 1
                 anim.frame_timer_ms = 0.0
                 anim.hold_timer_ms = float(clip.hold_last_frame_ms)
+                self.maybe_emit_clip_impact(entity, anim, clip)
                 break
             finish_non_loop(clip, variant)
             clip = self.animation_clip_for(entity_kind, variant, anim.current_clip)
@@ -7787,6 +8730,164 @@ class BattleState:
         st = getattr(entity, "state", {})
         anim = st.get("_anim")
         return anim if isinstance(anim, AnimationState) else None
+
+    def fire_projectile_payload(self, row: int, payload: Dict[str, object]) -> None:
+        proj_count = max(1, int(payload.get("proj_count", 1)))
+        base_x = float(payload.get("base_x", 0.0))
+        base_y = float(payload.get("base_y", self.row_y(row)))
+        slow = float(payload.get("slow", 0.0))
+        anti_air = bool(payload.get("anti_air", False))
+        color = tuple(int(v) for v in payload.get("color", (41, 179, 71)))
+        outline = tuple(int(v) for v in payload.get("outline", (20, 110, 38)))
+        for idx in range(proj_count):
+            oy = (idx - (proj_count - 1) / 2.0) * 8.0
+            self.add_projectile(
+                row,
+                base_x,
+                base_y + oy,
+                float(payload.get("damage", 20.0)),
+                slow=slow,
+                color=color,
+                outline=outline,
+                anti_air=anti_air,
+            )
+
+    def resolve_plant_anim_markers(self, plant: Plant, cfg: PlantType, cx: float, cy: float, damage: float) -> None:
+        st = plant.state
+        if self.consume_anim_marker(plant, "sun"):
+            pending_amount = int(st.get("sun_pending_amount", 0))
+            if pending_amount > 0:
+                self.tokens.append(Token(cx + random.randint(-12, 12), cy - 16, pending_amount, 9.0, "sun"))
+                plant.cd = random.uniform(max(1.0, cfg.interval - 1.0), cfg.interval + 1.0)
+                self.queue_audio_key("sun_spawn")
+                st["sun_pending_amount"] = 0
+        if self.consume_anim_marker(plant, "shoot"):
+            pending = st.pop("shoot_pending", None)
+            if isinstance(pending, dict):
+                if plant.kind == "repeater":
+                    first_payload = dict(pending)
+                    first_payload["proj_count"] = 1
+                    self.fire_projectile_payload(plant.row, first_payload)
+                    queued = list(st.get("queued_burst_shots", []))
+                    queued.append(
+                        {
+                            "t": float(pending.get("burst_gap", 0.12)),
+                            "payload": {
+                                **pending,
+                                "proj_count": 1,
+                                "damage": float(pending.get("damage", damage)),
+                            },
+                        }
+                    )
+                    st["queued_burst_shots"] = queued
+                else:
+                    self.fire_projectile_payload(plant.row, pending)
+                plant.cd = float(pending.get("cooldown", self.scaled_plant_interval(cfg.interval)))
+                st["recoil_t"] = max(float(st.get("recoil_t", 0.0)), float(pending.get("recoil_t", 0.15)))
+        if self.consume_anim_marker(plant, "detonate"):
+            pending = st.pop("detonate_pending", None)
+            if isinstance(pending, dict):
+                self.boom(float(pending.get("x", cx)), float(pending.get("y", cy + 8)), float(pending.get("radius", 95.0)), float(pending.get("damage", 9999.0)))
+                st["detonate_anim_active"] = 0.0
+                st["potato_state"] = "spent"
+                plant.hp = 0.0
+        if self.consume_anim_marker(plant, "chomp"):
+            pending = st.pop("chomp_pending", None)
+            if isinstance(pending, dict):
+                target = pending.get("target")
+                did_chomp = False
+                if isinstance(target, Zombie) and target in self.zombies and target.hp > 0.0 and target.row == plant.row and abs(target.x - cx) <= 78.0:
+                    self.slay_zombie(target, source="chomp")
+                    did_chomp = True
+                    self.queue_audio_key("zombie_hit")
+                if did_chomp:
+                    plant.cd = float(pending.get("cooldown", 9.5))
+                    st["chomper_chew_t"] = max(float(st.get("chomper_chew_t", 0.0)), min(3.8, plant.cd))
+                    self.bump_anim_event(plant, "swallow")
+                else:
+                    plant.cd = max(float(plant.cd), 0.75)
+                st["recoil_t"] = max(float(st.get("recoil_t", 0.0)), 0.26 if did_chomp else 0.14)
+        if self.consume_anim_marker(plant, "row_blast"):
+            pending = st.pop("row_blast_pending", None)
+            if isinstance(pending, dict):
+                if bool(pending.get("boss_counter", False)):
+                    self.cancel_zomboss_pending_attack("jalapeno")
+                    self.ice_rows.clear()
+                    self.queue_audio_key("zomboss_counter")
+                for z in list(self.zombies):
+                    if z.row == int(pending.get("row", plant.row)):
+                        self.slay_zombie(z, source="row_blast")
+                self.queue_audio_key("big_boom")
+                st["row_blast_anim_active"] = 0.0
+                plant.hp = 0.0
+        if self.consume_anim_marker(plant, "freeze"):
+            pending = st.pop("freeze_pending", None)
+            if isinstance(pending, dict):
+                if bool(pending.get("boss_counter", False)):
+                    self.cancel_zomboss_pending_attack("ice_shroom")
+                    self.queue_audio_key("zomboss_counter")
+                for z in self.zombies:
+                    z.stunned_t = max(z.stunned_t, float(pending.get("stun_t", 2.5)))
+                    z.slow_t = max(z.slow_t, float(pending.get("slow_t", 4.5)))
+                st["freeze_anim_active"] = 0.0
+                plant.hp = 0.0
+
+    def resolve_zombie_anim_markers(self, zombie: Zombie) -> None:
+        if zombie.kind == "newspaper" and self.consume_anim_marker(zombie, "paper_loss"):
+            self.queue_audio_key("newspaper_rip")
+        if zombie.kind == "bungee" and self.consume_anim_marker(zombie, "steal"):
+            pending = zombie.state.pop("bungee_steal_pending", None)
+            if isinstance(pending, dict):
+                row = int(pending.get("row", zombie.row))
+                col = int(pending.get("col", 0))
+                pos = (row, col)
+                loot = 0.0
+                if pos in self.armor:
+                    del self.armor[pos]
+                    loot = 1.0
+                elif pos in self.main:
+                    del self.main[pos]
+                    loot = 1.0
+                elif pos in self.support:
+                    del self.support[pos]
+                    loot = 1.0
+                zombie.state["has_loot"] = loot
+                if loot > 0.0:
+                    self.queue_audio_key("plant_hit")
+        if zombie.kind == "ladder" and self.consume_anim_marker(zombie, "place"):
+            pending = zombie.state.pop("ladder_place_pending", None)
+            if isinstance(pending, dict):
+                pos = (int(pending.get("row", zombie.row)), int(pending.get("col", 0)))
+                zombie.state["ladder_place_done"] = 1.0
+                if self.apply_ladder_to_pos(pos):
+                    zombie.state["ladder_state"] = "placed_attack"
+                    zombie.state["ladder_phase_t"] = 0.52
+                    zombie.state["ladder_phase_total"] = 0.52
+                else:
+                    zombie.state["ladder_state"] = "carrying"
+        if zombie.kind == "catapult" and self.consume_anim_marker(zombie, "lob"):
+            pending = zombie.state.pop("catapult_lob_pending", None)
+            if isinstance(pending, dict):
+                pos = (int(pending.get("row", zombie.row)), int(pending.get("col", 0)))
+                target = self.armor.get(pos)
+                main_target = self.main.get(pos)
+                if target is None and self.is_plant_edible(main_target):
+                    target = main_target
+                if target is None:
+                    support_target = self.support.get(pos)
+                    if self.is_plant_edible(support_target):
+                        target = support_target
+                if target is not None and not self.has_umbrella_cover(pos[0], pos[1]):
+                    target.hp -= float(pending.get("damage", 140.0))
+                    target.state["hit_flash"] = 0.16
+                    self.hit_sparks.append({"x": float(self.cell_center(pos[0], pos[1])[0]), "y": float(self.row_y(pos[0]) - 10), "t": 0.16, "ttl": 0.16})
+                    self.queue_audio_key("plant_hit")
+                    if target.hp <= 0:
+                        self.armor.pop(pos, None)
+                        self.main.pop(pos, None)
+                        self.support.pop(pos, None)
+        if zombie.kind == "pogo" and self.consume_anim_marker(zombie, "vault"):
+            zombie.state["pogo_motion_started"] = 1.0
 
     def ensure_zomboss_anim_actor(self) -> Optional[Zombie]:
         if not self.is_zomboss_boss_mode():
@@ -7823,6 +8924,18 @@ class BattleState:
         actor.state["exposed_t"] = self.zomboss_exposed_t
         actor.state["head_lane_row"] = self.zomboss_head_lane_row
         self.advance_entity_animation(actor, dt, "zombie")
+        pending = self.zomboss_pending_attack if isinstance(self.zomboss_pending_attack, dict) else None
+        if not pending or bool(pending.get("resolved", False)):
+            return
+        phase = str(self.zomboss_attack_phase or pending.get("phase", ""))
+        if phase == "release_fire" and self.consume_anim_marker(actor, "launch_fire"):
+            self.execute_zomboss_attack_payload(pending)
+        elif phase == "release_ice" and self.consume_anim_marker(actor, "launch_ice"):
+            self.execute_zomboss_attack_payload(pending)
+        elif phase == "stomp_smash" and self.consume_anim_marker(actor, "stomp_smash"):
+            self.execute_zomboss_attack_payload(pending)
+        elif phase == "bungee_call" and self.consume_anim_marker(actor, "bungee_call"):
+            self.execute_zomboss_attack_payload(pending)
 
     def rows(self) -> int:
         return self.field.rows
@@ -8039,6 +9152,15 @@ class BattleState:
         self.zomboss_pending_attack = {}
         self.zomboss_night_tint = 0.0
         self.zomboss_actor = None
+        self.battle_intro_phase = ""
+        self.battle_intro_step_t = 0.0
+        self.battle_intro_skip_ready_t = 0.0
+        self.battle_intro_dave_x = -140.0
+        self.battle_intro_dave_y = float(LAWN_Y + 72)
+        self.battle_intro_bungee_y = -160.0
+        self.battle_intro_grabbed = False
+        self.battle_intro_overlay_t = 0.0
+        self.battle_intro_queued_reveal_notice = False
         if self.mode_bool("conveyor", False):
             self.conveyor_pool = [k for k in self.mode_list("conveyor_pool") if k in self.plant_types] or list(available)
             self.conveyor_cap = max(4, int(self.mode_float("conveyor_cap", 8.0)))
@@ -8221,6 +9343,13 @@ class BattleState:
                 kind=kind,
             )
         )
+        if enemy:
+            if kind == "zomboss_fireball":
+                self.queue_audio_key("zomboss_fireball")
+            elif kind == "zomboss_iceball":
+                self.queue_audio_key("zomboss_iceball")
+        elif not lobbed:
+            self.queue_audio_key("pea_shoot")
 
     def boom(self, x: float, y: float, radius: float, damage: float, slow_t: float = 0.0) -> None:
         for z in self.zombies:
@@ -8233,6 +9362,7 @@ class BattleState:
                     z.slow_t = max(z.slow_t, slow_t)
         intensity = min(12.0, radius / 20.0)
         self.screen_shake_request = max(getattr(self, 'screen_shake_request', 0.0), intensity)
+        self.queue_audio_key("big_boom")
 
     def can_place(self, kind: str, row: int, col: int) -> bool:
         if not (0 <= row < self.rows() and 0 <= col < COLS):
@@ -8389,6 +9519,9 @@ class BattleState:
     def update(self, dt: float) -> None:
         if not self.level or self.result or self.paused or self.almanac_open:
             return
+        if self.is_battle_intro_active():
+            self.update_battle_intro(dt)
+            return
         if self.last_stand_in_prep():
             for k in list(self.card_timer.keys()):
                 self.card_timer[k] = 0.0
@@ -8481,6 +9614,7 @@ class BattleState:
                 pos = (row, col)
                 if pos not in self.main and pos not in self.support and pos not in self.graves:
                     self.graves[pos] = 300.0
+                    self.queue_audio_key("grave_spawn")
                     break
         self.update_plants(dt)
         self.update_projectiles(dt)
@@ -8498,10 +9632,12 @@ class BattleState:
             t.update(dt)
             if t.kind == "sun" and self.mode_bool("auto_collect_sun", False):
                 self.sun += t.value
+                self.queue_audio_key("collect_sun")
                 self.tokens.remove(t)
                 continue
             if t.kind == "coin" and self.mode_bool("auto_collect_coins", False):
                 self.save_data["coins"] = int(self.save_data.get("coins", 0)) + t.value
+                self.queue_audio_key("collect_coin")
                 self.tokens.remove(t)
                 continue
             if t.life <= 0:
@@ -8571,10 +9707,26 @@ class BattleState:
                 plant.state["hit_flash"] = 0.14
                 self.bump_anim_event(plant, "hit")
             plant.state["last_hp"] = plant.hp
+            plant.state["chomper_chew_t"] = max(0.0, float(plant.state.get("chomper_chew_t", 0.0)) - dt)
             self.advance_entity_animation(plant, dt, "plant")
             plant.state["recoil_t"] = max(0.0, plant.state.get("recoil_t", 0.0) - dt)
             plant.state["hit_flash"] = max(0.0, plant.state.get("hit_flash", 0.0) - dt)
             plant.state["ladder_flash_t"] = max(0.0, float(plant.state.get("ladder_flash_t", 0.0)) - dt)
+            queued_burst = list(plant.state.get("queued_burst_shots", []))
+            if queued_burst:
+                still_pending: List[Dict[str, object]] = []
+                for shot in queued_burst:
+                    timer = float(shot.get("t", 0.0)) - dt
+                    if timer <= 0.0:
+                        payload = shot.get("payload")
+                        if isinstance(payload, dict):
+                            self.fire_projectile_payload(plant.row, payload)
+                    else:
+                        still_pending.append({**shot, "t": timer})
+                if still_pending:
+                    plant.state["queued_burst_shots"] = still_pending
+                else:
+                    plant.state.pop("queued_burst_shots", None)
             if plant.slot == "armor":
                 continue
             if plant.hp <= 0:
@@ -8608,30 +9760,73 @@ class BattleState:
             cx, cy = self.cell_center(plant.row, plant.col)
             b = cfg.behavior
             dmg = cfg.damage * plant_dmg_scale
+            self.resolve_plant_anim_markers(plant, cfg, cx, cy, dmg)
+            if plant.hp <= 0:
+                continue
             if self.is_i_zombie_mode() and b in ("sun", "sun_shroom"):
                 # I, Zombie uses bite-based sunlight economy, no passive plant production.
                 continue
             if b in ("block", "garlic", "support", "armor", "noop", "imitate"):
                 continue
             if b == "sun" and plant.cd <= 0:
-                self.tokens.append(Token(cx + random.randint(-12, 12), cy - 16, cfg.sun_amount, 9.0, "sun"))
-                plant.cd = random.uniform(max(1.0, cfg.interval - 1.0), cfg.interval + 1.0)
-                self.bump_anim_event(plant, "sun")
+                variant = self.plant_animation_variant(plant)
+                marker_driven = bool(variant) and self.animation_clip_supports_marker("plant", variant, "sun_produce", "sun")
+                if marker_driven:
+                    if int(plant.state.get("sun_pending_amount", 0)) <= 0:
+                        plant.state["sun_pending_amount"] = int(cfg.sun_amount)
+                        self.bump_anim_event(plant, "sun")
+                else:
+                    self.tokens.append(Token(cx + random.randint(-12, 12), cy - 16, cfg.sun_amount, 9.0, "sun"))
+                    plant.cd = random.uniform(max(1.0, cfg.interval - 1.0), cfg.interval + 1.0)
+                    self.bump_anim_event(plant, "sun")
+                    self.queue_audio_key("sun_spawn")
             elif b == "sun_shroom" and plant.cd <= 0:
                 amt = 25 if self.elapsed > 90 else 15
                 self.tokens.append(Token(cx + random.randint(-12, 12), cy - 16, amt, 9.0, "sun"))
                 plant.cd = random.uniform(8.0, 11.0)
+                self.queue_audio_key("sun_spawn")
             elif b in ("shoot", "shoot_slow", "shoot_balloon") and plant.cd <= 0 and self.z_ahead(plant.row, cx):
-                for i in range(cfg.proj_count):
-                    oy = (i - (cfg.proj_count - 1) / 2.0) * 8
-                    slow = 2.5 if b == "shoot_slow" else 0.0
-                    col = (120, 216, 246) if b == "shoot_slow" else ((110, 210, 245) if b == "shoot_balloon" else (41, 179, 71))
-                    out = (56, 122, 150) if b == "shoot_slow" else ((30, 110, 140) if b == "shoot_balloon" else (20, 110, 38))
-                    self.add_projectile(plant.row, cx + 22, cy + oy, dmg, slow=slow, color=col, outline=out, anti_air=(b == "shoot_balloon"))
-                plant.cd = self.scaled_plant_interval(cfg.interval)
-                plant.state["recoil_t"] = 0.15
-                if plant.kind == "peashooter":
-                    self.bump_anim_event(plant, "shoot")
+                slow = 2.5 if b == "shoot_slow" else 0.0
+                col = (120, 216, 246) if b == "shoot_slow" else ((110, 210, 245) if b == "shoot_balloon" else (41, 179, 71))
+                out = (56, 122, 150) if b == "shoot_slow" else ((30, 110, 140) if b == "shoot_balloon" else (20, 110, 38))
+                variant = self.plant_animation_variant(plant)
+                marker_driven = bool(variant) and self.animation_clip_supports_marker("plant", variant, "shoot", "shoot")
+                if marker_driven:
+                    if not isinstance(plant.state.get("shoot_pending"), dict):
+                        plant.state["shoot_pending"] = {
+                            "proj_count": 1 if plant.kind == "repeater" else int(cfg.proj_count),
+                            "base_x": float(cx + 22),
+                            "base_y": float(cy),
+                            "damage": float(dmg),
+                            "slow": float(slow),
+                            "anti_air": bool(b == "shoot_balloon"),
+                            "color": tuple(col),
+                            "outline": tuple(out),
+                            "cooldown": float(self.scaled_plant_interval(cfg.interval)),
+                            "recoil_t": 0.15,
+                            "burst_gap": 0.12 if plant.kind == "repeater" else 0.0,
+                        }
+                        self.bump_anim_event(plant, "shoot")
+                else:
+                    payload = {
+                        "proj_count": int(cfg.proj_count),
+                        "base_x": float(cx + 22),
+                        "base_y": float(cy),
+                        "damage": float(dmg),
+                        "slow": float(slow),
+                        "anti_air": bool(b == "shoot_balloon"),
+                        "color": tuple(col),
+                        "outline": tuple(out),
+                    }
+                    if plant.kind == "repeater":
+                        self.fire_projectile_payload(plant.row, {**payload, "proj_count": 1})
+                        plant.state["queued_burst_shots"] = [{"t": 0.12, "payload": {**payload, "proj_count": 1}}]
+                    else:
+                        self.fire_projectile_payload(plant.row, payload)
+                    plant.cd = self.scaled_plant_interval(cfg.interval)
+                    plant.state["recoil_t"] = 0.15
+                    if plant.kind == "peashooter":
+                        self.bump_anim_event(plant, "shoot")
             elif b == "shoot_short" and plant.cd <= 0:
                 z = self.z_near(plant.row, cx + CELL_W * 1.5, CELL_W * 3.2)
                 if z:
@@ -8680,15 +9875,33 @@ class BattleState:
                     elif plant.state["arm_t"] <= 4.0:
                         plant.state["potato_state"] = "priming"
                 elif self.z_near(plant.row, cx, 44):
-                    self.boom(cx, cy + 8, 95, 9999)
-                    self.bump_anim_event(plant, "detonate")
-                    plant.hp = 0
+                    variant = self.plant_animation_variant(plant)
+                    marker_driven = bool(variant) and self.animation_clip_supports_marker("plant", variant, "detonate", "detonate")
+                    if marker_driven:
+                        if not isinstance(plant.state.get("detonate_pending"), dict):
+                            plant.state["detonate_pending"] = {"x": float(cx), "y": float(cy + 8), "radius": 95.0, "damage": 9999.0}
+                            plant.state["potato_state"] = "detonate"
+                            plant.state["detonate_anim_active"] = 1.0
+                            self.bump_anim_event(plant, "detonate")
+                    else:
+                        self.boom(cx, cy + 8, 95, 9999)
+                        self.bump_anim_event(plant, "detonate")
+                        plant.hp = 0
             elif b == "chomp" and plant.cd <= 0:
                 z = self.z_near(plant.row, cx, 52)
                 if z:
-                    self.slay_zombie(z, source="chomp")
-                    plant.cd = 9.5
-                    plant.state["recoil_t"] = 0.28
+                    variant = self.plant_animation_variant(plant)
+                    marker_driven = bool(variant) and self.animation_clip_supports_marker("plant", variant, "attack", "chomp")
+                    if marker_driven:
+                        if not isinstance(plant.state.get("chomp_pending"), dict):
+                            plant.state["chomp_pending"] = {"target": z, "cooldown": 9.5}
+                            self.bump_anim_event(plant, "chomp")
+                    else:
+                        self.slay_zombie(z, source="chomp")
+                        plant.cd = 9.5
+                        plant.state["chomper_chew_t"] = max(float(plant.state.get("chomper_chew_t", 0.0)), 3.8)
+                        self.bump_anim_event(plant, "swallow")
+                        plant.state["recoil_t"] = 0.28
             elif b == "fume" and plant.cd <= 0:
                 used = False
                 for z in self.zombies:
@@ -8706,12 +9919,25 @@ class BattleState:
                         plant.cd = self.scaled_plant_interval(cfg.interval)
                         plant.state["recoil_t"] = 0.12
             elif b == "ice" and plant.cd <= 0:
-                if self.is_zomboss_boss_mode():
-                    self.cancel_zomboss_pending_attack("ice_shroom")
-                for z in self.zombies:
-                    z.stunned_t = max(z.stunned_t, 2.5)
-                    z.slow_t = max(z.slow_t, 4.5)
-                plant.hp = 0
+                variant = self.plant_animation_variant(plant)
+                marker_driven = bool(variant) and self.animation_clip_supports_marker("plant", variant, "freeze_cast", "freeze")
+                if marker_driven:
+                    if not isinstance(plant.state.get("freeze_pending"), dict):
+                        plant.state["freeze_pending"] = {
+                            "stun_t": 2.5,
+                            "slow_t": 4.5,
+                            "boss_counter": self.is_zomboss_boss_mode(),
+                        }
+                        plant.state["freeze_anim_active"] = 1.0
+                        self.bump_anim_event(plant, "freeze")
+                        plant.state["recoil_t"] = 0.16
+                else:
+                    if self.is_zomboss_boss_mode():
+                        self.cancel_zomboss_pending_attack("ice_shroom")
+                    for z in self.zombies:
+                        z.stunned_t = max(z.stunned_t, 2.5)
+                        z.slow_t = max(z.slow_t, 4.5)
+                    plant.hp = 0
             elif b == "doom" and plant.cd <= 0:
                 self.boom(cx, cy, 250, 9999)
                 plant.hp = 0
@@ -8726,13 +9952,25 @@ class BattleState:
                     self.slay_zombie(z, source="kelp")
                     plant.hp = 0
             elif b == "row_blast" and plant.cd <= 0:
-                if self.is_zomboss_boss_mode() and plant.kind == "jalapeno":
-                    self.cancel_zomboss_pending_attack("jalapeno")
-                    self.ice_rows.clear()
-                for z in self.zombies:
-                    if z.row == plant.row:
-                        self.slay_zombie(z, source="row_blast")
-                plant.hp = 0
+                variant = self.plant_animation_variant(plant)
+                marker_driven = bool(variant) and self.animation_clip_supports_marker("plant", variant, "detonate", "row_blast")
+                if marker_driven:
+                    if not isinstance(plant.state.get("row_blast_pending"), dict):
+                        plant.state["row_blast_pending"] = {
+                            "row": plant.row,
+                            "boss_counter": self.is_zomboss_boss_mode() and plant.kind == "jalapeno",
+                        }
+                        plant.state["row_blast_anim_active"] = 1.0
+                        self.bump_anim_event(plant, "row_blast")
+                        plant.state["recoil_t"] = 0.18
+                else:
+                    if self.is_zomboss_boss_mode() and plant.kind == "jalapeno":
+                        self.cancel_zomboss_pending_attack("jalapeno")
+                        self.ice_rows.clear()
+                    for z in self.zombies:
+                        if z.row == plant.row:
+                            self.slay_zombie(z, source="row_blast")
+                    plant.hp = 0
             elif b == "spike":
                 for z in self.zombies:
                     if z.row == plant.row and abs(z.x - cx) <= 28 and not z.hypnotized:
@@ -8749,14 +9987,24 @@ class BattleState:
                         self.damage_zombie(z, 140, source="magnet")
                         plant.cd = 8.0
                         break
-            elif b == "pult" and plant.cd <= 0 and self.z_ahead(plant.row, cx):
+            elif b in {"pult", "kernel_pult", "melon_pult"} and plant.cd <= 0 and self.z_ahead(plant.row, cx):
                 slow = 0.0
                 splash = 0.0
+                color = (119, 196, 92)
+                outline = (36, 90, 40)
+                proj_kind = "pult"
                 if plant.kind in ("winter_melon",):
                     slow = 2.6
-                if plant.kind in ("melon_pult", "winter_melon"):
+                if b == "kernel_pult":
+                    proj_kind = "kernel_butter" if random.random() < 0.26 else "kernel_corn"
+                    color = (242, 212, 104) if proj_kind == "kernel_butter" else (240, 198, 94)
+                    outline = (138, 100, 26) if proj_kind == "kernel_butter" else (126, 84, 24)
+                if b == "melon_pult" or plant.kind in ("melon_pult", "winter_melon"):
                     splash = 85.0
-                self.add_projectile(plant.row, cx + 16, cy - 8, dmg, slow=slow, lobbed=True, splash=splash, color=(119, 196, 92), outline=(36, 90, 40))
+                    proj_kind = "melon_pult"
+                    color = (126, 196, 104)
+                    outline = (42, 94, 36)
+                self.add_projectile(plant.row, cx + 16, cy - 8, dmg, slow=slow, lobbed=True, splash=splash, color=color, outline=outline, kind=proj_kind)
                 plant.cd = self.scaled_plant_interval(cfg.interval)
                 plant.state["recoil_t"] = 0.22
             elif b == "grave_buster" and plant.cd <= 0:
@@ -8765,6 +10013,7 @@ class BattleState:
             elif b == "marigold" and plant.cd <= 0:
                 self.tokens.append(Token(cx + random.randint(-10, 10), cy, random.choice([20, 25]), 10.0, "coin"))
                 plant.cd = random.uniform(9.0, 13.0)
+                self.queue_audio_key("collect_coin")
             elif b == "gloom" and plant.cd <= 0:
                 self.boom(cx, cy, 105, dmg)
                 plant.cd = 1.7
@@ -8835,6 +10084,7 @@ class BattleState:
                 if hit_plant is not None and hit_pos is not None:
                     hit_plant.hp -= p.damage
                     hit_plant.state["hit_flash"] = 0.16
+                    self.queue_audio_key("plant_hit")
                     self.hit_sparks.append({"x": float(p.x), "y": float(self.row_y(p.row) - 10), "t": 0.16, "ttl": 0.16})
                     if p.kind == "zomboss_iceball":
                         self.ice_rows[p.row] = max(float(self.ice_rows.get(p.row, 0.0)), 9999.0)
@@ -8858,7 +10108,11 @@ class BattleState:
                 hit_source = "anti_air_projectile" if p.anti_air else "projectile"
                 self.damage_zombie(hit, p.damage, source=hit_source)
                 hit.state["hit_flash"] = 0.18
+                self.queue_audio_key("zombie_hit")
                 self.hit_sparks.append({"x": float(hit.x), "y": float(self.row_y(hit.row) - 8), "t": 0.18, "ttl": 0.18})
+                if p.kind == "kernel_butter":
+                    hit.stunned_t = max(hit.stunned_t, 1.85)
+                    hit.slow_t = max(hit.slow_t, 1.8)
                 if p.slow > 0:
                     hit.slow_t = max(hit.slow_t, p.slow)
                 if p.splash > 0:
@@ -8930,6 +10184,7 @@ class BattleState:
                     z.state["invisi_reveal_t"] = max(float(z.state.get("invisi_reveal_t", 0.0)), 0.52)
             z.state["last_hp"] = z.hp
             self.advance_entity_animation(z, dt, "zombie")
+            self.resolve_zombie_anim_markers(z)
             if z.kind in {"conehead", "buckethead"}:
                 break_ratio = 0.58 if z.kind == "conehead" else 0.62
                 if z.hp_max > 0 and (z.hp / z.hp_max) <= break_ratio and float(z.state.get("helmet_broken", 0.0)) <= 0.0:
@@ -9016,11 +10271,21 @@ class BattleState:
                     z.state["ladder_state"] = "placing"
                     z.state["ladder_phase_t"] = 0.66
                     z.state["ladder_phase_total"] = 0.66
+                    z.state["ladder_place_pending"] = {"row": z.row, "col": int(clamp((z.x - LAWN_X) // CELL_W, 0, COLS - 1))}
+                    z.state["ladder_place_done"] = 0.0
                     z.state["bite_t"] = 0.0
                     continue
             if z.kind == "pole_vaulting":
                 pole_state = str(z.state.get("pole_vault_state", "run"))
                 if pole_state == "vault":
+                    variant = self.zombie_animation_variant(z) or ""
+                    marker_driven_vault = bool(variant) and self.animation_clip_supports_marker("zombie", variant, "vault", "vault")
+                    if marker_driven_vault and float(z.state.get("pole_motion_started", 0.0)) <= 0.0:
+                        if self.consume_anim_marker(z, "vault"):
+                            z.state["pole_motion_started"] = 1.0
+                        else:
+                            z.state["bite_t"] = 0.0
+                            continue
                     vault_t = max(0.0, float(z.state.get("pole_vault_t", 0.0)) - dt)
                     z.state["pole_vault_t"] = vault_t
                     total = max(0.01, float(z.state.get("pole_vault_total", 0.38)))
@@ -9032,22 +10297,28 @@ class BattleState:
                         z.state["pole_vault_state"] = "post_vault_walk"
                     continue
                 if pole_state == "run" and target is not None:
+                    variant = self.zombie_animation_variant(z) or ""
+                    marker_driven_vault = bool(variant) and self.animation_clip_supports_marker("zombie", variant, "vault", "vault")
                     z.state["pole_vault_state"] = "vault"
                     z.state["pole_vault_t"] = 0.38
                     z.state["pole_vault_total"] = 0.38
                     z.state["pole_vault_start_x"] = z.x
                     z.state["pole_vault_end_x"] = max(LAWN_X - 8.0, z.x - CELL_W * 0.92)
+                    z.state["pole_motion_started"] = 0.0 if marker_driven_vault else 1.0
                     self.bump_anim_event(z, "vault")
                     continue
             if z.kind == "pogo" and self.pogo_state(z) == "hop_loop" and target is not None:
                 blocked_by_tallnut = bool(main_target and main_target.kind == "tall_nut")
                 pogo_target_kind = target.kind if target else ""
                 if (not blocked_by_tallnut) and pogo_target_kind in {"wallnut", "pumpkin", "spikeweed", "spikerock", "garlic"}:
+                    variant = self.zombie_animation_variant(z) or ""
+                    marker_driven_vault = bool(variant) and self.animation_clip_supports_marker("zombie", variant, "vault_over", "vault")
                     z.state["pogo_state"] = "vault_over"
                     z.state["pogo_phase_t"] = 0.46
                     z.state["pogo_total_t"] = 0.46
                     z.state["pogo_start_x"] = z.x
                     z.state["pogo_end_x"] = max(LAWN_X - 8.0, z.x - CELL_W * 0.96)
+                    z.state["pogo_motion_started"] = 0.0 if marker_driven_vault else 1.0
                     continue
             if target and self.zombie_can_attack_plants(z):
                 target.hp -= z.dps * dt
@@ -9142,6 +10413,145 @@ class BattleState:
             return surface, shift_x, shift_y, scale_ratio
         return surface.subsurface(rect).copy(), shift_x, shift_y, scale_ratio
 
+    def placement_hover_cell(self, mouse_pos: Tuple[int, int]) -> Optional[Tuple[int, int]]:
+        selected_kind = str(self.selected)
+        if (
+            not selected_kind
+            or selected_kind not in self.plant_types
+            or self.shovel_mode
+            or self.is_i_zombie_mode()
+            or self.is_whack_mode()
+            or self.is_beghouled_mode()
+            or self.is_beghouled_twist_mode()
+            or self.is_zombiquarium_mode()
+            or self.is_battle_intro_active()
+            or self.result
+        ):
+            return None
+        mx, my = mouse_pos
+        if not (LAWN_X <= mx < self.lawn_right() and LAWN_Y <= my < self.lawn_bottom()):
+            return None
+        col = int((mx - LAWN_X) // CELL_W)
+        row = int((my - LAWN_Y) // CELL_H)
+        if not (0 <= row < self.rows() and 0 <= col < COLS):
+            return None
+        return row, col
+
+    def draw_battle_placement_highlight(self, screen: pygame.Surface, mouse_pos: Tuple[int, int]) -> None:
+        hover = self.placement_hover_cell(mouse_pos)
+        if hover is None:
+            return
+        row, col = hover
+        selected_kind = str(self.selected)
+        valid = self.can_place(selected_kind, row, col)
+        row_rect = pygame.Rect(LAWN_X + 4, LAWN_Y + row * CELL_H + 6, COLS * CELL_W - 8, CELL_H - 12)
+        cell_rect = pygame.Rect(LAWN_X + col * CELL_W + 6, LAWN_Y + row * CELL_H + 6, CELL_W - 12, CELL_H - 12)
+
+        row_overlay = pygame.Surface(row_rect.size, pygame.SRCALPHA)
+        row_fill = (234, 208, 138, 28) if valid else (186, 106, 84, 26)
+        row_edge = (255, 236, 188, 42) if valid else (222, 148, 118, 36)
+        pygame.draw.rect(row_overlay, row_fill, row_overlay.get_rect(), border_radius=14)
+        pygame.draw.rect(row_overlay, row_edge, row_overlay.get_rect(), width=1, border_radius=14)
+        pygame.draw.line(
+            row_overlay,
+            (92, 74, 44, 34) if valid else (108, 58, 44, 28),
+            (12, row_overlay.get_height() - 18),
+            (row_overlay.get_width() - 12, row_overlay.get_height() - 18),
+            2,
+        )
+        screen.blit(row_overlay, row_rect.topleft)
+
+        cell_overlay = pygame.Surface(cell_rect.size, pygame.SRCALPHA)
+        frame_col = (244, 216, 148, 190) if valid else (210, 128, 96, 180)
+        inner_col = (104, 74, 36, 108) if valid else (112, 56, 44, 96)
+        pygame.draw.rect(cell_overlay, (frame_col[0], frame_col[1], frame_col[2], 34), cell_overlay.get_rect(), border_radius=10)
+        pygame.draw.rect(cell_overlay, frame_col, cell_overlay.get_rect(), width=3, border_radius=10)
+        inner_rect = cell_overlay.get_rect().inflate(-8, -8)
+        pygame.draw.rect(cell_overlay, inner_col, inner_rect, width=1, border_radius=8)
+        screen.blit(cell_overlay, cell_rect.topleft)
+
+    def plant_ground_y(self, row: int) -> int:
+        return LAWN_Y + row * CELL_H + int(CELL_H * 0.70)
+
+    def plant_shadow_y(self, row: int) -> int:
+        return LAWN_Y + row * CELL_H + int(CELL_H * 0.76)
+
+    def plant_grounding_profile(self, plant: Plant, cfg: PlantType) -> Dict[str, float | str]:
+        profile = PLANT_GROUNDING_PROFILES.get(plant.kind)
+        if profile is None:
+            if plant.slot == "support":
+                return {
+                    "anchor_mode": "support_flat",
+                    "foot_inset_y": 2.0,
+                    "shadow_family": "flat",
+                    "shadow_scale_x": 1.0,
+                }
+            if plant.slot == "armor":
+                return {
+                    "anchor_mode": "overlay_shell",
+                    "foot_inset_y": 4.0,
+                    "shadow_family": "wide",
+                    "shadow_scale_x": 1.10,
+                }
+            return dict(DEFAULT_PLANT_GROUNDING_PROFILE)
+        return dict(profile)
+
+    def static_plant_foot_anchor(self, surface: pygame.Surface, grounding: Dict[str, float | str]) -> Tuple[float, float]:
+        rect = surface.get_bounding_rect(min_alpha=1)
+        if rect.w <= 0 or rect.h <= 0:
+            rect = surface.get_rect()
+        inset = clamp(float(grounding.get("foot_inset_y", 0.0)), 0.0, max(0.0, float(rect.h - 1)))
+        return float(rect.centerx), float(rect.bottom - inset)
+
+    def resolve_plant_anchor(
+        self,
+        surface: pygame.Surface,
+        grounding: Dict[str, float | str],
+        anim_frame: Optional[AnimationFrame] = None,
+        *,
+        surf_dx: float = 0.0,
+        surf_dy: float = 0.0,
+    ) -> Tuple[float, float]:
+        if anim_frame is not None and str(grounding.get("anchor_mode", "bbox_bottom")) == "anim_anchor":
+            return (
+                float(surface.get_width() / 2.0 - surf_dx),
+                float(surface.get_height() / 2.0 - surf_dy),
+            )
+        return self.static_plant_foot_anchor(surface, grounding)
+
+    def transformed_anchor_offset(
+        self,
+        surface_size: Tuple[int, int],
+        anchor: Tuple[float, float],
+        *,
+        scale: float,
+        angle: float,
+        flip_x: bool = False,
+    ) -> Tuple[float, float]:
+        width, height = surface_size
+        vx = float(anchor[0] - width / 2.0)
+        vy = float(anchor[1] - height / 2.0)
+        if flip_x:
+            vx = -vx
+        vx *= scale
+        vy *= scale
+        rad = math.radians(angle)
+        cos_a = math.cos(rad)
+        sin_a = math.sin(rad)
+        return (
+            vx * cos_a + vy * sin_a,
+            -vx * sin_a + vy * cos_a,
+        )
+
+    def plant_row_visual_profile(self, grounding: Dict[str, float | str]) -> Dict[str, float]:
+        family = str(grounding.get("shadow_family", "standard"))
+        scale_x = float(grounding.get("shadow_scale_x", 1.0))
+        if family == "flat":
+            return {"shadow_w": 50.0 * scale_x, "shadow_h": 9.0, "shadow_alpha": 82.0}
+        if family == "wide":
+            return {"shadow_w": 48.0 * scale_x, "shadow_h": 10.0, "shadow_alpha": 98.0}
+        return {"shadow_w": 42.0 * scale_x, "shadow_h": 9.0, "shadow_alpha": 92.0}
+
     def draw(
         self,
         screen: pygame.Surface,
@@ -9221,6 +10631,21 @@ class BattleState:
         for r in range(1, self.rows()):
             y = LAWN_Y + r * CELL_H
             pygame.draw.line(screen, (44, 94, 34, 140), (LAWN_X + 6, y), (LAWN_X + COLS * CELL_W - 6, y), 1)
+        row_read_surf = pygame.Surface((COLS * CELL_W, self.lawn_h()), pygame.SRCALPHA)
+        for r in range(self.rows()):
+            baseline_y = self.plant_shadow_y(r) - LAWN_Y
+            if self.is_water(r):
+                dark_col = (50, 86, 120, 28)
+                light_col = (188, 222, 255, 20)
+            elif self.field.is_roof:
+                dark_col = (118, 78, 50, 30)
+                light_col = (232, 194, 148, 16)
+            else:
+                dark_col = (60, 102, 46, 26)
+                light_col = (202, 230, 166, 16)
+            pygame.draw.line(row_read_surf, dark_col, (10, baseline_y), (row_read_surf.get_width() - 10, baseline_y), 2)
+            pygame.draw.line(row_read_surf, light_col, (14, max(0, baseline_y - 2)), (row_read_surf.get_width() - 14, max(0, baseline_y - 2)), 1)
+        screen.blit(row_read_surf, (LAWN_X, LAWN_Y))
         # Animated water shimmer overlay for pool tiles
         for r in range(self.rows()):
             if self.is_water(r):
@@ -9239,6 +10664,7 @@ class BattleState:
                     persp_off = r * 3
                     pygame.draw.line(screen, (168, 102, 64), (tile.x + persp_off, tile.y + CELL_H // 3), (tile.right + persp_off, tile.y + CELL_H // 3), 1)
                     pygame.draw.line(screen, (168, 102, 64), (tile.x + persp_off + 1, tile.y + 2 * CELL_H // 3), (tile.right + persp_off + 1, tile.y + 2 * CELL_H // 3), 1)
+        self.draw_battle_placement_highlight(screen, pygame.mouse.get_pos())
         vignette = pygame.Surface((lawn_rect.w, lawn_rect.h), pygame.SRCALPHA)
         for y in range(vignette.get_height()):
             edge_t = abs((y / max(1, vignette.get_height() - 1)) - 0.5) * 2.0
@@ -9458,6 +10884,9 @@ class BattleState:
             self.ensure_plant_anim_state(plant)
             cx, cy = self.cell_center(plant.row, plant.col)
             cfg = self.plant_types[plant.kind]
+            grounding = self.plant_grounding_profile(plant, cfg)
+            profile = self.plant_row_visual_profile(grounding)
+            ground_y = float(self.plant_ground_y(plant.row))
             phase = plant.state.get("anim_phase", 0.0)
             t = self.elapsed + phase
             recoil = plant.state.get("recoil_t", 0.0)
@@ -9540,6 +10969,8 @@ class BattleState:
             sprite = plant_sprite_fn(plant.kind, plant.slot)
             anim_alpha = 1.0
             used_anim_frame = False
+            surf_dx = 0.0
+            surf_dy = 0.0
             if entity_anim_frame_fn is not None:
                 anim_surface, anim_frame = entity_anim_frame_fn(
                     "plant",
@@ -9562,11 +10993,18 @@ class BattleState:
                     anim_alpha = clamp(float(anim_frame.alpha) / 255.0, 0.0, 1.0)
                     used_anim_frame = True
             draw_cx = int(cx + dx)
-            draw_cy = int((cy if plant.slot != "support" else cy + 6) + dy)
-            shadow_w = 46 if plant.slot != "support" else 52
-            shadow_h = 12 if plant.slot != "support" else 10
-            shadow_rect = pygame.Rect(draw_cx - shadow_w // 2, draw_cy + 24, shadow_w, shadow_h)
-            pygame.draw.ellipse(screen, (26, 34, 24), shadow_rect)
+            draw_cy = int(ground_y)
+            shadow_w = int(profile["shadow_w"])
+            shadow_h = int(profile["shadow_h"])
+            shadow_center_y = self.plant_shadow_y(plant.row)
+            shadow_rect = pygame.Rect(draw_cx - shadow_w // 2, shadow_center_y - shadow_h // 2, shadow_w, shadow_h)
+            shadow_surf = pygame.Surface((shadow_rect.w, shadow_rect.h), pygame.SRCALPHA)
+            pygame.draw.ellipse(
+                shadow_surf,
+                (24, 30, 20, int(profile["shadow_alpha"])),
+                shadow_surf.get_rect(),
+            )
+            screen.blit(shadow_surf, shadow_rect.topleft)
             plant_render_w = 56
             plant_render_h = 72
             if sprite is not None:
@@ -9582,7 +11020,26 @@ class BattleState:
                     alpha=anim_alpha,
                     mono=bool(plant.state.get("from_imitater", 0.0)) and plant.state.get("imitater_morph_t", 0.0) <= 0.0,
                 )
-                self_rect = sp.get_rect(center=(draw_cx, draw_cy))
+                render_scale = scale if used_anim_frame else scale * plant_global_scale
+                render_anchor = self.resolve_plant_anchor(
+                    sprite,
+                    grounding,
+                    anim_frame if used_anim_frame else None,
+                    surf_dx=surf_dx,
+                    surf_dy=surf_dy,
+                )
+                anchor_off_x, anchor_off_y = self.transformed_anchor_offset(
+                    sprite.get_size(),
+                    render_anchor,
+                    scale=render_scale,
+                    angle=angle,
+                )
+                target_anchor_x = float(cx + dx)
+                target_anchor_y = float(ground_y)
+                render_center_x = target_anchor_x - anchor_off_x
+                render_center_y = target_anchor_y - anchor_off_y
+                self_rect = sp.get_rect(center=(int(round(render_center_x)), int(round(render_center_y))))
+                draw_cx, draw_cy = self_rect.center
                 plant_render_w = max(24, self_rect.w)
                 plant_render_h = max(24, self_rect.h)
                 if plant.state.get("dying", 0.0) > 0:
@@ -9598,11 +11055,15 @@ class BattleState:
                     color = (89, 165, 101) if plant.kind == "lily_pad" else ((190, 104, 72) if plant.kind == "flower_pot" else (109, 174, 110))
                     ew = int(60 * max(0.8, scale))
                     eh = int(20 * max(0.8, scale))
-                    pygame.draw.ellipse(screen, color, (draw_cx - ew // 2, draw_cy + 16 - eh // 2, ew, eh))
+                    procedural_cy = int(ground_y - (16 + eh / 2.0))
+                    pygame.draw.ellipse(screen, color, (draw_cx - ew // 2, procedural_cy + 16 - eh // 2, ew, eh))
+                    draw_cy = procedural_cy
                     plant_render_w = ew
                     plant_render_h = max(eh, 20)
                 elif plant.slot == "armor":
-                    pygame.draw.ellipse(screen, (228, 120, 64), (draw_cx - 34, draw_cy - 24, 68, 52))
+                    procedural_cy = int(ground_y - 28)
+                    pygame.draw.ellipse(screen, (228, 120, 64), (draw_cx - 34, procedural_cy - 24, 68, 52))
+                    draw_cy = procedural_cy
                     plant_render_w = 68
                     plant_render_h = 52
                 else:
@@ -9612,7 +11073,9 @@ class BattleState:
                     if self.mushroom_sleeping(plant):
                         color = (95, 88, 110)
                     rad = int(24 * max(0.82, scale))
-                    pygame.draw.circle(screen, color, (draw_cx, draw_cy), rad)
+                    procedural_cy = int(ground_y - rad)
+                    pygame.draw.circle(screen, color, (draw_cx, procedural_cy), rad)
+                    draw_cy = procedural_cy
                     plant_render_w = rad * 2
                     plant_render_h = rad * 2
             if plant.kind == "potato_mine" and not used_anim_frame:
@@ -10122,6 +11585,8 @@ class Game:
         os.makedirs(self.assets_root / "plants" / "anim", exist_ok=True)
         os.makedirs(self.assets_root / "zombies" / "anim", exist_ok=True)
         os.makedirs(self.assets_root / "ui" / "modes", exist_ok=True)
+        os.makedirs(self.assets_root / "audio" / "music", exist_ok=True)
+        os.makedirs(self.assets_root / "audio" / "sfx", exist_ok=True)
         self.image_cache: Dict[Tuple[str, Optional[Tuple[int, int]]], Optional[pygame.Surface]] = {}
         self.animation_sheet_cache: Dict[str, Optional[pygame.Surface]] = {}
         self.animation_frame_cache: Dict[Tuple[str, Optional[Tuple[int, int, int, int]]], Optional[pygame.Surface]] = {}
@@ -10141,6 +11606,7 @@ class Game:
             "ui": self.make_font(30, bold=True),
             "sub_ui": self.make_font(28, bold=True),
             "mid": self.make_font(24),
+            "hud_num": self.make_font(24, bold=True),
             "label": self.make_font(20),
             "small": self.make_font(17),
             "tiny": self.make_font(15),
@@ -10204,7 +11670,7 @@ class Game:
         self.almanac_tab = "plants"
         self.almanac_selected_key = {"plants": "", "zombies": ""}
         self.almanac_page = {"plants": 0, "zombies": 0}
-        self.almanac_list_page_size = 11
+        self.almanac_list_page_size = 9
         self.encyclopedia_mode = "menu"
         self.encyclopedia_tab = "plants"
         self.encyclopedia_selected_key = {"plants": "", "zombies": ""}
@@ -10275,6 +11741,9 @@ class Game:
         self.zen_notice = ""
         self.zen_notice_until_ms = 0
         self.shop_return_scene = "start"
+        self.audio = AudioManager(self.assets_root)
+        self.audio.set_enabled(self.options_music_on, self.options_sfx_on)
+        self.update_scene_music(force=True)
 
     def make_font(self, size: int, bold: bool = False) -> pygame.font.Font:
         if not hasattr(self, "_font_face_path"):
@@ -10358,6 +11827,61 @@ class Game:
             idx = min(range(len(SPEED_CHOICES)), key=lambda i: abs(SPEED_CHOICES[i] - curr))
         idx = int(clamp(float(idx + delta_steps), 0.0, float(len(SPEED_CHOICES) - 1)))
         self.set_battle_speed(SPEED_CHOICES[idx], announce=True)
+
+    def play_sfx(self, key: str, volume: float = 1.0, force: bool = False) -> None:
+        if hasattr(self, "audio"):
+            self.audio.play_sfx(key, volume=volume, force=force)
+
+    def battle_music_track_key(self) -> str:
+        if self.battle.is_zomboss_boss_mode():
+            return "zomboss"
+        field = self.battle.field
+        if field.is_roof:
+            return "roof"
+        if field.has_fog:
+            return "fog"
+        if field.water_rows:
+            return "pool"
+        if field.is_night:
+            return "night"
+        return "day"
+
+    def scene_music_track_key(self, target: Optional[str] = None) -> str:
+        scene = str(target or self.scene)
+        if scene in {"battle"}:
+            return self.battle_music_track_key()
+        if scene == "result":
+            return self.battle_music_track_key() if getattr(self, "battle", None) is not None else "menu"
+        return "menu"
+
+    def update_scene_music(self, force: bool = False) -> None:
+        if not hasattr(self, "audio"):
+            return
+        self.audio.set_enabled(self.options_music_on, self.options_sfx_on)
+        track = self.scene_music_track_key()
+        if self.options_music_on:
+            self.audio.play_music(track, loop=True, fade_ms=320, force=force)
+        else:
+            self.audio.stop_music(180)
+
+    def sync_audio_options(self, force_music: bool = False) -> None:
+        if not hasattr(self, "audio"):
+            return
+        self.audio.set_enabled(self.options_music_on, self.options_sfx_on)
+        if force_music:
+            self.update_scene_music(force=True)
+
+    def notice_sfx_key(self, notice_key: str) -> str:
+        mapping = {
+            "zomboss_fireball_notice": "zomboss_fireball",
+            "zomboss_iceball_notice": "zomboss_iceball",
+            "zomboss_stomp_notice": "zomboss_stomp",
+            "zomboss_rv_notice": "zomboss_rv",
+            "zomboss_bungee_notice": "zomboss_bungee",
+            "zomboss_counter_fireball": "zomboss_counter",
+            "zomboss_counter_iceball": "zomboss_counter",
+        }
+        return mapping.get(str(notice_key), "")
 
     def apply_runtime_battle_rules(self, mode_rules: Optional[Dict[str, object]]) -> Dict[str, object]:
         rules = dict(mode_rules or {})
@@ -12429,6 +13953,7 @@ class Game:
                                     event_markers=tuple(str(x) for x in payload.get("event_markers", []) if x),
                                     hold_last_frame_ms=int(payload.get("hold_last_frame_ms", 0)),
                                     impact_marker=str(payload.get("impact_marker", "")),
+                                    impact_frame_index=int(payload.get("impact_frame_index", -1)),
                                     lock_until_end=bool(payload.get("lock_until_end", False)),
                                     anchor=(int(anchor[0]), int(anchor[1])),
                                 )
@@ -14245,15 +15770,15 @@ class Game:
 
     def battle_hud_layout(self) -> Dict[str, pygame.Rect]:
         special_mode = self.scene == "battle" and self.battle.is_special_hud_mode()
-        hud_h = 86 if special_mode else 110
+        hud_h = 94 if special_mode else 118
         bank_h = 48 if special_mode else 64
         hud = pygame.Rect(10, 8, SCREEN_WIDTH - 20, hud_h)
         sun_box = pygame.Rect(hud.x + 8, hud.y + 7, 86 if special_mode else 110, 48 if special_mode else 50)
-        shovel_btn = pygame.Rect(hud.x + 10, hud.bottom - 19, 60 if special_mode else 50, 14)
-        slot_btn = pygame.Rect(shovel_btn.right + 4, shovel_btn.y, 74 if special_mode else 58, 14)
-        settings_btn = pygame.Rect(hud.right - (52 if special_mode else 72), hud.y + 8, 42 if special_mode else 62, 22)
+        shovel_btn = pygame.Rect(hud.x + 10, hud.bottom - (28 if special_mode else 32), 64 if special_mode else 54, 22 if special_mode else 26)
+        slot_btn = pygame.Rect(shovel_btn.right + 4, shovel_btn.y, 78 if special_mode else 62, shovel_btn.h)
+        settings_btn = pygame.Rect(hud.right - (56 if special_mode else 76), hud.y + 8, 46 if special_mode else 66, 26 if special_mode else 30)
         seed_bank = pygame.Rect(sun_box.right + 10, hud.y + 8, settings_btn.x - sun_box.right - 18, bank_h)
-        utility_info = pygame.Rect(seed_bank.x, seed_bank.bottom + 3, seed_bank.w - (124 if special_mode else 152), 13 if special_mode else 16)
+        utility_info = pygame.Rect(seed_bank.x, seed_bank.bottom + 3, seed_bank.w - (124 if special_mode else 152), 18 if special_mode else 22)
         wave_meter = pygame.Rect(SCREEN_WIDTH // 2 - 170, SCREEN_HEIGHT - 44, 340, 28)
         left_tools = pygame.Rect(sun_box.x - 2, hud.y + 2, sun_box.w + 8, hud.h - 6)
         right_cluster = pygame.Rect(utility_info.x, utility_info.y, utility_info.w, utility_info.h)
@@ -14399,7 +15924,7 @@ class Game:
     def draw_settings_toggle_row(self, rect: pygame.Rect, label: str, enabled: bool, hover: bool = False) -> None:
         fill = (244, 232, 198) if hover else (238, 224, 188)
         self.draw_framed_panel(rect, fill=fill, border=(122, 88, 44), radius=10, inner=(248, 238, 214))
-        self.screen.blit(self.fonts["small"].render(label, True, (52, 38, 24)), (rect.x + 12, rect.y + 11))
+        self.draw_menu_label_text(self.fonts["small"], label, (rect.x + 12, rect.y + 10), max_width=rect.w - 136)
         badge = pygame.Rect(rect.right - 108, rect.y + 7, 94, rect.h - 14)
         self.draw_framed_panel(
             badge,
@@ -14409,20 +15934,32 @@ class Game:
             inner=(144, 218, 152) if enabled else (202, 182, 150),
         )
         status = self.tr("on") if enabled else self.tr("off")
-        status_surf = self.fonts["small"].render(status, True, (26, 22, 16))
-        self.screen.blit(status_surf, status_surf.get_rect(center=badge.center))
+        self.draw_pvz_hud_label(
+            self.fonts["small"],
+            status,
+            badge.center,
+            fill=(250, 244, 214),
+            outline=(40, 44, 26),
+            outline_width=2,
+        )
 
     def draw_settings_numeric_row(self, rect: pygame.Rect, label: str, value_text: str, hover_minus: bool = False, hover_plus: bool = False) -> Tuple[pygame.Rect, pygame.Rect]:
         self.draw_framed_panel(rect, fill=(238, 224, 188), border=(122, 88, 44), radius=10, inner=(248, 238, 214))
-        self.screen.blit(self.fonts["small"].render(label, True, (52, 38, 24)), (rect.x + 12, rect.y + 11))
+        self.draw_menu_label_text(self.fonts["small"], label, (rect.x + 12, rect.y + 10), max_width=rect.w - 206)
         minus_btn = pygame.Rect(rect.right - 178, rect.y + 7, 36, rect.h - 14)
         plus_btn = pygame.Rect(rect.right - 52, rect.y + 7, 36, rect.h - 14)
         value_box = pygame.Rect(minus_btn.right + 6, rect.y + 7, 84, rect.h - 14)
         self.draw_secondary_button(minus_btn, "-", hover=hover_minus)
         self.draw_secondary_button(plus_btn, "+", hover=hover_plus)
         self.draw_framed_panel(value_box, fill=(246, 236, 210), border=(122, 88, 44), radius=8, inner=(252, 246, 228))
-        value_surf = self.fonts["small"].render(value_text, True, (50, 36, 24))
-        self.screen.blit(value_surf, value_surf.get_rect(center=value_box.center))
+        self.draw_pvz_hud_label(
+            self.fonts["small"],
+            value_text,
+            value_box.center,
+            fill=(248, 238, 206),
+            outline=(74, 44, 20),
+            outline_width=2,
+        )
         return minus_btn, plus_btn
 
     def draw_battle_settings(self) -> None:
@@ -14936,14 +16473,14 @@ class Game:
         return list(self.plants.keys())
 
     def encyclopedia_detail_layout(self) -> Dict[str, pygame.Rect]:
-        panel = pygame.Rect(44, 38, SCREEN_WIDTH - 88, SCREEN_HEIGHT - 86)
-        header = pygame.Rect(panel.x + 18, panel.y + 12, panel.w - 36, 42)
-        tabs = pygame.Rect(panel.x + 22, panel.y + 62, 256, 40)
-        left = pygame.Rect(panel.x + 20, panel.y + 110, 356, panel.h - 178)
-        list_view = pygame.Rect(left.x + 10, left.y + 48, left.w - 20, left.h - 58)
-        right = pygame.Rect(left.right + 18, panel.y + 110, panel.right - left.right - 38, panel.h - 178)
-        tab_plants = pygame.Rect(tabs.x, tabs.y, 120, 36)
-        tab_zombies = pygame.Rect(tabs.x + 132, tabs.y, 120, 36)
+        panel = pygame.Rect(36, 28, SCREEN_WIDTH - 72, SCREEN_HEIGHT - 56)
+        header = pygame.Rect(panel.x + 22, panel.y + 16, panel.w - 44, 84)
+        tabs = pygame.Rect(panel.x + 28, panel.y + 114, 262, 42)
+        left = pygame.Rect(panel.x + 24, panel.y + 168, 346, panel.h - 238)
+        list_view = pygame.Rect(left.x + 14, left.y + 56, left.w - 28, left.h - 70)
+        right = pygame.Rect(left.right + 22, panel.y + 168, panel.right - left.right - 46, panel.h - 238)
+        tab_plants = pygame.Rect(tabs.x, tabs.y, 124, 38)
+        tab_zombies = pygame.Rect(tabs.x + 136, tabs.y, 124, 38)
         return {
             "panel": panel,
             "header": header,
@@ -14957,8 +16494,8 @@ class Game:
 
     def encyclopedia_scroll_max(self) -> int:
         keys = self.get_encyclopedia_keys(self.encyclopedia_tab)
-        row_h = 44
-        gap = 6
+        row_h = 52
+        gap = 8
         content_h = len(keys) * row_h + max(0, len(keys) - 1) * gap
         view_h = self.encyclopedia_detail_layout()["list_view"].h
         return max(0, content_h - view_h)
@@ -14982,8 +16519,8 @@ class Game:
         self.ensure_encyclopedia_state()
         keys = self.get_encyclopedia_keys(self.encyclopedia_tab)
         list_view = self.encyclopedia_detail_layout()["list_view"]
-        row_h = 44
-        gap = 6
+        row_h = 52
+        gap = 8
         buttons: List[Tuple[str, pygame.Rect]] = []
         for i, key in enumerate(keys):
             y = list_view.y + i * (row_h + gap) - int(self.encyclopedia_scroll_y)
@@ -15010,17 +16547,17 @@ class Game:
             self.almanac_page[tab] = int(clamp(float(self.almanac_page.get(tab, 0)), 0.0, float(max_page)))
 
     def almanac_layout(self) -> Dict[str, pygame.Rect]:
-        panel = pygame.Rect(56, 52, SCREEN_WIDTH - 112, SCREEN_HEIGHT - 104)
-        header = pygame.Rect(panel.x + 16, panel.y + 12, panel.w - 32, 44)
-        tabs = pygame.Rect(panel.x + 22, panel.y + 64, 250, 36)
-        left = pygame.Rect(panel.x + 18, panel.y + 108, 332, panel.h - 126)
-        right = pygame.Rect(left.right + 16, panel.y + 108, panel.right - left.right - 34, panel.h - 126)
-        close = pygame.Rect(panel.right - 110, panel.y + 14, 86, 34)
-        list_area = pygame.Rect(left.x + 8, left.y + 44, left.w - 16, left.h - 96)
-        page_prev = pygame.Rect(left.x + 14, left.bottom - 42, 44, 28)
-        page_next = pygame.Rect(left.right - 58, left.bottom - 42, 44, 28)
-        plant_tab = pygame.Rect(tabs.x, tabs.y, 118, 34)
-        zombie_tab = pygame.Rect(tabs.x + 128, tabs.y, 118, 34)
+        panel = pygame.Rect(64, 46, SCREEN_WIDTH - 128, SCREEN_HEIGHT - 92)
+        header = pygame.Rect(panel.x + 20, panel.y + 14, panel.w - 40, 72)
+        tabs = pygame.Rect(panel.x + 24, panel.y + 96, 262, 40)
+        left = pygame.Rect(panel.x + 22, panel.y + 150, 322, panel.h - 180)
+        right = pygame.Rect(left.right + 18, panel.y + 150, panel.right - left.right - 40, panel.h - 180)
+        close = pygame.Rect(panel.right - 108, panel.y + 22, 84, 34)
+        list_area = pygame.Rect(left.x + 12, left.y + 54, left.w - 24, left.h - 112)
+        page_prev = pygame.Rect(left.x + 16, left.bottom - 44, 46, 30)
+        page_next = pygame.Rect(left.right - 62, left.bottom - 44, 46, 30)
+        plant_tab = pygame.Rect(tabs.x, tabs.y, 124, 36)
+        zombie_tab = pygame.Rect(tabs.x + 136, tabs.y, 124, 36)
         return {
             "panel": panel,
             "header": header,
@@ -15041,8 +16578,8 @@ class Game:
         start = page * self.almanac_list_page_size
         visible = keys[start : start + self.almanac_list_page_size]
         buttons: List[Tuple[str, pygame.Rect]] = []
-        row_h = 34
-        gap = 4
+        row_h = 38
+        gap = 6
         for i, key in enumerate(visible):
             rect = pygame.Rect(list_rect.x, list_rect.y + i * (row_h + gap), list_rect.w, row_h)
             buttons.append((key, rect))
@@ -15202,13 +16739,13 @@ class Game:
         self.screen.blit(sun_glow, (SCREEN_WIDTH - 300, 42))
         pygame.draw.circle(self.screen, (255, 242, 164), (SCREEN_WIDTH - 180, 150), 36)
 
-        pygame.draw.ellipse(self.screen, (124, 194, 116), (-180, 384, 940, 452))
-        pygame.draw.ellipse(self.screen, (108, 176, 98), (226, 420, 1010, 372))
-        pygame.draw.ellipse(self.screen, (90, 156, 82), (720, 456, 820, 334))
+        pygame.draw.ellipse(self.screen, (118, 200, 96), (-180, 384, 940, 452))
+        pygame.draw.ellipse(self.screen, (100, 186, 82), (226, 420, 1010, 372))
+        pygame.draw.ellipse(self.screen, (86, 172, 72), (720, 456, 820, 334))
         pygame.draw.ellipse(self.screen, (238, 238, 226), (920, 46, 180, 64))
         pygame.draw.ellipse(self.screen, (238, 238, 226), (84, 72, 230, 72))
         pygame.draw.ellipse(self.screen, (236, 236, 226), (302, 56, 148, 56))
-        pygame.draw.rect(self.screen, (124, 184, 92), (0, SCREEN_HEIGHT - 102, SCREEN_WIDTH, 102))
+        pygame.draw.rect(self.screen, (92, 168, 62), (0, SCREEN_HEIGHT - 102, SCREEN_WIDTH, 102))
 
     def shift_color(self, color: Tuple[int, int, int], delta: int) -> Tuple[int, int, int]:
         return (
@@ -15362,15 +16899,58 @@ class Game:
                 offset=(1, 1),
             )
 
+    def draw_menu_section_strip(
+        self,
+        rect: pygame.Rect,
+        text: str,
+        *,
+        font: Optional[pygame.font.Font] = None,
+        fill: Tuple[int, int, int] = (124, 80, 38),
+        border: Tuple[int, int, int] = (70, 40, 18),
+        inner: Tuple[int, int, int] = (156, 106, 54),
+        text_fill: Tuple[int, int, int] = (248, 236, 208),
+        text_outline: Tuple[int, int, int] = (56, 30, 12),
+        outline_width: int = 2,
+    ) -> None:
+        if rect.w <= 6 or rect.h <= 6:
+            return
+        use_font = font or (self.fonts["small"] if rect.h >= 18 else self.fonts["tiny"])
+        self.draw_framed_panel(rect, fill=fill, border=border, radius=min(10, rect.h // 2), inner=inner)
+        label = self.fit_label(text, use_font, rect.w - 14)
+        self.draw_pvz_hud_label(
+            use_font,
+            label,
+            rect.center,
+            fill=text_fill,
+            outline=text_outline,
+            outline_width=outline_width,
+        )
+
+    def draw_menu_label_text(
+        self,
+        font: pygame.font.Font,
+        text: str,
+        pos: Tuple[int, int],
+        *,
+        max_width: Optional[int] = None,
+        fill: Tuple[int, int, int] = (250, 238, 204),
+        outline: Tuple[int, int, int] = (56, 32, 16),
+        outline_width: int = 2,
+    ) -> None:
+        label = self.fit_label(text, font, max_width) if max_width is not None else text
+        self.draw_outlined_text_pos(font, label, fill, pos, outline_color=outline, outline_width=outline_width)
+
     def draw_stone_button(self, rect: pygame.Rect, text: str, hover: bool = False, enabled: bool = True) -> None:
         if enabled:
             fill = UI_PALETTE["stone_fill"] if not hover else UI_PALETTE["stone_hover"]
             edge = UI_PALETTE["stone_border"]
-            txt = (28, 30, 36)
+            txt_fill = (242, 244, 248)
+            txt_outline = (58, 60, 68)
         else:
             fill = (138, 140, 146)
             edge = (100, 102, 110)
-            txt = (84, 86, 92)
+            txt_fill = (206, 208, 214)
+            txt_outline = (88, 90, 98)
         draw_r = rect.inflate(4, 4) if hover and enabled else rect
         self.draw_framed_panel(draw_r, fill=fill, border=edge, radius=16, inner=UI_PALETTE["stone_inner"])
         for y in range(draw_r.y + 12, draw_r.bottom - 10, 12):
@@ -15380,24 +16960,26 @@ class Game:
         pygame.draw.line(self.screen, crack_col, (draw_r.right - 56, draw_r.y + 20), (draw_r.right - 34, draw_r.y + 34), 2)
         font = self.fonts["small"] if draw_r.h <= 28 or draw_r.w <= 74 else self.fonts["mid"]
         render_text = self.fit_label(text, font, max(18, draw_r.w - 12))
-        self.draw_text_center_shadow(
+        self.draw_pvz_hud_label(
             font,
             render_text,
-            txt,
             draw_r.center,
-            shadow=(228, 230, 236) if enabled else (174, 176, 184),
-            offset=(1, 1),
+            fill=txt_fill,
+            outline=txt_outline,
+            outline_width=2,
         )
 
     def draw_primary_button(self, rect: pygame.Rect, text: str, enabled: bool = True, hover: bool = False) -> None:
         if enabled:
             fill = UI_PALETTE["btn_primary_hover"] if hover else UI_PALETTE["btn_primary"]
             border = (118, 74, 20)
-            txt = (48, 30, 12)
+            txt_fill = (252, 242, 206)
+            txt_outline = (84, 46, 16)
         else:
             fill = UI_PALETTE["btn_disabled"]
             border = (112, 98, 78)
-            txt = (88, 78, 66)
+            txt_fill = (214, 204, 184)
+            txt_outline = (112, 98, 82)
         draw_r = rect.inflate(4, 4) if hover and enabled else rect
         self.draw_framed_panel(draw_r, fill=fill, border=border, radius=14, inner=UI_PALETTE["btn_primary_inner"] if enabled else UI_PALETTE["btn_disabled_inner"])
         if enabled:
@@ -15409,13 +16991,13 @@ class Game:
             glow = pygame.Surface((draw_r.w + 8, draw_r.h + 8), pygame.SRCALPHA)
             pygame.draw.rect(glow, (255, 230, 140, 70), (0, 0, glow.get_width(), glow.get_height()), width=3, border_radius=18)
             self.screen.blit(glow, (draw_r.x - 4, draw_r.y - 4))
-        self.draw_text_center_shadow(
+        self.draw_pvz_hud_label(
             self.fonts["ui"],
-            text,
-            txt,
+            self.fit_label(text, self.fonts["ui"], draw_r.w - 14),
             draw_r.center,
-            shadow=(252, 238, 196) if enabled else (182, 172, 152),
-            offset=(1, 2),
+            fill=txt_fill,
+            outline=txt_outline,
+            outline_width=2,
         )
 
     def draw_secondary_button(self, rect: pygame.Rect, text: str, hover: bool = False) -> None:
@@ -15427,13 +17009,13 @@ class Game:
         pygame.draw.rect(gloss_surf, (255, 246, 220, 50), (0, 0, gloss.w, gloss.h), border_radius=8)
         self.screen.blit(gloss_surf, gloss.topleft)
         font = self.fonts["small"] if draw_r.h <= 42 or draw_r.w <= 90 else self.fonts["mid"]
-        self.draw_text_center_shadow(
+        self.draw_pvz_hud_label(
             font,
-            text,
-            (44, 30, 14),
+            self.fit_label(text, font, draw_r.w - 12),
             draw_r.center,
-            shadow=(246, 232, 196),
-            offset=(1, 1),
+            fill=(248, 238, 204),
+            outline=(74, 44, 20),
+            outline_width=2,
         )
 
     def draw_coin_plaque(self, rect: pygame.Rect, value: int, label: Optional[str] = None, compact: bool = False) -> None:
@@ -15452,10 +17034,11 @@ class Game:
         self.draw_text_shadow(font, text, (56, 40, 18), (tx, ty), shadow=(252, 240, 202), offset=(1, 1))
 
     def draw_sun_counter_panel(self, rect: pygame.Rect, sun_value: int) -> None:
-        self.draw_framed_panel(rect, fill=(236, 190, 74), border=UI_PALETTE["hud_border"], radius=16, inner=(248, 214, 118))
+        self.draw_framed_panel(rect, fill=(248, 204, 88), border=UI_PALETTE["hud_border"], radius=16, inner=(255, 228, 130))
         inset = rect.inflate(-10, -10)
-        self.draw_mode_thumb_gradient(self.screen, inset, (252, 232, 160), (232, 176, 58))
-        pygame.draw.rect(self.screen, (140, 90, 28), inset, 2, border_radius=12)
+        self.draw_mode_thumb_gradient(self.screen, inset, (255, 238, 168), (240, 188, 64))
+        pygame.draw.rect(self.screen, (120, 76, 22), inset, 2, border_radius=12)
+        pygame.draw.rect(self.screen, (255, 252, 220), inset.inflate(-3, -3), 1, border_radius=10)
         sun_cx, sun_cy = rect.x + 30, rect.centery - 1
         glow = pygame.Surface((56, 56), pygame.SRCALPHA)
         for r in range(28, 4, -2):
@@ -15476,8 +17059,23 @@ class Game:
         pygame.draw.circle(self.screen, (255, 236, 118), (sun_cx, sun_cy), 14)
         pygame.draw.circle(self.screen, (252, 210, 62), (sun_cx, sun_cy), 14, 2)
         pygame.draw.circle(self.screen, (255, 252, 220), (sun_cx - 4, sun_cy - 4), 5)
-        self.draw_text_shadow(self.fonts["small"], self.tr("sun"), (92, 54, 18), (rect.x + 56, rect.y + 8), shadow=(252, 242, 198), offset=(1, 1))
-        self.draw_text_shadow(self.fonts["ui"], str(int(sun_value)), (52, 34, 14), (rect.x + 54, rect.y + 26), shadow=(252, 242, 210), offset=(1, 2))
+        sun_word = self.tr("sun")
+        self.draw_outlined_text_pos(
+            self.fonts["small"],
+            sun_word,
+            UI_PALETTE["pvz_label_fill_dim"],
+            (rect.x + 56, rect.y + 6),
+            outline_color=UI_PALETTE["pvz_label_outline"],
+            outline_width=2,
+        )
+        self.draw_outlined_text_pos(
+            self.fonts["hud_num"],
+            str(int(sun_value)),
+            UI_PALETTE["pvz_label_fill"],
+            (rect.x + 54, rect.y + 24),
+            outline_color=UI_PALETTE["pvz_label_outline"],
+            outline_width=2,
+        )
 
     def battle_mode_display_label(self, mode_name: str) -> str:
         if mode_name in CLASSIC_MODE_TITLE_BY_ID:
@@ -15600,30 +17198,30 @@ class Game:
         shade = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
         shade.fill((16, 12, 10, 116 if win else 132))
         self.screen.blit(shade, (0, 0))
-        panel = pygame.Rect(0, 0, 620, 234)
+        panel = pygame.Rect(0, 0, 680, 264)
         panel.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 14)
         self.draw_book_panel(panel)
         title_text = self.tr("win") if win else self.tr("lose")
         result_title = self.battle_result_title_text(win)
-        self.draw_wood_sign(pygame.Rect(panel.x + 116, panel.y + 18, panel.w - 232, 70), title_text, result_title)
+        self.draw_wood_sign(pygame.Rect(panel.x + 116, panel.y + 18, panel.w - 232, 74), title_text, result_title)
         notice_text = self.battle_clear_notice_text() if win else self.battle_lose_notice_text()
-        notice_chip = pygame.Rect(panel.x + 86, panel.y + 102, panel.w - 172, 28)
+        notice_chip = pygame.Rect(panel.x + 56, panel.y + 106, panel.w - 112, 32)
         chip_fill = (220, 236, 188) if win else (236, 206, 188)
         chip_border = (96, 132, 66) if win else (148, 82, 56)
         chip_inner = (236, 246, 214) if win else (246, 226, 212)
         self.draw_framed_panel(notice_chip, fill=chip_fill, border=chip_border, radius=11, inner=chip_inner)
         notice_label = self.fit_label(notice_text, self.fonts["small"], notice_chip.w - 18)
         self.draw_text_center_shadow(self.fonts["small"], notice_label, (74, 56, 28), notice_chip.center, shadow=(248, 242, 222), offset=(1, 1))
-        summary_box = pygame.Rect(panel.x + 70, panel.y + 142, panel.w - 140, 52)
+        summary_box = pygame.Rect(panel.x + 48, panel.y + 150, panel.w - 96, 62)
         self.draw_framed_panel(summary_box, fill=(244, 234, 206), border=(134, 98, 48), radius=14, inner=(250, 242, 224))
         summary_text = self.battle_result_summary_text(win)
         summary_line = self.fit_label(summary_text, self.fonts["small"], summary_box.w - 18)
         self.draw_text_center_shadow(self.fonts["small"], summary_line, (70, 52, 28), summary_box.center, shadow=(250, 242, 224), offset=(1, 1))
         progress_lines = self.battle_result_progress_lines(win)
         if progress_lines:
-            chip_w = max(220, min(272, panel.w - 172))
-            chip = pygame.Rect(0, 0, chip_w, 26)
-            chip.center = (panel.centerx, panel.bottom - 24)
+            chip_w = max(260, min(320, panel.w - 120))
+            chip = pygame.Rect(0, 0, chip_w, 28)
+            chip.center = (panel.centerx, panel.bottom - 26)
             self.draw_framed_panel(chip, fill=(228, 214, 176), border=(128, 92, 46), radius=10, inner=(242, 232, 206))
             chip_text = self.fit_label(progress_lines[0], self.fonts["tiny"], chip.w - 12)
             self.draw_text_center_shadow(self.fonts["tiny"], chip_text, (68, 48, 24), chip.center, shadow=(250, 242, 220), offset=(1, 1))
@@ -15765,24 +17363,26 @@ class Game:
 
     def draw_seed_bank_top(self, rect: pygame.Rect, label: str = "") -> None:
         self.draw_panel_shadow(rect, radius=18, alpha=60, offset=(0, 4))
-        self.draw_framed_panel(rect, fill=(162, 108, 52), border=(84, 50, 20), radius=18, inner=(202, 146, 86))
+        wf, wfd = UI_PALETTE["seed_bank_wood"], UI_PALETTE["seed_bank_wood_dark"]
+        self.draw_framed_panel(rect, fill=wf, border=wfd, radius=18, inner=(214, 158, 92))
         # Wood-grain lines on the tray
         tray_grain = rect.inflate(-14, -8)
         for gy in range(tray_grain.y + 4, tray_grain.bottom - 4, 6):
             a = 22 + (gy % 3) * 6
             grain_surf = pygame.Surface((tray_grain.w - 8, 1), pygame.SRCALPHA)
-            grain_surf.fill((82, 48, 18, a))
+            grain_surf.fill((72, 40, 14, a))
             self.screen.blit(grain_surf, (tray_grain.x + 4, gy))
         # Top lip highlight
         lip_top = pygame.Surface((rect.w - 20, 6), pygame.SRCALPHA)
         for row in range(6):
-            lip_top.fill((255, 240, 200, max(0, 60 - row * 12)))
+            lip_top.fill((255, 246, 210, max(0, 72 - row * 12)))
             self.screen.blit(lip_top, (rect.x + 10, rect.y + 4 + row))
         channel = rect.inflate(-12, -9)
-        self.draw_framed_panel(channel, fill=(108, 68, 32), border=(72, 44, 18), radius=12, inner=(146, 98, 54))
+        ch = UI_PALETTE["seed_bank_channel"]
+        self.draw_framed_panel(channel, fill=ch, border=(58, 34, 14), radius=12, inner=(148, 102, 56))
         lip = pygame.Rect(channel.x + 10, channel.y + 7, channel.w - 20, 8)
-        pygame.draw.rect(self.screen, (228, 190, 132), lip, border_radius=5)
-        pygame.draw.rect(self.screen, (120, 76, 38), channel, 1, border_radius=11)
+        pygame.draw.rect(self.screen, (236, 200, 140), lip, border_radius=5)
+        pygame.draw.rect(self.screen, (96, 58, 26), channel, 1, border_radius=11)
         if label:
             ribbon = pygame.Rect(rect.x + 16, rect.y - 9, min(172, rect.w - 32), 20)
             self.draw_framed_panel(ribbon, fill=(200, 54, 38), border=(108, 28, 20), radius=8, inner=(226, 88, 72))
@@ -15815,9 +17415,15 @@ class Game:
         self.draw_framed_panel(rect, fill=base, border=border, radius=12, inner=(254, 248, 230))
         top_band_h = 11 if rect.h <= 50 else (12 if rect.h <= 56 else 16)
         top_band = pygame.Rect(rect.x + 4, rect.y + 4, rect.w - 8, top_band_h)
-        self.draw_framed_panel(top_band, fill=(82, 142, 56), border=(42, 86, 28), radius=7, inner=(112, 172, 84))
-        cost_label = self.fonts["tiny"].render(str(shown_cost), True, (252, 252, 232))
-        self.screen.blit(cost_label, cost_label.get_rect(center=top_band.center))
+        self.draw_framed_panel(top_band, fill=(72, 148, 52), border=(28, 72, 22), radius=7, inner=(108, 176, 78))
+        self.draw_pvz_hud_label(
+            self.fonts["tiny"],
+            str(shown_cost),
+            top_band.center,
+            fill=(255, 252, 220),
+            outline=(18, 48, 12),
+            outline_width=2,
+        )
         icon_box = pygame.Rect(rect.x + 6, top_band.bottom + 1, rect.w - 12, max(16, rect.h - top_band_h - 9))
         self.draw_mode_thumb_gradient(self.screen, icon_box, (250, 244, 222), (228, 218, 184))
         pygame.draw.rect(self.screen, (156, 118, 64), icon_box, 1, border_radius=8)
@@ -15838,7 +17444,7 @@ class Game:
             self.screen.blit(shade, rect.topleft)
 
     def draw_wave_flag_meter(self, rect: pygame.Rect) -> None:
-        self.draw_framed_panel(rect, fill=(180, 126, 66), border=(104, 66, 28), radius=12, inner=(206, 150, 88))
+        self.draw_framed_panel(rect, fill=(196, 138, 72), border=(96, 58, 24), radius=12, inner=(220, 162, 96))
         track = rect.inflate(-12, -9)
         pygame.draw.rect(self.screen, (80, 58, 30), track, border_radius=6)
         inner = track.inflate(-2, -2)
@@ -15884,7 +17490,7 @@ class Game:
             pygame.draw.circle(self.screen, (168, 58, 48), (head_x + 2, head_y - 2), 2)
         label = f"{self.tr('wave_label')} {max(0, current)}/{total}"
         font = self.fonts["tiny"] if rect.h <= 24 else self.fonts["small"]
-        self.draw_text_center_shadow(font, label, (252, 244, 220), rect.center, shadow=(66, 42, 22), offset=(1, 1))
+        self.draw_pvz_hud_label(font, label, rect.center, outline_width=2)
 
     def draw_seed_chooser_board(self, rect: pygame.Rect) -> None:
         shell = rect.inflate(10, 10)
@@ -15950,16 +17556,20 @@ class Game:
         self.draw_panel_shadow(draw_r, radius=14, alpha=80 if hover else 72, offset=(0, 5 if hover else 4))
         pygame.draw.rect(self.screen, cover, draw_r, border_radius=14)
         pygame.draw.rect(self.screen, (144, 102, 34), draw_r, 3, border_radius=14)
-        spine = pygame.Rect(draw_r.x + 12, draw_r.y + 10, 30, draw_r.h - 20)
+        spine = pygame.Rect(draw_r.x + 10, draw_r.y + 10, 22, draw_r.h - 20)
         pygame.draw.rect(self.screen, (194, 148, 58), spine, border_radius=8)
         pygame.draw.rect(self.screen, (122, 84, 30), spine, 2, border_radius=8)
-        page = pygame.Rect(draw_r.x + 48, draw_r.y + 12, draw_r.w - 60, draw_r.h - 24)
+        page = pygame.Rect(draw_r.x + 36, draw_r.y + 10, draw_r.w - 46, draw_r.h - 20)
         pygame.draw.rect(self.screen, (246, 226, 170), page, border_radius=10)
         pygame.draw.rect(self.screen, (148, 108, 38), page, 2, border_radius=10)
         self.draw_panel_grain(page.inflate(-4, -4), (148, 108, 38), alpha=22, spacing=8)
-        self.screen.blit(self.fonts["mid"].render(title, True, (68, 42, 18)), (page.x + 10, page.y + 6))
+        title_label = self.fit_label(title, self.fonts["mid"], page.w - 16)
+        title_surf = self.fonts["mid"].render(title_label, True, (68, 42, 18))
         if subtitle:
-            self.screen.blit(self.fonts["small"].render(subtitle, True, (82, 60, 30)), (page.x + 10, page.y + 34))
+            self.screen.blit(title_surf, (page.x + 8, page.y + 6))
+            self.screen.blit(self.fonts["small"].render(subtitle, True, (82, 60, 30)), (page.x + 8, page.y + 32))
+        else:
+            self.screen.blit(title_surf, title_surf.get_rect(center=(page.centerx, page.centery)))
         if hover:
             glow = pygame.Surface((draw_r.w + 8, draw_r.h + 8), pygame.SRCALPHA)
             pygame.draw.rect(glow, (255, 230, 140, 60), (0, 0, glow.get_width(), glow.get_height()), width=2, border_radius=18)
@@ -15993,11 +17603,18 @@ class Game:
         left_sub_sign = pygame.Rect(86, 164, 390, 50)
         statue_rect = pygame.Rect(116, 420, 118, 186)
         zen_badge = pygame.Rect(332, 572, 160, 74)
-        book_btn = pygame.Rect(tombstone.x + 42, tombstone.bottom - 64, 132, 66)
-        shop_btn = pygame.Rect(tombstone.x + 198, tombstone.bottom - 46, 106, 42)
-        options_btn = pygame.Rect(tombstone.x + 316, tombstone.bottom - 64, 116, 48)
-        help_btn = pygame.Rect(tombstone.x + 424, tombstone.bottom - 38, 92, 42)
-        quit_btn = pygame.Rect(tombstone.right - 86, tombstone.bottom - 78, 80, 44)
+        row1_y = survival_btn.bottom + slab_gap
+        row1_gap = 12
+        book_w = (slab_w - row1_gap) // 2 + 10
+        shop_w = slab_w - book_w - row1_gap
+        book_btn = pygame.Rect(slab_x, row1_y, book_w, 54)
+        shop_btn = pygame.Rect(slab_x + book_w + row1_gap, row1_y, shop_w, 54)
+        row2_y = book_btn.bottom + 10
+        row2_gap = 10
+        btn3_w = (slab_w - row2_gap * 2) // 3
+        options_btn = pygame.Rect(slab_x, row2_y, btn3_w, 40)
+        help_btn = pygame.Rect(slab_x + btn3_w + row2_gap, row2_y, btn3_w, 40)
+        quit_btn = pygame.Rect(slab_x + (btn3_w + row2_gap) * 2, row2_y, slab_w - (btn3_w + row2_gap) * 2, 40)
         return {
             "tombstone": tombstone,
             "adventure_btn": adv_btn,
@@ -16031,15 +17648,56 @@ class Game:
         main_s = font.render(text, True, color)
         self.screen.blit(main_s, main_s.get_rect(center=center))
 
+    def draw_outlined_text_pos(
+        self,
+        font: pygame.font.Font,
+        text: str,
+        color: Tuple[int, int, int],
+        topleft: Tuple[int, int],
+        outline_color: Tuple[int, int, int] = (32, 22, 8),
+        outline_width: int = 2,
+    ) -> None:
+        outline_s = font.render(text, True, outline_color)
+        offsets: List[Tuple[int, int]] = []
+        r2 = outline_width * outline_width + 1
+        for dx in range(-outline_width, outline_width + 1):
+            for dy in range(-outline_width, outline_width + 1):
+                if dx * dx + dy * dy <= r2 and (dx != 0 or dy != 0):
+                    offsets.append((dx, dy))
+        base_rect = outline_s.get_rect(topleft=topleft)
+        for dx, dy in offsets:
+            self.screen.blit(outline_s, (base_rect.x + dx, base_rect.y + dy))
+        main_s = font.render(text, True, color)
+        self.screen.blit(main_s, main_s.get_rect(topleft=topleft))
+
+    def draw_pvz_hud_label(
+        self,
+        font: pygame.font.Font,
+        text: str,
+        center: Tuple[int, int],
+        *,
+        fill: Optional[Tuple[int, int, int]] = None,
+        outline: Optional[Tuple[int, int, int]] = None,
+        outline_width: int = 2,
+    ) -> None:
+        self.draw_outlined_text(
+            font,
+            text,
+            fill or UI_PALETTE["pvz_label_fill"],
+            center,
+            outline_color=outline or UI_PALETTE["pvz_label_outline"],
+            outline_width=outline_width,
+        )
+
     def draw_start_backdrop(self) -> None:
         t = self._menu_anim_t
-        self.draw_vertical_gradient(pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), (136, 216, 248), (84, 162, 220))
+        self.draw_vertical_gradient(pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), (120, 210, 255), (72, 148, 214))
         sky_haze = pygame.Surface((SCREEN_WIDTH, 220), pygame.SRCALPHA)
-        sky_haze.fill((255, 250, 232, 26))
+        sky_haze.fill((255, 252, 238, 32))
         self.screen.blit(sky_haze, (0, 0))
-        pygame.draw.ellipse(self.screen, (126, 194, 108), (-240, 362, 1000, 430))
-        pygame.draw.ellipse(self.screen, (108, 178, 92), (300, 404, 980, 380))
-        pygame.draw.ellipse(self.screen, (94, 162, 82), (760, 448, 720, 320))
+        pygame.draw.ellipse(self.screen, (118, 200, 96), (-240, 362, 1000, 430))
+        pygame.draw.ellipse(self.screen, (96, 186, 78), (300, 404, 980, 380))
+        pygame.draw.ellipse(self.screen, (82, 170, 68), (760, 448, 720, 320))
 
         # Left tree
         trunk = [(18, 700), (98, 700), (166, 518), (188, 420), (176, 274), (146, 168), (100, 120), (60, 124), (42, 188), (52, 342), (36, 512)]
@@ -16116,7 +17774,7 @@ class Game:
                 pygame.draw.circle(self.screen, petal, (int(fx + math.cos(rad) * 8), int(fy + math.sin(rad) * 8)), 4)
             pygame.draw.circle(self.screen, (252, 228, 120), (fx, fy), 3)
 
-        pygame.draw.rect(self.screen, (104, 162, 70), (0, SCREEN_HEIGHT - 90, SCREEN_WIDTH, 90))
+        pygame.draw.rect(self.screen, (92, 168, 62), (0, SCREEN_HEIGHT - 90, SCREEN_WIDTH, 90))
 
         # Walking zombie silhouette across the bottom
         zombie_period = 28.0
@@ -16138,9 +17796,9 @@ class Game:
     def draw_tombstone_button(self, rect: pygame.Rect, text: str, hover: bool = False, enabled: bool = True, primary: bool = False) -> None:
         is_primary = primary and enabled
         if is_primary:
-            base = (186, 196, 172) if not hover else (200, 214, 186)
-            inner = (202, 216, 190) if not hover else (218, 234, 206)
-            border_col = (72, 92, 56)
+            base = (120, 168, 92) if not hover else (138, 188, 108)
+            inner = (160, 204, 128) if not hover else (176, 220, 142)
+            border_col = (42, 86, 36)
         elif enabled:
             base = (170, 174, 184) if not hover else (184, 188, 198)
             inner = (194, 198, 206) if not hover else (206, 210, 216)
@@ -16171,7 +17829,7 @@ class Game:
             ((draw_r.x + 40, draw_r.centery + 4), (draw_r.x + 62, draw_r.centery - 2)),
             ((draw_r.right - 70, draw_r.centery - 6), (draw_r.right - 48, draw_r.centery + 2)),
         ]
-        crack_col = (88, 90, 106) if not is_primary else (62, 82, 50)
+        crack_col = (88, 90, 106) if not is_primary else (48, 92, 40)
         for pts in cracks:
             pygame.draw.lines(self.screen, crack_col, False, pts, 2)
         if is_primary:
@@ -16192,8 +17850,18 @@ class Game:
         txt_col = (22, 22, 26) if enabled else (76, 78, 84)
         font = self.fonts["ui"] if draw_r.h >= 88 else self.fonts["mid"]
         if enabled:
-            outline_col = (192, 210, 178) if is_primary else (200, 204, 216)
-            self.draw_outlined_text(font, text, txt_col, draw_r.center, outline_color=outline_col, outline_width=2)
+            if is_primary:
+                self.draw_outlined_text(
+                    font,
+                    text,
+                    UI_PALETTE["pvz_label_fill"],
+                    draw_r.center,
+                    outline_color=(24, 56, 18),
+                    outline_width=3,
+                )
+            else:
+                outline_col = (200, 204, 216)
+                self.draw_outlined_text(font, text, txt_col, draw_r.center, outline_color=outline_col, outline_width=2)
         else:
             shadow_col = (154, 158, 166)
             self.draw_text_center_shadow(font, text, txt_col, draw_r.center, shadow=shadow_col, offset=(1, 2))
@@ -16252,8 +17920,8 @@ class Game:
 
     def mode_scene_layout(self) -> Dict[str, pygame.Rect]:
         frame = pygame.Rect(60, 38, SCREEN_WIDTH - 120, SCREEN_HEIGHT - 84)
-        title = pygame.Rect(frame.x + 278, frame.y + 10, frame.w - 556, 52)
-        cards_area = pygame.Rect(frame.x + 22, frame.y + 76, frame.w - 44, frame.h - 128)
+        title = pygame.Rect(frame.x + 278, frame.y + 10, frame.w - 556, 72)
+        cards_area = pygame.Rect(frame.x + 22, title.bottom + 14, frame.w - 44, frame.bottom - title.bottom - 62)
         pager_y = frame.bottom - 34
         page_prev = pygame.Rect(frame.centerx - 78, pager_y, 34, 24)
         page_badge = pygame.Rect(frame.centerx - 36, pager_y + 1, 72, 22)
@@ -16893,6 +18561,7 @@ class Game:
         self.draw_panel_shadow(book_frame, radius=24, alpha=90, offset=(0, 6))
         pygame.draw.rect(self.screen, cover_dark, book_frame.inflate(6, 6), border_radius=26)
         pygame.draw.rect(self.screen, cover_col, book_frame, border_radius=24)
+        pygame.draw.rect(self.screen, self.shift_color(cover_dark, 40), book_frame, 3, border_radius=24)
         # Open-book spread: left page + right page
         left_page = pygame.Rect(book_frame.x + 14, book_frame.y + 14, book_frame.w // 2 - 20, book_frame.h - 28)
         right_page = pygame.Rect(book_frame.centerx + 6, book_frame.y + 14, book_frame.w // 2 - 20, book_frame.h - 28)
@@ -17145,6 +18814,8 @@ class Game:
         sfx_row = ui["sfx_btn"].inflate(24, 18)
         self.draw_framed_panel(music_row, fill=(236, 220, 188), border=(130, 94, 50), radius=16, inner=(246, 236, 212))
         self.draw_framed_panel(sfx_row, fill=(236, 220, 188), border=(130, 94, 50), radius=16, inner=(246, 236, 212))
+        self.draw_menu_section_strip(pygame.Rect(music_row.x + 18, music_row.y + 8, music_row.w - 36, 18), "Music", font=self.fonts["tiny"])
+        self.draw_menu_section_strip(pygame.Rect(sfx_row.x + 18, sfx_row.y + 8, sfx_row.w - 36, 18), "SFX", font=self.fonts["tiny"])
         self.draw_secondary_button(ui["music_btn"], m_label, hover=ui["music_btn"].collidepoint(mouse))
         self.draw_secondary_button(ui["sfx_btn"], s_label, hover=ui["sfx_btn"].collidepoint(mouse))
         self.draw_primary_button(ui["back_btn"], self.tr("back_to_start"), enabled=True, hover=ui["back_btn"].collidepoint(mouse))
@@ -17322,6 +18993,7 @@ class Game:
         self._transition_progress = 0.0
         self._transition_active = True
         self.scene = target
+        self.update_scene_music(force=True)
 
     def handle_click(self, p: Tuple[int, int]) -> None:
         if self._transition_active:
@@ -17341,30 +19013,39 @@ class Game:
             self.start_help_btn = layout["help_btn"]
             self.start_quit_btn = layout["quit_btn"]
             if self.start_adventure_btn.collidepoint(p):
+                self.play_sfx("ui_click")
                 self.change_scene("adventure_chapter_select")
             elif self.start_mini_btn.collidepoint(p):
+                self.play_sfx("ui_click")
                 self.mode_scene_page["mini_select"] = 0
                 self.change_scene("mini_select")
             elif self.start_puzzle_btn.collidepoint(p):
+                self.play_sfx("ui_click")
                 self.mode_scene_page["puzzle_select"] = 0
                 self.change_scene("puzzle_select")
             elif self.start_survival_btn.collidepoint(p):
+                self.play_sfx("ui_click")
                 self.mode_scene_page["survival_select"] = 0
                 self.change_scene("survival_select")
             elif self.start_zen_btn.collidepoint(p):
+                self.play_sfx("ui_click")
                 self.change_scene("zen_garden")
             elif self.start_shop_btn.collidepoint(p):
+                self.play_sfx("ui_click")
                 self.shop_return_scene = "start"
                 self.change_scene("shop")
             elif self.start_book_btn.collidepoint(p):
+                self.play_sfx("ui_click")
                 self.encyclopedia_mode = "menu"
                 self.encyclopedia_tab = "plants"
                 self.encyclopedia_scroll_y = 0
                 self.ensure_encyclopedia_state()
                 self.change_scene("encyclopedia_menu")
             elif self.start_options_btn.collidepoint(p):
+                self.play_sfx("ui_click")
                 self.change_scene("options_scene")
             elif self.start_help_btn.collidepoint(p):
+                self.play_sfx("ui_click")
                 self.change_scene("help_scene")
             elif self.start_quit_btn.collidepoint(p):
                 self.save_mgr.save(self.save_data)
@@ -17441,6 +19122,7 @@ class Game:
         if self.scene == "options_scene":
             ui = self.options_scene_layout()
             if ui["back_btn"].collidepoint(p):
+                self.play_sfx("ui_back")
                 self.save_data["options_music"] = bool(self.options_music_on)
                 self.save_data["options_sfx"] = bool(self.options_sfx_on)
                 self.save_mgr.save(self.save_data)
@@ -17448,9 +19130,14 @@ class Game:
                 return
             if ui["music_btn"].collidepoint(p):
                 self.options_music_on = not self.options_music_on
+                self.sync_audio_options(force_music=True)
+                self.play_sfx("ui_toggle", force=True)
                 return
             if ui["sfx_btn"].collidepoint(p):
+                old_sfx = self.options_sfx_on
                 self.options_sfx_on = not self.options_sfx_on
+                self.sync_audio_options(force_music=False)
+                self.play_sfx("ui_toggle", force=(not old_sfx))
                 return
             return
         if self.scene == "help_scene":
@@ -17471,10 +19158,12 @@ class Game:
         if self.scene == "plant_select":
             required_pick_count = self.plant_select_required_pick_count()
             if self.plant_select_back_btn.collidepoint(p):
+                self.play_sfx("ui_back")
                 self.change_scene(self.plant_select_return_scene)
                 return
             if self.plant_select_start_btn.collidepoint(p):
                 if self.pending_level_idx is not None and len(self.plant_select_selected) == required_pick_count:
+                    self.play_sfx("ui_click")
                     self.start_level(
                         self.pending_level_idx,
                         selected_cards=list(self.plant_select_selected),
@@ -17483,12 +19172,14 @@ class Game:
                 return
             for i, rect in enumerate(self.plant_select_tray_slots()):
                 if rect.collidepoint(p) and i < len(self.plant_select_selected):
+                    self.play_sfx("ui_click")
                     del self.plant_select_selected[i]
                     return
             viewport = self.plant_select_available_viewport()
             if viewport.collidepoint(p):
                 for kind, rect in self.plant_select_grid_buttons(apply_scroll=True):
                     if rect.collidepoint(p):
+                        self.play_sfx("ui_click")
                         if kind in self.plant_select_selected:
                             self.plant_select_selected.remove(kind)
                         elif len(self.plant_select_selected) < required_pick_count:
@@ -17497,9 +19188,11 @@ class Game:
             return
         if self.scene == "encyclopedia_menu":
             if self.encyclopedia_menu_back_btn.collidepoint(p):
+                self.play_sfx("ui_back")
                 self.change_scene("start")
                 return
             if self.encyclopedia_plants_btn.collidepoint(p):
+                self.play_sfx("ui_click")
                 self.encyclopedia_mode = "detail"
                 self.encyclopedia_tab = "plants"
                 self.encyclopedia_scroll_y = 0
@@ -17507,6 +19200,7 @@ class Game:
                 self.change_scene("encyclopedia_detail")
                 return
             if self.encyclopedia_zombies_btn.collidepoint(p):
+                self.play_sfx("ui_click")
                 self.encyclopedia_mode = "detail"
                 self.encyclopedia_tab = "zombies"
                 self.encyclopedia_scroll_y = 0
@@ -17518,15 +19212,18 @@ class Game:
             self.ensure_encyclopedia_state()
             layout = self.encyclopedia_detail_layout()
             if self.encyclopedia_back_btn.collidepoint(p):
+                self.play_sfx("ui_back")
                 self.encyclopedia_mode = "menu"
                 self.change_scene("encyclopedia_menu")
                 return
             if layout["tab_plants"].collidepoint(p):
+                self.play_sfx("ui_click")
                 self.encyclopedia_tab = "plants"
                 self.encyclopedia_scroll_y = 0
                 self.ensure_encyclopedia_state()
                 return
             if layout["tab_zombies"].collidepoint(p):
+                self.play_sfx("ui_click")
                 self.encyclopedia_tab = "zombies"
                 self.encyclopedia_scroll_y = 0
                 self.ensure_encyclopedia_state()
@@ -17534,11 +19231,13 @@ class Game:
             if layout["list_view"].collidepoint(p):
                 for key, rect in self.encyclopedia_entry_buttons():
                     if rect.collidepoint(p):
+                        self.play_sfx("ui_click")
                         self.encyclopedia_selected_key[self.encyclopedia_tab] = key
                         return
             return
         if self.scene == "shop":
             if self.back_btn.collidepoint(p):
+                self.play_sfx("ui_back")
                 self.change_scene(self.shop_return_scene if self.shop_return_scene in ("start", "select") else "start")
                 return
             upgrades = [("twin_sunflower", 500), ("gloom_shroom", 750), ("winter_melon", 1000), ("spikerock", 800), ("cob_cannon", 1200)]
@@ -17546,6 +19245,7 @@ class Game:
                 rect = pygame.Rect(96, 214 + i * 86, 1088, 70)
                 if rect.collidepoint(p):
                     if self.save_data.get("upgrades", {}).get(name):
+                        self.play_sfx("ui_click")
                         return
                     if int(self.save_data.get("coins", 0)) >= cost:
                         self.save_data["coins"] = int(self.save_data.get("coins", 0)) - cost
@@ -17553,10 +19253,17 @@ class Game:
                         up[name] = True
                         self.save_data["upgrades"] = up
                         self.save_mgr.save(self.save_data)
+                        self.play_sfx("shop_buy")
+                    else:
+                        self.play_sfx("ui_back")
                     return
             return
         if self.scene == "battle":
             if self.battle_result_hold_active():
+                return
+            if self.battle.is_battle_intro_active():
+                if self.battle.skip_battle_intro_step():
+                    self.play_sfx("ui_click")
                 return
             if self.battle_settings_open:
                 self.handle_battle_settings_click(p)
@@ -17601,40 +19308,52 @@ class Game:
                 self.handle_almanac_click(p)
                 return
             if self.battle_settings_btn.collidepoint(p):
+                self.play_sfx("ui_click")
                 self.open_battle_menu()
                 return
             if self.battle.is_zombiquarium_mode():
                 if self.shovel_btn.collidepoint(p):
                     if len(self.battle.zombiquarium_fish) >= self.battle.zombiquarium_fish_cap():
+                        self.play_sfx("ui_back")
                         self.show_battle_notice(self.tr("zombiquarium_tank_full"), color=(96, 72, 36))
                         return
                     if self.battle.buy_zombiquarium_fish():
+                        self.play_sfx("shop_buy")
                         self.show_battle_notice(self.tr("zombiquarium_buy_fish"), color=(54, 116, 72))
                     else:
+                        self.play_sfx("ui_back")
                         self.show_battle_notice(self.tr("zombiquarium_need_more_sun"), color=(156, 56, 44))
                     return
                 if self.slot_spin_btn.collidepoint(p):
                     if self.battle.buy_zombiquarium_trophy():
+                        self.play_sfx("shop_buy")
                         self.show_battle_notice(self.tr("zombiquarium_trophy_bought"), color=(210, 144, 30))
                     else:
+                        self.play_sfx("ui_back")
                         self.show_battle_notice(self.tr("zombiquarium_need_more_sun"), color=(156, 56, 44))
                     return
             if self.battle.is_last_stand_mode() and self.battle.last_stand_in_prep() and self.slot_spin_btn.collidepoint(p):
+                self.play_sfx("last_stand_start")
                 self.battle.begin_last_stand_assault()
                 self.show_battle_notice(self.tr("last_stand_started"), color=(210, 138, 34))
                 return
             if self.pause_btn.collidepoint(p):
                 self.battle.paused = not self.battle.paused
+                self.play_sfx("pause_toggle")
                 return
             if self.battle_exit_btn.collidepoint(p):
+                self.play_sfx("ui_click")
                 self.open_battle_menu()
                 return
             if self.shovel_btn.collidepoint(p):
                 self.battle.shovel_mode = not self.battle.shovel_mode
+                self.play_sfx("shovel")
                 return
             if self.battle.is_slot_machine_mode() and self.slot_spin_btn.collidepoint(p):
+                self.play_sfx("slot_spin")
                 event, value, key = self.battle.slot_machine_spin()
                 if event == "no_sun":
+                    self.play_sfx("ui_back")
                     self.show_battle_notice(self.tr("slot_not_enough_sun"), color=(156, 56, 44))
                 elif event == "sun":
                     self.show_battle_notice(self.tr("slot_gain_sun").format(value=value), color=(52, 122, 56))
@@ -17654,8 +19373,10 @@ class Game:
                         return
                     if t.kind == "sun":
                         self.battle.sun += t.value
+                        self.play_sfx("collect_sun")
                     else:
                         self.save_data["coins"] = int(self.save_data.get("coins", 0)) + t.value
+                        self.play_sfx("collect_coin")
                     self.battle.tokens.remove(t)
                     return
             if self.battle.is_zombiquarium_mode() and self.battle.feed_zombiquarium_fish(p[0], p[1]):
@@ -17682,9 +19403,12 @@ class Game:
                 if self.battle.selected:
                     self.battle.place_i_zombie(self.battle.selected, row, col)
             elif self.battle.shovel_mode:
+                self.play_sfx("shovel")
                 self.battle.shovel(row, col)
             else:
-                self.battle.place(self.battle.selected, row, col)
+                placed = self.battle.place(self.battle.selected, row, col)
+                if placed:
+                    self.play_sfx("plant_place")
             return
         if self.scene == "result":
             if self.result_btn.collidepoint(p):
@@ -17796,8 +19520,13 @@ class Game:
             a = min(60, row * 6)
             pygame.draw.line(bot_shd, (0, 0, 0, a), (12, row), (bot_shd.get_width() - 12, row))
         self.screen.blit(bot_shd, (tomb.x + 20, tomb.bottom - 22))
-        # Separation lines between button zones
-        for y in (tomb.y + 90, tomb.y + 218, tomb.y + 332, tomb.y + 448):
+        sep_lines = [
+            self.start_adventure_btn.bottom + 8,
+            self.start_mini_btn.bottom + 8,
+            self.start_puzzle_btn.bottom + 8,
+            self.start_survival_btn.bottom + 8,
+        ]
+        for y in sep_lines:
             pygame.draw.line(self.screen, (78, 82, 98), (tomb.x + 20, y), (tomb.right - 26, y), 2)
             pygame.draw.line(self.screen, (148, 152, 170), (tomb.x + 20, y + 2), (tomb.right - 26, y + 2), 1)
         # Moss patches on stone
@@ -17811,7 +19540,7 @@ class Game:
         self.draw_tombstone_button(self.start_mini_btn, self.tr("mini_games"), hover=self.start_mini_btn.collidepoint(mouse), enabled=True)
         self.draw_tombstone_button(self.start_puzzle_btn, self.tr("puzzle"), hover=self.start_puzzle_btn.collidepoint(mouse), enabled=True)
         self.draw_tombstone_button(self.start_survival_btn, self.tr("survival"), hover=self.start_survival_btn.collidepoint(mouse), enabled=True)
-        prop_ground = pygame.Rect(layout["tombstone"].x + 24, layout["tombstone"].bottom - 36, layout["tombstone"].w - 48, 64)
+        prop_ground = pygame.Rect(tomb.x + 24, tomb.bottom - 10, tomb.w - 48, 48)
         pygame.draw.ellipse(self.screen, (156, 120, 84), prop_ground)
         pygame.draw.ellipse(self.screen, (102, 70, 48), prop_ground, 2)
         self.draw_book_button(
@@ -17820,17 +19549,10 @@ class Game:
             "",
             hover=self.start_book_btn.collidepoint(mouse),
         )
-        key_ring = (self.start_shop_btn.x - 10, self.start_shop_btn.centery - 4)
-        pygame.draw.circle(self.screen, (184, 66, 60), key_ring, 8)
-        pygame.draw.circle(self.screen, (246, 234, 214), key_ring, 4)
-        pygame.draw.line(self.screen, (172, 166, 158), (key_ring[0] + 6, key_ring[1] + 6), (self.start_shop_btn.x + 8, self.start_shop_btn.y + 8), 2)
         self.draw_secondary_button(self.start_shop_btn, self.tr("shop"), hover=self.start_shop_btn.collidepoint(mouse))
         self.draw_leaf_button(self.start_options_btn, self.tr("options"), hover=self.start_options_btn.collidepoint(mouse))
         self.draw_leaf_button(self.start_help_btn, self.tr("help"), hover=self.start_help_btn.collidepoint(mouse))
         self.draw_leaf_button(self.start_quit_btn, self.tr("quit"), hover=self.start_quit_btn.collidepoint(mouse))
-        for fx, fy in ((self.start_options_btn.centerx + 28, self.start_options_btn.bottom + 2), (self.start_help_btn.centerx + 20, self.start_help_btn.bottom + 2), (self.start_quit_btn.centerx + 8, self.start_quit_btn.bottom + 2)):
-            pygame.draw.ellipse(self.screen, (238, 224, 168), (fx - 12, fy - 8, 24, 14))
-            pygame.draw.ellipse(self.screen, (132, 108, 54), (fx - 12, fy - 8, 24, 14), 2)
 
         coin_badge = pygame.Rect(54, 626, 264, 52)
         self.draw_coin_plaque(coin_badge, int(self.save_data.get("coins", 0)))
@@ -18210,23 +19932,19 @@ class Game:
         required_pick_count = self.plant_select_required_pick_count()
         self.draw_framed_panel(tray_panel, fill=(150, 96, 48), border=(84, 48, 22), radius=16, inner=(188, 132, 72))
         tray_header = pygame.Rect(tray_panel.x + 12, tray_panel.y + 6, tray_panel.w - 24, 14)
-        self.draw_framed_panel(tray_header, fill=(118, 74, 34), border=(70, 40, 18), radius=8, inner=(150, 96, 46))
-        self.screen.blit(self.fonts["small"].render(self.tr("selected_tray"), True, (248, 236, 204)), (tray_header.x + 10, tray_header.y + 1))
+        self.draw_menu_section_strip(tray_header, self.tr("selected_tray"), font=self.fonts["tiny"])
         count_text = f"{self.tr('pick_count')} ({len(self.plant_select_selected)}/{required_pick_count})"
-        count_surf = self.fonts["tiny"].render(count_text, True, (248, 236, 204))
-        self.screen.blit(count_surf, (tray_header.right - count_surf.get_width() - 10, tray_header.y + 2))
+        self.draw_menu_label_text(self.fonts["tiny"], count_text, (tray_header.right - 150, tray_header.y + 2), max_width=140, fill=(250, 240, 214), outline=(70, 42, 20))
 
         avail_panel = layout["available_panel"]
         self.draw_seed_chooser_board(avail_panel)
         avail_head = pygame.Rect(avail_panel.x + 12, avail_panel.y + 7, avail_panel.w - 24, 14)
-        self.draw_framed_panel(avail_head, fill=(118, 72, 34), border=(72, 40, 18), radius=8, inner=(150, 94, 44))
-        self.screen.blit(self.fonts["small"].render(self.tr("available_plants"), True, (246, 232, 196)), (avail_head.x + 10, avail_head.y + 1))
+        self.draw_menu_section_strip(avail_head, self.tr("available_plants"), font=self.fonts["tiny"])
 
         z_panel = layout["zombie_panel"]
         self.draw_framed_panel(z_panel, fill=(214, 182, 128), border=(104, 70, 32), radius=16, inner=(236, 210, 164))
         z_head = pygame.Rect(z_panel.x + 10, z_panel.y + 10, z_panel.w - 20, 20)
-        self.draw_framed_panel(z_head, fill=(124, 80, 38), border=(72, 42, 18), radius=8, inner=(156, 106, 54))
-        self.draw_text_center_shadow(self.fonts["small"], self.tr("zombie_preview"), (248, 236, 208), z_head.center, shadow=(70, 42, 20), offset=(1, 1))
+        self.draw_menu_section_strip(z_head, self.tr("zombie_preview"), font=self.fonts["small"])
         preview_hint_key = str((self.pending_mode_rules or {}).get("primary_hint_key", "") or (self.pending_mode_rules or {}).get("special_hint_key", ""))
         preview_hint = self.tr(preview_hint_key) if preview_hint_key else ""
         if not preview_hint and not pending_mode_name and 1 <= int(getattr(level, "world", 0)) <= 5 and self.stage_style_for_level(level) == "normal_select":
@@ -18277,8 +19995,7 @@ class Game:
             hint_rect = pygame.Rect(z_panel.x + 12, z_panel.y + 36, z_panel.w - 24, 28)
             self.draw_framed_panel(hint_rect, fill=(224, 206, 162), border=(132, 96, 48), radius=8, inner=(240, 226, 188))
             hint_text = self.fit_label(preview_hint, self.fonts["small"], hint_rect.w - 12)
-            hint_surf = self.fonts["small"].render(hint_text, True, UI_PALETTE["text_mid"])
-            self.screen.blit(hint_surf, hint_surf.get_rect(center=hint_rect.center))
+            self.draw_pvz_hud_label(self.fonts["small"], hint_text, hint_rect.center, fill=(248, 238, 212), outline=(86, 60, 28), outline_width=2)
             list_top = hint_rect.bottom + 6
         list_view = pygame.Rect(z_panel.x + 10, list_top, z_panel.w - 20, z_panel.bottom - list_top - 10)
         zy = list_view.y
@@ -18648,6 +20365,8 @@ class Game:
         self.draw_wood_sign(pygame.Rect(304, 54, 672, 80), self.tr("shop"), self.tr("daves_shop"))
         coin_bar = pygame.Rect(84, 142, 300, 56)
         self.draw_coin_plaque(coin_bar, int(self.save_data.get("coins", 0)))
+        stock_head = pygame.Rect(404, 150, 286, 24)
+        self.draw_menu_section_strip(stock_head, self.tr("plants_tab"), font=self.fonts["small"])
         upgrades = [("twin_sunflower", 500), ("gloom_shroom", 750), ("winter_melon", 1000), ("spikerock", 800), ("cob_cannon", 1200)]
         for i, (name, cost) in enumerate(upgrades):
             y = 214 + i * 86
@@ -18660,15 +20379,21 @@ class Game:
             if icon is not None:
                 self.screen.blit(icon, icon.get_rect(center=(rect.x + 44, rect.centery)))
             status = self.tr("owned") if owned else f"{self.tr('buy')} {cost}"
-            key_col = (36, 36, 36)
-            status_col = (44, 90, 46) if owned else (96, 58, 26)
-            self.screen.blit(self.fonts["mid"].render(self.plant_display_name(name), True, key_col), (136, y + 21))
+            name_plate = pygame.Rect(rect.x + 128, rect.y + 12, 308, 20)
+            self.draw_menu_section_strip(name_plate, self.plant_display_name(name), font=self.fonts["small"])
             buy_chip = pygame.Rect(rect.right - 176, rect.y + 17, 144, 34)
             chip_fill = (196, 222, 164) if owned else (234, 206, 146)
             chip_border = (94, 140, 74) if owned else (134, 96, 42)
             chip_inner = (216, 238, 186) if owned else (246, 224, 170)
             self.draw_framed_panel(buy_chip, fill=chip_fill, border=chip_border, radius=10, inner=chip_inner)
-            self.draw_text_center_shadow(self.fonts["small"], status, status_col, buy_chip.center, shadow=(248, 238, 210), offset=(1, 1))
+            self.draw_pvz_hud_label(
+                self.fonts["small"],
+                status,
+                buy_chip.center,
+                fill=(248, 238, 210),
+                outline=(46, 82, 34) if owned else (74, 46, 18),
+                outline_width=2,
+            )
         back_label = self.tr("back_to_start") if self.shop_return_scene == "start" else self.tr("back")
         self.draw_secondary_button(self.back_btn, back_label, hover=self.back_btn.collidepoint(mouse))
         return
@@ -18678,13 +20403,16 @@ class Game:
         target_duration = self.battle.target_duration if self.battle.target_duration > 0 else (self.battle.level.duration if self.battle.level else 0.0)
         remain = max(0, int(target_duration - self.battle.elapsed)) if self.battle.level else 0
         layout = self.battle_hud_layout()
-        cleanup_rect = pygame.Rect(0, 0, SCREEN_WIDTH, LAWN_Y - 6)
+        cleanup_rect = pygame.Rect(0, 0, SCREEN_WIDTH, LAWN_Y - 12)
         if self.battle.field.is_night:
             self.draw_vertical_gradient(cleanup_rect, (42, 56, 86), (28, 36, 52))
         else:
             self.draw_vertical_gradient(cleanup_rect, (216, 232, 206), (188, 214, 178))
-        band = pygame.Rect(0, LAWN_Y - 10, SCREEN_WIDTH, 10)
-        self.draw_vertical_gradient(band, (140, 108, 76), (104, 76, 52))
+        band = pygame.Rect(0, cleanup_rect.bottom, SCREEN_WIDTH, LAWN_Y - cleanup_rect.bottom + 2)
+        self.draw_vertical_gradient(band, (152, 118, 78), (104, 76, 50))
+        seam_glow = pygame.Rect(0, LAWN_Y - 13, SCREEN_WIDTH, 4)
+        self.draw_vertical_gradient(seam_glow, (236, 208, 152), (182, 140, 92))
+        pygame.draw.line(self.screen, (78, 108, 54), (0, LAWN_Y), (SCREEN_WIDTH, LAWN_Y), 2)
 
         hud = layout["hud"]
         self.draw_framed_panel(hud, fill=UI_PALETTE["hud_fill"], border=UI_PALETTE["hud_border"], radius=18, inner=UI_PALETTE["hud_inner"])
@@ -18695,6 +20423,8 @@ class Game:
             pygame.draw.line(gloss_s, (255, 246, 210, a), (4, row), (top_gloss.w - 4, row))
         self.screen.blit(gloss_s, top_gloss.topleft)
         sun_box = layout["sun_box"]
+        seed_bridge = pygame.Rect(sun_box.x - 4, hud.y + 5, layout["seed_bank"].right - sun_box.x + 8, max(sun_box.h, layout["seed_bank"].h) + 12)
+        self.draw_framed_panel(seed_bridge, fill=UI_PALETTE["seed_bank_wood"], border=UI_PALETTE["seed_bank_wood_dark"], radius=18, inner=(206, 152, 90))
         self.draw_sun_counter_panel(sun_box, int(self.battle.sun))
         mode_name = str(self.battle.mode_rules.get("mode_name", ""))
         mode_text = self.battle_mode_display_label(mode_name)
@@ -18814,7 +20544,7 @@ class Game:
             else:
                 utility_parts.append(f"{self.tr('survival_round')} {s_round}/{max(1, s_total)}")
         info_rect = layout["utility_info"]
-        self.draw_framed_panel(info_rect, fill=(232, 220, 188), border=(126, 92, 46), radius=10, inner=(244, 236, 212))
+        self.draw_framed_panel(info_rect, fill=(240, 226, 196), border=(118, 84, 42), radius=10, inner=(250, 240, 216))
         info_font = self.fonts["small"] if info_rect.h >= 15 else self.fonts["tiny"]
         utility_text = self.fit_label("  \u2022  ".join(utility_parts), info_font, info_rect.w - 14)
         utility_surf = info_font.render(utility_text, True, UI_PALETTE["text_dark"])
@@ -18823,10 +20553,10 @@ class Game:
             self.draw_wave_progress_bar(layout["wave_meter"])
         else:
             meter = layout["wave_meter"]
-            self.draw_framed_panel(meter, fill=(184, 130, 74), border=(104, 66, 30), radius=14, inner=(208, 150, 92))
+            self.draw_framed_panel(meter, fill=(196, 138, 74), border=(96, 58, 26), radius=14, inner=(218, 162, 98))
             meter_font = self.fonts["small"] if meter.h >= 26 else self.fonts["tiny"]
             label = self.fit_label(meter_text if meter_text else mode_text, meter_font, meter.w - 16)
-            self.draw_text_center_shadow(meter_font, label, UI_PALETTE["text_light"], meter.center, shadow=(66, 42, 22), offset=(1, 1))
+            self.draw_pvz_hud_label(meter_font, label, meter.center, outline_width=2)
 
         coin_box = layout["coin_box"]
         self.draw_coin_plaque(coin_box, int(self.save_data.get("coins", 0)), compact=True)
@@ -18901,7 +20631,7 @@ class Game:
         else:
             subtitle = self.tr("start")
         notice_text = self.battle_clear_notice_text() if win else self.battle_lose_notice_text()
-        notice_chip = pygame.Rect(panel.x + 96, panel.y + 108, panel.w - 192, 28)
+        notice_chip = pygame.Rect(panel.x + 64, panel.y + 108, panel.w - 128, 32)
         chip_fill = (220, 236, 188) if win else (236, 206, 188)
         chip_border = (96, 132, 66) if win else (148, 82, 56)
         chip_inner = (236, 246, 214) if win else (246, 226, 212)
@@ -18909,7 +20639,7 @@ class Game:
         notice_label = self.fit_label(notice_text, self.fonts["small"], notice_chip.w - 18)
         self.draw_text_center_shadow(self.fonts["small"], notice_label, (74, 56, 28), notice_chip.center, shadow=(248, 242, 222), offset=(1, 1))
 
-        summary_box = pygame.Rect(panel.x + 76, panel.y + 148, panel.w - 152, 78)
+        summary_box = pygame.Rect(panel.x + 56, panel.y + 150, panel.w - 112, 78)
         self.draw_framed_panel(summary_box, fill=(244, 234, 206), border=(134, 98, 48), radius=14, inner=(250, 242, 224))
         summary_text = self.battle_result_summary_text(win)
         summary_lines = self.wrap_text_lines(self.fonts["small"], summary_text, summary_box.w - 24)[:3]
@@ -18920,10 +20650,10 @@ class Game:
             sy += 22
 
         progress_lines = self.battle_result_progress_lines(win)
-        py = summary_box.bottom + 12
+        py = summary_box.bottom + 10
         if progress_lines:
-            chip_w = max(180, (panel.w - 188 - max(0, len(progress_lines) - 1) * 10) // max(1, len(progress_lines)))
-            chip_x = panel.x + 94
+            chip_w = max(200, (panel.w - 140 - max(0, len(progress_lines) - 1) * 10) // max(1, len(progress_lines)))
+            chip_x = panel.x + 64
             for line in progress_lines[:2]:
                 chip = pygame.Rect(chip_x, py, chip_w, 28)
                 self.draw_framed_panel(chip, fill=(228, 214, 176), border=(128, 92, 46), radius=10, inner=(242, 232, 206))
@@ -18931,7 +20661,7 @@ class Game:
                 self.draw_text_center_shadow(self.fonts["tiny"], chip_text, (68, 48, 24), chip.center, shadow=(250, 242, 220), offset=(1, 1))
                 chip_x += chip_w + 10
 
-        subtitle_chip = pygame.Rect(panel.x + 140, panel.bottom - 86, panel.w - 280, 30)
+        subtitle_chip = pygame.Rect(panel.x + 120, panel.bottom - 86, panel.w - 240, 30)
         self.draw_framed_panel(subtitle_chip, fill=(240, 224, 186), border=(132, 96, 46), radius=12, inner=(248, 236, 208))
         subtitle_label = self.fit_label(subtitle, self.fonts["small"], subtitle_chip.w - 14)
         self.draw_text_center_shadow(self.fonts["small"], subtitle_label, (78, 58, 32), subtitle_chip.center, shadow=(248, 238, 214), offset=(1, 1))
@@ -19229,150 +20959,192 @@ class Game:
             "movement_zh": movement_zh,
         }
 
+    def draw_almanac_list_entry(self, rect: pygame.Rect, label: str, *, selected: bool, hover: bool, icon: Optional[pygame.Surface]) -> None:
+        fill = (248, 236, 206) if selected else ((242, 228, 196) if hover else (236, 220, 186))
+        border = (224, 146, 42) if selected else (132, 96, 48)
+        self.draw_framed_panel(rect, fill=fill, border=border, radius=10, inner=(254, 248, 232))
+        if selected:
+            ribbon = pygame.Rect(rect.x + 6, rect.y + 6, 8, rect.h - 12)
+            self.draw_framed_panel(ribbon, fill=(238, 164, 52), border=(146, 92, 30), radius=4, inner=(252, 206, 110))
+        icon_box = pygame.Rect(rect.x + 16, rect.y + 6, rect.h - 12, rect.h - 12)
+        self.draw_parchment_panel(icon_box, radius=8)
+        if icon is not None:
+            self.screen.blit(icon, icon.get_rect(center=icon_box.center))
+        self.draw_menu_label_text(
+            self.fonts["small"],
+            label,
+            (icon_box.right + 12, rect.y + max(8, (rect.h - self.fonts["small"].get_height()) // 2 - 1)),
+            max_width=rect.w - (icon_box.right - rect.x) - 26,
+            fill=(252, 244, 222),
+            outline=(74, 48, 22),
+        )
+
+    def draw_almanac_detail_content(self, tab: str, selected_key: str, detail_rect: pygame.Rect, *, compact: bool) -> None:
+        use_zh = self.lang == "zh"
+        stats_title = "核心属性" if use_zh else "Core Stats"
+        preview_title = self.tr("plants_tab") if tab == "plants" else self.tr("zombies_tab")
+        if tab == "plants":
+            cfg = self.plants[selected_key]
+            info = self.get_plant_almanac_text(selected_key, cfg)
+            display_name = self.plant_display_name(selected_key) if use_zh else (cfg.display_name_en or cfg.name)
+            behavior = info["behavior_zh"] if use_zh else info["behavior_en"]
+            preview = self.load_image(cfg.sprite_path, size=(max(176, detail_rect.w // 3), max(176, detail_rect.w // 3)))
+            stat_lines = [
+                f"{self.tr('cost')}: {cfg.cost}",
+                f"{self.tr('hp')}: {int(cfg.hp)}",
+                f"{self.tr('cooldown')}: {cfg.cooldown:.1f}s",
+                f"{self.tr('behavior')}: {behavior}",
+            ]
+            body_pairs = [
+                (self.tr("intro"), info["short_zh"] if use_zh else info["short_en"]),
+                (self.tr("gameplay"), info["summary_zh"] if use_zh else info["summary_en"]),
+            ]
+            fallback_kind = "plants"
+        else:
+            cfg = self.zombies[selected_key]
+            info = self.get_zombie_almanac_text(selected_key, cfg)
+            display_name = self.zombie_display_name(selected_key) if use_zh else (cfg.display_name_en or cfg.name)
+            movement = info["movement_zh"] if use_zh else info["movement_en"]
+            beh_en, beh_zh = self.almanac_behavior_label(cfg.behavior, False)
+            behavior = beh_zh if use_zh else beh_en
+            preview = self.load_image(cfg.sprite_path, size=(max(176, detail_rect.w // 3), max(208, detail_rect.w // 3 + 24)))
+            stat_lines = [
+                f"{self.tr('hp')}: {int(cfg.hp)}",
+                f"{self.tr('movement')}: {movement}",
+                f"{self.tr('behavior')}: {behavior}",
+            ]
+            body_pairs = [
+                (self.tr("intro"), info["short_zh"] if use_zh else info["short_en"]),
+                (self.tr("threat"), info["threat_zh"] if use_zh else info["threat_en"]),
+            ]
+            fallback_kind = "zombies"
+
+        name_plate_h = 52 if compact else 58
+        name_plate = pygame.Rect(detail_rect.x + 20, detail_rect.y + 18, detail_rect.w - 40, name_plate_h)
+        top_y = name_plate.bottom + 14
+        preview_w = min(300 if not compact else 262, max(228, int(detail_rect.w * (0.40 if compact else 0.43))))
+        preview_h = 240 if compact else 292
+        preview_box = pygame.Rect(detail_rect.x + 20, top_y, preview_w, preview_h)
+        stats_box = pygame.Rect(preview_box.right + 18, top_y, detail_rect.right - preview_box.right - 38, preview_h)
+        body_box = pygame.Rect(detail_rect.x + 20, preview_box.bottom + 16, detail_rect.w - 40, detail_rect.bottom - preview_box.bottom - 34)
+
+        self.draw_framed_panel(name_plate, fill=(150, 104, 56), border=(82, 50, 22), radius=14, inner=(188, 136, 82))
+        self.draw_parchment_panel(preview_box, radius=14)
+        self.draw_framed_panel(stats_box, fill=(240, 226, 194), border=(132, 96, 48), radius=14, inner=(248, 238, 212))
+        self.draw_parchment_panel(body_box, radius=14)
+
+        title_font = self.fonts["mid"] if compact else self.fonts["ui"]
+        title_text = self.fit_label(display_name, title_font, name_plate.w - 20)
+        self.draw_text_center_shadow(title_font, title_text, (56, 38, 20), name_plate.center, shadow=(252, 242, 214), offset=(1, 1))
+
+        preview_head = pygame.Rect(preview_box.x + 14, preview_box.y + 10, preview_box.w - 28, 22)
+        stats_head = pygame.Rect(stats_box.x + 14, stats_box.y + 10, stats_box.w - 28, 22)
+        self.draw_menu_section_strip(preview_head, preview_title, font=self.fonts["small"])
+        self.draw_menu_section_strip(stats_head, stats_title, font=self.fonts["small"])
+
+        preview_inner = pygame.Rect(preview_box.x + 18, preview_head.bottom + 10, preview_box.w - 36, preview_box.bottom - preview_head.bottom - 20)
+        if preview is not None:
+            self.screen.blit(preview, preview.get_rect(center=preview_inner.center))
+        else:
+            self.draw_fallback_almanac_sprite(fallback_kind, selected_key, preview_inner)
+
+        row_y = stats_head.bottom + 12
+        row_h = 30 if compact else 32
+        row_gap = 8
+        for line in stat_lines:
+            row = pygame.Rect(stats_box.x + 14, row_y, stats_box.w - 28, row_h)
+            self.draw_framed_panel(row, fill=(246, 236, 210), border=(136, 102, 56), radius=9, inner=(252, 246, 228))
+            self.screen.blit(self.fonts["small"].render(line, True, (50, 38, 26)), (row.x + 12, row.y + 6))
+            row_y += row_h + row_gap
+
+        body_font = self.fonts["small"]
+        y = body_box.y + 14
+        wrap_width = body_box.w - 28
+        max_lines = 5 if not compact else 4
+        section_font = self.fonts["tiny"] if compact else self.fonts["small"]
+        for title_txt, body in body_pairs:
+            strip = pygame.Rect(body_box.x + 14, y, min(236, wrap_width), 22)
+            self.draw_menu_section_strip(strip, title_txt, font=section_font)
+            y += 30
+            for line in self.wrap_text_lines(body_font, body, wrap_width)[:max_lines]:
+                if y > body_box.bottom - 24:
+                    break
+                self.screen.blit(body_font.render(line, True, (52, 38, 24)), (body_box.x + 14, y))
+                y += 22 if compact else 24
+            y += 8
+
     def draw_encyclopedia_detail(self) -> None:
         mouse = pygame.mouse.get_pos()
         self.ensure_encyclopedia_state()
         self.draw_scene_backdrop()
-        outer = pygame.Rect(38, 32, SCREEN_WIDTH - 76, SCREEN_HEIGHT - 76)
-        self.draw_book_panel(outer)
         ui = self.encyclopedia_detail_layout()
         panel = ui["panel"]
         left = ui["left"]
         list_view = ui["list_view"]
         right = ui["right"]
-        self.draw_parchment_panel(panel, radius=18)
-        self.draw_framed_panel(left, fill=(234, 216, 176), border=(130, 92, 46), radius=14, inner=(244, 229, 196))
-        self.draw_framed_panel(right, fill=(244, 230, 194), border=(130, 92, 46), radius=14, inner=(250, 241, 214))
+        outer = panel.inflate(12, 12)
+        self.draw_book_panel(outer)
+        self.draw_parchment_panel(panel, radius=24)
+        self.draw_framed_panel(left, fill=(232, 214, 178), border=(126, 90, 44), radius=16, inner=(246, 236, 210))
+        self.draw_framed_panel(right, fill=(242, 230, 196), border=(130, 94, 46), radius=18, inner=(250, 242, 220))
+
         p_sel = self.encyclopedia_tab == "plants"
         z_sel = self.encyclopedia_tab == "zombies"
         active_label = self.tr("plants_tab") if p_sel else self.tr("zombies_tab")
-        self.draw_wood_sign(pygame.Rect(panel.x + 214, panel.y + 14, panel.w - 428, 72), self.tr("encyclopedia"), active_label)
+        self.draw_wood_sign(ui["header"], self.tr("encyclopedia"), active_label)
         self.draw_secondary_button(ui["tab_plants"], self.tr("plants_tab"), hover=ui["tab_plants"].collidepoint(mouse))
         self.draw_secondary_button(ui["tab_zombies"], self.tr("zombies_tab"), hover=ui["tab_zombies"].collidepoint(mouse))
         if p_sel:
-            pygame.draw.rect(self.screen, (236, 156, 40), ui["tab_plants"], 3, border_radius=10)
+            pygame.draw.rect(self.screen, (238, 158, 42), ui["tab_plants"], 3, border_radius=12)
         if z_sel:
-            pygame.draw.rect(self.screen, (236, 156, 40), ui["tab_zombies"], 3, border_radius=10)
-        left_chip = pygame.Rect(left.x + 12, left.y + 10, left.w - 24, 28)
-        self.draw_framed_panel(left_chip, fill=(236, 220, 184), border=(130, 92, 46), radius=10, inner=(246, 236, 210))
-        left_text = self.fit_label(f"{active_label}  •  {len(self.get_encyclopedia_keys(self.encyclopedia_tab))}", self.fonts["small"], left_chip.w - 10)
-        self.draw_text_center_shadow(self.fonts["small"], left_text, (66, 46, 24), left_chip.center, shadow=(250, 240, 214), offset=(1, 1))
+            pygame.draw.rect(self.screen, (238, 158, 42), ui["tab_zombies"], 3, border_radius=12)
+
+        count_chip = pygame.Rect(left.x + 14, left.y + 12, left.w - 28, 28)
+        count_label = self.fit_label(f"{active_label} / {len(self.get_encyclopedia_keys(self.encyclopedia_tab))}", self.fonts["small"], count_chip.w - 12)
+        self.draw_menu_section_strip(count_chip, count_label, font=self.fonts["small"])
+
+        selected_key = self.encyclopedia_selected_key.get(self.encyclopedia_tab, "")
         old_clip = self.screen.get_clip()
         self.screen.set_clip(list_view)
-        selected_key = self.encyclopedia_selected_key.get(self.encyclopedia_tab, "")
         for key, rect in self.encyclopedia_entry_buttons():
             if not rect.colliderect(list_view):
                 continue
             is_sel = key == selected_key
             hover = rect.collidepoint(mouse)
-            fill = (250, 236, 204) if is_sel else ((244, 228, 194) if hover else (238, 222, 186))
-            self.draw_framed_panel(rect, fill=fill, border=(220, 144, 38) if is_sel else (142, 104, 54), radius=8, inner=(252, 244, 226))
-            label = self.plant_display_name(key) if self.encyclopedia_tab == "plants" else self.zombie_display_name(key)
-            self.screen.blit(self.fonts["small"].render(label, True, (40, 34, 26)), (rect.x + 10, rect.y + 12))
+            if self.encyclopedia_tab == "plants":
+                cfgp = self.plants[key]
+                icon = self.load_image(cfgp.sprite_path, size=(28, 28))
+                label = self.plant_display_name(key)
+            else:
+                cfgz = self.zombies[key]
+                icon = self.load_image(cfgz.sprite_path, size=(28, 32))
+                label = self.zombie_display_name(key)
+            self.draw_almanac_list_entry(rect, label, selected=is_sel, hover=hover, icon=icon)
         self.screen.set_clip(old_clip)
+
         scroll_max = self.encyclopedia_scroll_max()
         if scroll_max > 0:
-            track = pygame.Rect(list_view.right - 6, list_view.y + 6, 4, list_view.h - 12)
-            pygame.draw.rect(self.screen, (176, 140, 88), track, border_radius=2)
-            knob_h = max(34, int(track.h * list_view.h / max(list_view.h, list_view.h + scroll_max)))
+            track = pygame.Rect(list_view.right - 6, list_view.y + 4, 5, list_view.h - 8)
+            pygame.draw.rect(self.screen, (176, 138, 84), track, border_radius=3)
+            knob_h = max(40, int(track.h * list_view.h / max(list_view.h, list_view.h + scroll_max)))
             knob_y = track.y + int((track.h - knob_h) * (self.encyclopedia_scroll_y / scroll_max))
-            pygame.draw.rect(self.screen, (222, 168, 82), (track.x - 2, knob_y, 8, knob_h), border_radius=4)
+            self.draw_framed_panel(pygame.Rect(track.x - 2, knob_y, 9, knob_h), fill=(238, 182, 82), border=(128, 78, 34), radius=4, inner=(250, 214, 126))
 
         keys = self.get_encyclopedia_keys(self.encyclopedia_tab)
         if keys and selected_key not in keys:
             selected_key = keys[0]
             self.encyclopedia_selected_key[self.encyclopedia_tab] = selected_key
-        self.encyclopedia_back_btn = pygame.Rect(outer.x + 22, outer.bottom - 52, 142, 40)
-        header_plate = pygame.Rect(right.x + 20, right.y + 16, right.w - 40, 38)
-        sprite_box = pygame.Rect(right.x + 20, right.y + 68, 252, 254)
-        stats_box = pygame.Rect(right.x + 290, right.y + 68, right.w - 310, 152)
-        text_box = pygame.Rect(right.x + 20, right.y + 338, right.w - 40, right.h - 358)
-        self.draw_framed_panel(header_plate, fill=(238, 220, 182), border=(130, 92, 46), radius=12, inner=(248, 238, 210))
-        self.draw_parchment_panel(sprite_box, radius=12)
-        self.draw_framed_panel(stats_box, fill=(240, 226, 192), border=(132, 96, 46), radius=12, inner=(248, 238, 214))
-        self.draw_parchment_panel(text_box, radius=10)
 
-        use_zh = self.lang == "zh"
-        if keys:
-            if self.encyclopedia_tab == "plants":
-                cfg = self.plants[selected_key]
-                spr = self.load_image(cfg.sprite_path, size=(182, 182))
-                if spr is not None:
-                    self.screen.blit(spr, spr.get_rect(center=sprite_box.center))
-                else:
-                    self.draw_fallback_almanac_sprite("plants", selected_key, sprite_box)
-                info = self.get_plant_almanac_text(selected_key, cfg)
-                name = (cfg.display_name_zh or self.plant_display_name(selected_key)) if use_zh else (cfg.display_name_en or cfg.name)
-                title_text = self.fit_label(name, self.fonts["ui"], header_plate.w - 16)
-                self.draw_text_center_shadow(self.fonts["ui"], title_text, (58, 40, 22), header_plate.center, shadow=(252, 244, 222), offset=(1, 1))
-                behavior = info["behavior_zh"] if use_zh else info["behavior_en"]
-                stat_lines = [
-                    f"{self.tr('cost')}: {cfg.cost}",
-                    f"{self.tr('hp')}: {int(cfg.hp)}",
-                    f"{self.tr('cooldown')}: {cfg.cooldown:.1f}s",
-                    f"{self.tr('behavior')}: {behavior}",
-                ]
-                stats_header = pygame.Rect(stats_box.x + 12, stats_box.y + 10, stats_box.w - 24, 24)
-                self.draw_framed_panel(stats_header, fill=(232, 214, 176), border=(126, 92, 44), radius=9, inner=(244, 234, 204))
-                self.draw_text_center_shadow(self.fonts["small"], self.tr("description"), (68, 48, 26), stats_header.center, shadow=(248, 240, 216), offset=(1, 1))
-                sy = stats_box.y + 46
-                for line in stat_lines:
-                    self.screen.blit(self.fonts["small"].render(line, True, (52, 40, 28)), (stats_box.x + 14, sy))
-                    sy += 27
-                y = text_box.y + 10
-                body_pairs = [
-                    (self.tr("intro"), info["short_zh"] if use_zh else info["short_en"]),
-                    (self.tr("gameplay"), info["summary_zh"] if use_zh else info["summary_en"]),
-                ]
-                for title_txt, body in body_pairs:
-                    self.screen.blit(self.fonts["tiny"].render(title_txt, True, (74, 52, 28)), (text_box.x + 10, y))
-                    y += 20
-                    for line in self.wrap_text_lines(self.fonts["tiny"], body, text_box.w - 20)[:4]:
-                        self.screen.blit(self.fonts["tiny"].render(line, True, (48, 36, 26)), (text_box.x + 10, y))
-                        y += 18
-            else:
-                cfg = self.zombies[selected_key]
-                spr = self.load_image(cfg.sprite_path, size=(184, 240))
-                if spr is not None:
-                    self.screen.blit(spr, spr.get_rect(center=sprite_box.center))
-                else:
-                    self.draw_fallback_almanac_sprite("zombies", selected_key, sprite_box)
-                info = self.get_zombie_almanac_text(selected_key, cfg)
-                name = (cfg.display_name_zh or self.zombie_display_name(selected_key)) if use_zh else (cfg.display_name_en or cfg.name)
-                title_text = self.fit_label(name, self.fonts["ui"], header_plate.w - 16)
-                self.draw_text_center_shadow(self.fonts["ui"], title_text, (58, 40, 22), header_plate.center, shadow=(252, 244, 222), offset=(1, 1))
-                movement = info["movement_zh"] if use_zh else info["movement_en"]
-                beh_en, beh_zh = self.almanac_behavior_label(cfg.behavior, False)
-                behavior = beh_zh if use_zh else beh_en
-                stat_lines = [
-                    f"{self.tr('hp')}: {int(cfg.hp)}",
-                    f"{self.tr('movement')}: {movement}",
-                    f"{self.tr('behavior')}: {behavior}",
-                ]
-                stats_header = pygame.Rect(stats_box.x + 12, stats_box.y + 10, stats_box.w - 24, 24)
-                self.draw_framed_panel(stats_header, fill=(232, 214, 176), border=(126, 92, 44), radius=9, inner=(244, 234, 204))
-                self.draw_text_center_shadow(self.fonts["small"], self.tr("description"), (68, 48, 26), stats_header.center, shadow=(248, 240, 216), offset=(1, 1))
-                sy = stats_box.y + 46
-                for line in stat_lines:
-                    self.screen.blit(self.fonts["small"].render(line, True, (52, 40, 28)), (stats_box.x + 14, sy))
-                    sy += 27
-                y = text_box.y + 10
-                body_pairs = [
-                    (self.tr("intro"), info["short_zh"] if use_zh else info["short_en"]),
-                    (self.tr("threat"), info["threat_zh"] if use_zh else info["threat_en"]),
-                ]
-                for title_txt, body in body_pairs:
-                    self.screen.blit(self.fonts["tiny"].render(title_txt, True, (74, 52, 28)), (text_box.x + 10, y))
-                    y += 20
-                    for line in self.wrap_text_lines(self.fonts["tiny"], body, text_box.w - 20)[:4]:
-                        self.screen.blit(self.fonts["tiny"].render(line, True, (48, 36, 26)), (text_box.x + 10, y))
-                        y += 18
+        self.encyclopedia_back_btn = pygame.Rect(panel.x + 24, panel.bottom - 52, 150, 40)
         self.draw_secondary_button(self.encyclopedia_back_btn, self.tr("back"), hover=self.encyclopedia_back_btn.collidepoint(mouse))
+        if selected_key:
+            self.draw_almanac_detail_content(self.encyclopedia_tab, selected_key, right, compact=False)
 
     def draw_almanac(self) -> None:
         if not self.battle.almanac_open:
             return
         self.ensure_almanac_state()
+        mouse = pygame.mouse.get_pos()
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
         overlay.fill((16, 12, 8, 166))
         self.screen.blit(overlay, (0, 0))
@@ -19381,152 +21153,60 @@ class Game:
         panel = ui["panel"]
         left = ui["left"]
         right = ui["right"]
-        pygame.draw.rect(self.screen, (236, 214, 172), panel, border_radius=16)
-        pygame.draw.rect(self.screen, (132, 92, 46), panel, 4, border_radius=16)
-        pygame.draw.rect(self.screen, (232, 208, 164), left, border_radius=12)
-        pygame.draw.rect(self.screen, (132, 92, 46), left, 3, border_radius=12)
-        pygame.draw.rect(self.screen, (244, 228, 188), right, border_radius=12)
-        pygame.draw.rect(self.screen, (132, 92, 46), right, 3, border_radius=12)
-
-        title = self.fonts["ui"].render(self.tr("encyclopedia"), True, (56, 38, 22))
-        self.screen.blit(title, (ui["header"].x + 6, ui["header"].y + 4))
-        self.screen.blit(self.fonts["small"].render(self.tr("press_a_close"), True, (86, 68, 44)), (ui["header"].x + 260, ui["header"].y + 12))
-
-        pygame.draw.rect(self.screen, (232, 188, 94), ui["close"], border_radius=8)
-        pygame.draw.rect(self.screen, (118, 76, 30), ui["close"], 2, border_radius=8)
-        ctext = self.fonts["small"].render(self.tr("close"), True, (40, 30, 18))
-        self.screen.blit(ctext, ctext.get_rect(center=ui["close"].center))
+        self.draw_book_panel(panel)
+        self.draw_framed_panel(left, fill=(232, 214, 178), border=(126, 90, 44), radius=16, inner=(246, 236, 210))
+        self.draw_framed_panel(right, fill=(242, 230, 196), border=(130, 94, 46), radius=18, inner=(250, 242, 220))
+        self.draw_wood_sign(ui["header"], self.tr("encyclopedia"), self.tr("press_a_close"))
+        self.draw_secondary_button(ui["close"], self.tr("close"), hover=ui["close"].collidepoint(mouse))
 
         plant_tab_sel = self.almanac_tab == "plants"
         zombie_tab_sel = self.almanac_tab == "zombies"
-        pygame.draw.rect(self.screen, (240, 206, 112) if plant_tab_sel else (214, 198, 164), ui["tab_plants"], border_radius=8)
-        pygame.draw.rect(self.screen, (240, 206, 112) if zombie_tab_sel else (214, 198, 164), ui["tab_zombies"], border_radius=8)
-        pygame.draw.rect(self.screen, (118, 76, 30), ui["tab_plants"], 2, border_radius=8)
-        pygame.draw.rect(self.screen, (118, 76, 30), ui["tab_zombies"], 2, border_radius=8)
-        self.screen.blit(self.fonts["small"].render(self.tr("plants_tab"), True, (42, 30, 18)), self.fonts["small"].render(self.tr("plants_tab"), True, (42, 30, 18)).get_rect(center=ui["tab_plants"].center))
-        self.screen.blit(self.fonts["small"].render(self.tr("zombies_tab"), True, (42, 30, 18)), self.fonts["small"].render(self.tr("zombies_tab"), True, (42, 30, 18)).get_rect(center=ui["tab_zombies"].center))
+        if plant_tab_sel:
+            self.draw_primary_button(ui["tab_plants"], self.tr("plants_tab"), enabled=True, hover=ui["tab_plants"].collidepoint(mouse))
+        else:
+            self.draw_secondary_button(ui["tab_plants"], self.tr("plants_tab"), hover=ui["tab_plants"].collidepoint(mouse))
+        if zombie_tab_sel:
+            self.draw_primary_button(ui["tab_zombies"], self.tr("zombies_tab"), enabled=True, hover=ui["tab_zombies"].collidepoint(mouse))
+        else:
+            self.draw_secondary_button(ui["tab_zombies"], self.tr("zombies_tab"), hover=ui["tab_zombies"].collidepoint(mouse))
 
         keys = self.get_almanac_keys(self.almanac_tab)
+        active_label = self.tr("plants_tab") if plant_tab_sel else self.tr("zombies_tab")
         selected_key = self.almanac_selected_key.get(self.almanac_tab, "")
         if keys and selected_key not in keys:
             selected_key = keys[0]
             self.almanac_selected_key[self.almanac_tab] = selected_key
 
+        count_chip = pygame.Rect(left.x + 12, left.y + 12, left.w - 24, 28)
+        count_label = self.fit_label(f"{active_label} / {len(keys)}", self.fonts["small"], count_chip.w - 10)
+        self.draw_menu_section_strip(count_chip, count_label, font=self.fonts["small"])
+
         entry_buttons = self.almanac_entry_buttons(self.almanac_tab, ui["list_area"])
         for key, rect in entry_buttons:
-            selected = key == selected_key
-            pygame.draw.rect(self.screen, (246, 226, 180) if selected else (236, 216, 176), rect, border_radius=7)
-            pygame.draw.rect(self.screen, (224, 136, 28) if selected else (132, 94, 48), rect, 2, border_radius=7)
+            is_sel = key == selected_key
+            hover = rect.collidepoint(mouse)
             if self.almanac_tab == "plants":
                 cfgp = self.plants[key]
-                icon = self.load_image(cfgp.sprite_path, size=(24, 24))
-                if icon is not None:
-                    self.screen.blit(icon, icon.get_rect(center=(rect.x + 18, rect.centery)))
-                else:
-                    pygame.draw.circle(self.screen, (84, 170, 98), (rect.x + 18, rect.centery), 10)
-                name = self.plant_display_name(key)
+                icon = self.load_image(cfgp.sprite_path, size=(26, 26))
+                label = self.plant_display_name(key)
             else:
                 cfgz = self.zombies[key]
-                icon = self.load_image(cfgz.sprite_path, size=(22, 28))
-                if icon is not None:
-                    self.screen.blit(icon, icon.get_rect(center=(rect.x + 18, rect.centery)))
-                else:
-                    pygame.draw.rect(self.screen, (126, 142, 106), (rect.x + 10, rect.y + 6, 16, 20), border_radius=4)
-                name = self.zombie_display_name(key)
-            self.screen.blit(self.fonts["small"].render(name, True, (38, 30, 22)), (rect.x + 36, rect.y + 8))
+                icon = self.load_image(cfgz.sprite_path, size=(24, 30))
+                label = self.zombie_display_name(key)
+            self.draw_almanac_list_entry(rect, label, selected=is_sel, hover=hover, icon=icon)
 
         max_page = max(1, math.ceil(max(1, len(keys)) / self.almanac_list_page_size))
         now_page = int(self.almanac_page.get(self.almanac_tab, 0)) + 1
-        pygame.draw.rect(self.screen, (228, 201, 156), ui["page_prev"], border_radius=6)
-        pygame.draw.rect(self.screen, (228, 201, 156), ui["page_next"], border_radius=6)
-        pygame.draw.rect(self.screen, (118, 76, 30), ui["page_prev"], 2, border_radius=6)
-        pygame.draw.rect(self.screen, (118, 76, 30), ui["page_next"], 2, border_radius=6)
-        self.screen.blit(self.fonts["small"].render("<", True, (40, 30, 18)), (ui["page_prev"].x + 16, ui["page_prev"].y + 4))
-        self.screen.blit(self.fonts["small"].render(">", True, (40, 30, 18)), (ui["page_next"].x + 16, ui["page_next"].y + 4))
-        page_text = self.fonts["small"].render(f"{self.tr('page')} {now_page}/{max_page}", True, (70, 50, 30))
-        self.screen.blit(page_text, page_text.get_rect(center=(left.centerx, ui["page_prev"].centery + 1)))
+        self.draw_secondary_button(ui["page_prev"], "<", hover=ui["page_prev"].collidepoint(mouse))
+        self.draw_secondary_button(ui["page_next"], ">", hover=ui["page_next"].collidepoint(mouse))
+        self.draw_menu_section_strip(
+            pygame.Rect(left.centerx - 84, ui["page_prev"].y, 168, ui["page_prev"].h),
+            f"{self.tr('page')} {now_page}/{max_page}",
+            font=self.fonts["small"],
+        )
 
-        if not selected_key:
-            return
-
-        sprite_box = pygame.Rect(right.x + 22, right.y + 18, 260, 252)
-        stat_box = pygame.Rect(right.x + 292, right.y + 18, right.w - 314, 252)
-        text_box = pygame.Rect(right.x + 22, right.y + 282, right.w - 44, right.h - 302)
-        pygame.draw.rect(self.screen, (236, 220, 184), sprite_box, border_radius=10)
-        pygame.draw.rect(self.screen, (236, 220, 184), stat_box, border_radius=10)
-        pygame.draw.rect(self.screen, (238, 223, 190), text_box, border_radius=10)
-        pygame.draw.rect(self.screen, (126, 92, 52), sprite_box, 2, border_radius=10)
-        pygame.draw.rect(self.screen, (126, 92, 52), stat_box, 2, border_radius=10)
-        pygame.draw.rect(self.screen, (126, 92, 52), text_box, 2, border_radius=10)
-
-        use_zh = self.lang == "zh"
-        if self.almanac_tab == "plants":
-            cfg = self.plants[selected_key]
-            preview = self.load_image(cfg.sprite_path, size=(220, 220))
-            if preview is not None:
-                self.screen.blit(preview, preview.get_rect(center=sprite_box.center))
-            else:
-                self.draw_fallback_almanac_sprite("plants", selected_key, sprite_box)
-            info = self.get_plant_almanac_text(selected_key, cfg)
-            display_name = self.plant_display_name(selected_key) if use_zh else (cfg.display_name_en or cfg.name)
-            behavior = info["behavior_zh"] if use_zh else info["behavior_en"]
-            stat_lines = [
-                display_name,
-                f"{self.tr('cost')}: {cfg.cost}",
-                f"{self.tr('hp')}: {int(cfg.hp)}",
-                f"{self.tr('cooldown')}: {cfg.cooldown:.1f}s",
-                f"{self.tr('behavior')}: {behavior}",
-            ]
-            yy = stat_box.y + 12
-            for line in stat_lines:
-                self.screen.blit(self.fonts["small"].render(line, True, (44, 34, 24)), (stat_box.x + 12, yy))
-                yy += 32
-
-            y = text_box.y + 8
-            text_pairs = [
-                (self.tr("description"), info["short_zh"] if use_zh else info["short_en"]),
-                (self.tr("gameplay_summary"), info["summary_zh"] if use_zh else info["summary_en"]),
-            ]
-            for section_title, body in text_pairs:
-                self.screen.blit(self.fonts["small"].render(section_title, True, (78, 54, 28)), (text_box.x + 10, y))
-                y += 22
-                for line in self.wrap_text_lines(self.fonts["small"], body, text_box.w - 20)[:4]:
-                    self.screen.blit(self.fonts["small"].render(line, True, (48, 36, 26)), (text_box.x + 10, y))
-                    y += 22
-        else:
-            cfg = self.zombies[selected_key]
-            preview = self.load_image(cfg.sprite_path, size=(200, 260))
-            if preview is not None:
-                self.screen.blit(preview, preview.get_rect(center=sprite_box.center))
-            else:
-                self.draw_fallback_almanac_sprite("zombies", selected_key, sprite_box)
-            info = self.get_zombie_almanac_text(selected_key, cfg)
-            display_name = self.zombie_display_name(selected_key) if use_zh else (cfg.display_name_en or cfg.name)
-            movement = info["movement_zh"] if use_zh else info["movement_en"]
-            beh_en, beh_zh = self.almanac_behavior_label(cfg.behavior, False)
-            behavior = beh_zh if use_zh else beh_en
-            stat_lines = [
-                display_name,
-                f"{self.tr('hp')}: {int(cfg.hp)}",
-                f"{self.tr('movement')}: {movement}",
-                f"{self.tr('behavior')}: {behavior}",
-            ]
-            yy = stat_box.y + 12
-            for line in stat_lines:
-                self.screen.blit(self.fonts["small"].render(line, True, (44, 34, 24)), (stat_box.x + 12, yy))
-                yy += 32
-
-            y = text_box.y + 8
-            text_pairs = [
-                (self.tr("description"), info["short_zh"] if use_zh else info["short_en"]),
-                (self.tr("threat_summary"), info["threat_zh"] if use_zh else info["threat_en"]),
-            ]
-            for section_title, body in text_pairs:
-                self.screen.blit(self.fonts["small"].render(section_title, True, (78, 54, 28)), (text_box.x + 10, y))
-                y += 22
-                for line in self.wrap_text_lines(self.fonts["small"], body, text_box.w - 20)[:4]:
-                    self.screen.blit(self.fonts["small"].render(line, True, (48, 36, 26)), (text_box.x + 10, y))
-                    y += 22
+        if selected_key:
+            self.draw_almanac_detail_content(self.almanac_tab, selected_key, right, compact=True)
 
     def draw(self) -> None:
         if self.scene not in ("battle", "result"):
@@ -19646,6 +21326,11 @@ class Game:
                         self.logged_missing_sprites.clear()
                     if self.scene == "battle" and self.battle_result_hold_active():
                         continue
+                    if self.scene == "battle" and self.battle.is_battle_intro_active():
+                        if e.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_KP_ENTER):
+                            if self.battle.skip_battle_intro_step():
+                                self.play_sfx("ui_click")
+                        continue
                     if self.scene == "battle" and e.key == pygame.K_o:
                         if self.battle_settings_open:
                             self.close_battle_settings()
@@ -19733,8 +21418,13 @@ class Game:
                 hold_active = self.battle_result_hold_active()
                 if not hold_active and not self.battle.result:
                     self.battle.update(sim_dt)
+                    for audio_key in self.battle.consume_audio_requests():
+                        self.play_sfx(audio_key)
                     notice_text, notice_key, notice_color, notice_duration = self.battle.consume_notice_request()
                     if notice_text or notice_key:
+                        sfx_key = self.notice_sfx_key(notice_key)
+                        if sfx_key:
+                            self.play_sfx(sfx_key)
                         self.show_battle_notice(notice_text or self.tr(notice_key), color=notice_color, duration_ms=max(400, notice_duration))
                     shake_req = getattr(self.battle, 'screen_shake_request', 0.0)
                     if shake_req > 0:
@@ -19755,6 +21445,7 @@ class Game:
                         win = self.battle.result == "win"
                         self.battle_result_hold_result = self.battle.result
                         self.battle_result_hold_until_ms = pygame.time.get_ticks() + self.battle_result_hold_duration_ms(win)
+                        self.play_sfx("battle_win" if win else "battle_lose", force=True)
                         self.show_battle_notice(
                             self.battle_clear_notice_text() if win else self.battle_lose_notice_text(),
                             color=(56, 118, 70) if win else (148, 82, 56),
@@ -19773,36 +21464,3 @@ class Game:
 
 if __name__ == "__main__":
     Game().run()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

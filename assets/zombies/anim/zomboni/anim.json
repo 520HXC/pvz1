@@ -54,18 +54,19 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "crush": {
       "frames": [
         {
           "surface_path": "crush_00.png",
-          "duration_ms": 74,
+          "duration_ms": 66,
           "content_bbox": [
             18,
-            60,
-            213,
-            167
+            59,
+            219,
+            171
           ],
           "anchor": [
             123,
@@ -74,12 +75,12 @@
         },
         {
           "surface_path": "crush_01.png",
-          "duration_ms": 82,
+          "duration_ms": 74,
           "content_bbox": [
-            23,
-            60,
-            213,
-            170
+            25,
+            58,
+            221,
+            174
           ],
           "anchor": [
             123,
@@ -88,12 +89,12 @@
         },
         {
           "surface_path": "crush_02.png",
-          "duration_ms": 90,
+          "duration_ms": 92,
           "content_bbox": [
-            19,
+            21,
             63,
-            208,
-            162
+            207,
+            164
           ],
           "anchor": [
             123,
@@ -105,7 +106,8 @@
       "next_clip": "",
       "event_markers": [],
       "hold_last_frame_ms": 0,
-      "impact_marker": "",
+      "impact_marker": "crush",
+      "impact_frame_index": 1,
       "lock_until_end": false
     },
     "hit": {
@@ -158,6 +160,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 116,
       "impact_marker": "hit",
+      "impact_frame_index": 0,
       "lock_until_end": true
     },
     "death": {
@@ -224,6 +227,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 220,
       "impact_marker": "death",
+      "impact_frame_index": 2,
       "lock_until_end": true
     }
   }

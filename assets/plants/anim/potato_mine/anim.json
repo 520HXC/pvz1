@@ -1,7 +1,7 @@
 {
   "anchor": [
     78,
-    78
+    118
   ],
   "clips": {
     "arming": {
@@ -17,7 +17,7 @@
           ],
           "anchor": [
             78,
-            78
+            118
           ]
         },
         {
@@ -31,7 +31,7 @@
           ],
           "anchor": [
             78,
-            78
+            118
           ]
         }
       ],
@@ -40,6 +40,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "priming": {
@@ -55,7 +56,7 @@
           ],
           "anchor": [
             78,
-            78
+            118
           ]
         },
         {
@@ -69,7 +70,7 @@
           ],
           "anchor": [
             78,
-            78
+            118
           ]
         },
         {
@@ -83,7 +84,7 @@
           ],
           "anchor": [
             78,
-            78
+            118
           ]
         },
         {
@@ -97,7 +98,7 @@
           ],
           "anchor": [
             78,
-            78
+            118
           ]
         }
       ],
@@ -106,6 +107,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "armed_idle": {
@@ -121,7 +123,7 @@
           ],
           "anchor": [
             78,
-            78
+            118
           ]
         },
         {
@@ -135,7 +137,7 @@
           ],
           "anchor": [
             78,
-            78
+            118
           ]
         },
         {
@@ -149,7 +151,7 @@
           ],
           "anchor": [
             78,
-            78
+            118
           ]
         },
         {
@@ -163,7 +165,7 @@
           ],
           "anchor": [
             78,
-            78
+            118
           ]
         }
       ],
@@ -172,6 +174,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "detonate": {
@@ -187,7 +190,7 @@
           ],
           "anchor": [
             78,
-            78
+            118
           ]
         },
         {
@@ -201,7 +204,7 @@
           ],
           "anchor": [
             78,
-            78
+            118
           ]
         },
         {
@@ -215,7 +218,7 @@
           ],
           "anchor": [
             78,
-            78
+            118
           ]
         },
         {
@@ -229,7 +232,7 @@
           ],
           "anchor": [
             78,
-            78
+            118
           ]
         }
       ],
@@ -238,6 +241,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 150,
       "impact_marker": "detonate",
+      "impact_frame_index": 1,
       "lock_until_end": true
     }
   }

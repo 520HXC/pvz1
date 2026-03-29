@@ -6,7 +6,7 @@
   ],
   "anchor": [
     82,
-    82
+    130
   ],
   "parts": {
     "body": {
@@ -77,6 +77,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false,
       "frames": [
         {
@@ -255,6 +256,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false,
       "frames": [
         {
@@ -529,6 +531,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 100,
       "impact_marker": "hit",
+      "impact_frame_index": 1,
       "lock_until_end": true,
       "frames": [
         {
@@ -671,6 +674,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 180,
       "impact_marker": "death",
+      "impact_frame_index": 2,
       "lock_until_end": true,
       "frames": [
         {

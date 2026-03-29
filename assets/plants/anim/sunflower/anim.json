@@ -96,6 +96,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "sun_produce": {
@@ -206,6 +207,7 @@
       ],
       "hold_last_frame_ms": 138,
       "impact_marker": "sun",
+      "impact_frame_index": 3,
       "lock_until_end": true
     },
     "hit": {
@@ -244,6 +246,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 110,
       "impact_marker": "hit",
+      "impact_frame_index": 1,
       "lock_until_end": true
     },
     "death": {
@@ -296,6 +299,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 200,
       "impact_marker": "death",
+      "impact_frame_index": 2,
       "lock_until_end": true
     }
   }

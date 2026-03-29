@@ -1,7 +1,7 @@
 {
   "anchor": [
     82,
-    82
+    130
   ],
   "clips": {
     "morphing": {
@@ -17,7 +17,7 @@
           ],
           "anchor": [
             82,
-            82
+            130
           ]
         },
         {
@@ -31,7 +31,7 @@
           ],
           "anchor": [
             82,
-            82
+            130
           ]
         },
         {
@@ -45,7 +45,7 @@
           ],
           "anchor": [
             82,
-            82
+            130
           ]
         }
       ],
@@ -54,6 +54,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "copied_idle": {
@@ -69,7 +70,7 @@
           ],
           "anchor": [
             82,
-            82
+            130
           ]
         },
         {
@@ -83,7 +84,7 @@
           ],
           "anchor": [
             82,
-            82
+            130
           ]
         },
         {
@@ -97,7 +98,7 @@
           ],
           "anchor": [
             82,
-            82
+            130
           ]
         },
         {
@@ -111,7 +112,7 @@
           ],
           "anchor": [
             82,
-            82
+            130
           ]
         }
       ],
@@ -120,6 +121,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "hit": {
@@ -135,7 +137,7 @@
           ],
           "anchor": [
             82,
-            82
+            130
           ]
         },
         {
@@ -149,7 +151,7 @@
           ],
           "anchor": [
             82,
-            82
+            130
           ]
         }
       ],
@@ -158,6 +160,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 100,
       "impact_marker": "hit",
+      "impact_frame_index": 1,
       "lock_until_end": true
     },
     "death": {
@@ -173,7 +176,7 @@
           ],
           "anchor": [
             82,
-            82
+            130
           ]
         },
         {
@@ -187,7 +190,7 @@
           ],
           "anchor": [
             82,
-            82
+            130
           ]
         },
         {
@@ -201,7 +204,7 @@
           ],
           "anchor": [
             82,
-            82
+            130
           ]
         }
       ],
@@ -210,6 +213,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 180,
       "impact_marker": "death",
+      "impact_frame_index": 2,
       "lock_until_end": true
     }
   }

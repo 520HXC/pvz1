@@ -67,6 +67,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false,
       "frames": [
         {
@@ -244,59 +245,116 @@
       "next_clip": "",
       "event_markers": [],
       "hold_last_frame_ms": 0,
-      "impact_marker": "",
+      "impact_marker": "crush",
+      "impact_frame_index": 1,
       "lock_until_end": false,
       "frames": [
+        {
+          "duration_ms": 66,
+          "parts": {
+            "chassis": {
+              "offset": [
+                10,
+                -2
+              ],
+              "scale": 1.04,
+              "angle": 3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "cabin": {
+              "offset": [
+                10,
+                -2
+              ],
+              "scale": 1.04,
+              "angle": 3.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "front_wheel": {
+              "offset": [
+                7,
+                2
+              ],
+              "scale": 1.0,
+              "angle": -24.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "rear_wheel": {
+              "offset": [
+                7,
+                1
+              ],
+              "scale": 1.0,
+              "angle": -24.0,
+              "alpha": 255,
+              "z_index": null
+            },
+            "blade": {
+              "offset": [
+                6,
+                -2
+              ],
+              "scale": 1.0,
+              "angle": -8.0,
+              "alpha": 255,
+              "z_index": null
+            }
+          },
+          "markers": []
+        },
         {
           "duration_ms": 74,
           "parts": {
             "chassis": {
               "offset": [
-                6,
-                -2
+                17,
+                -1
               ],
-              "scale": 1.02,
-              "angle": 2.0,
+              "scale": 1.07,
+              "angle": 5.0,
               "alpha": 255,
               "z_index": null
             },
             "cabin": {
               "offset": [
-                6,
-                -2
+                17,
+                -1
               ],
-              "scale": 1.02,
-              "angle": 2.0,
+              "scale": 1.07,
+              "angle": 5.0,
               "alpha": 255,
               "z_index": null
             },
             "front_wheel": {
               "offset": [
-                4,
-                2
+                12,
+                1
               ],
               "scale": 1.0,
-              "angle": -18.0,
+              "angle": 30.0,
               "alpha": 255,
               "z_index": null
             },
             "rear_wheel": {
               "offset": [
-                4,
-                1
+                12,
+                0
               ],
               "scale": 1.0,
-              "angle": -18.0,
+              "angle": 30.0,
               "alpha": 255,
               "z_index": null
             },
             "blade": {
               "offset": [
-                4,
+                12,
                 -1
               ],
               "scale": 1.0,
-              "angle": -4.0,
+              "angle": 10.0,
               "alpha": 255,
               "z_index": null
             }
@@ -304,67 +362,11 @@
           "markers": []
         },
         {
-          "duration_ms": 82,
+          "duration_ms": 92,
           "parts": {
             "chassis": {
-              "offset": [
-                10,
-                -1
-              ],
-              "scale": 1.03,
-              "angle": 3.0,
-              "alpha": 255,
-              "z_index": null
-            },
-            "cabin": {
-              "offset": [
-                10,
-                -1
-              ],
-              "scale": 1.03,
-              "angle": 3.0,
-              "alpha": 255,
-              "z_index": null
-            },
-            "front_wheel": {
-              "offset": [
-                8,
-                1
-              ],
-              "scale": 1.0,
-              "angle": 22.0,
-              "alpha": 255,
-              "z_index": null
-            },
-            "rear_wheel": {
-              "offset": [
-                8,
-                0
-              ],
-              "scale": 1.0,
-              "angle": 22.0,
-              "alpha": 255,
-              "z_index": null
-            },
-            "blade": {
               "offset": [
                 6,
-                -1
-              ],
-              "scale": 1.0,
-              "angle": 4.0,
-              "alpha": 255,
-              "z_index": null
-            }
-          },
-          "markers": []
-        },
-        {
-          "duration_ms": 90,
-          "parts": {
-            "chassis": {
-              "offset": [
-                4,
                 0
               ],
               "scale": 1.0,
@@ -374,7 +376,7 @@
             },
             "cabin": {
               "offset": [
-                4,
+                6,
                 0
               ],
               "scale": 1.0,
@@ -384,31 +386,31 @@
             },
             "front_wheel": {
               "offset": [
-                2,
+                4,
                 1
               ],
               "scale": 1.0,
-              "angle": 8.0,
+              "angle": 12.0,
               "alpha": 255,
               "z_index": null
             },
             "rear_wheel": {
               "offset": [
-                2,
+                4,
                 0
               ],
               "scale": 1.0,
-              "angle": 8.0,
+              "angle": 12.0,
               "alpha": 255,
               "z_index": null
             },
             "blade": {
               "offset": [
-                2,
+                4,
                 0
               ],
               "scale": 1.0,
-              "angle": 1.0,
+              "angle": 2.0,
               "alpha": 255,
               "z_index": null
             }
@@ -423,6 +425,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 116,
       "impact_marker": "hit",
+      "impact_frame_index": 0,
       "lock_until_end": true,
       "frames": [
         {
@@ -601,6 +604,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 220,
       "impact_marker": "death",
+      "impact_frame_index": 2,
       "lock_until_end": true,
       "frames": [
         {

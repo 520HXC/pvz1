@@ -54,6 +54,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "popped_fall": {
@@ -106,6 +107,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 140,
       "impact_marker": "fall",
+      "impact_frame_index": 1,
       "lock_until_end": true
     },
     "grounded_walk": {
@@ -172,6 +174,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "eat": {
@@ -238,6 +241,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 0,
       "impact_marker": "",
+      "impact_frame_index": -1,
       "lock_until_end": false
     },
     "death": {
@@ -304,6 +308,7 @@
       "event_markers": [],
       "hold_last_frame_ms": 220,
       "impact_marker": "death",
+      "impact_frame_index": 2,
       "lock_until_end": true
     }
   }
