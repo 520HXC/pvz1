@@ -46,6 +46,12 @@ class AdventureInvariantTests(unittest.TestCase):
             {"upgrades": {}},
         )
 
+    def has_balloon_issue(self, level):
+        return any(
+            issue.capability == "balloon counter"
+            for issue in self.validate([level])
+        )
+
     def test_only_real_platforms_use_the_support_layer(self):
         support_kinds = {key for key, plant in self.plants.items() if plant.is_support}
         self.assertEqual({"lily_pad", "flower_pot"}, support_kinds)
@@ -176,7 +182,7 @@ class AdventureInvariantTests(unittest.TestCase):
 
         self.assertEqual([], self.validate([vasebreaker]))
 
-    def test_balloon_counter_must_be_deployable_on_the_battlefield(self):
+    def test_pool_balloon_counter_must_be_deployable_on_water_lanes(self):
         fog_cactus_only = replace(
             self.by_code["4-1"],
             cards=["cactus"],
@@ -184,6 +190,17 @@ class AdventureInvariantTests(unittest.TestCase):
         )
         fog_blover = replace(fog_cactus_only, cards=["blover"])
         fog_cattail = replace(fog_cactus_only, cards=["cattail"])
+        fog_cattail_on_lily = replace(
+            fog_cactus_only,
+            cards=["cattail", "lily_pad"],
+        )
+
+        self.assertTrue(self.has_balloon_issue(fog_cactus_only))
+        self.assertFalse(self.has_balloon_issue(fog_blover))
+        self.assertTrue(self.has_balloon_issue(fog_cattail))
+        self.assertFalse(self.has_balloon_issue(fog_cattail_on_lily))
+
+    def test_roof_cactus_requires_platform_in_every_spawn_lane(self):
         roof_cactus_only = replace(
             self.by_code["5-2"],
             cards=["cactus"],
@@ -194,23 +211,31 @@ class AdventureInvariantTests(unittest.TestCase):
             roof_cactus_only,
             preplaced_supports=(("flower_pot", 0, 0),),
         )
+        roof_cactus_all_rows = replace(
+            roof_cactus_only,
+            preplaced_supports=tuple(("flower_pot", row, 0) for row in range(5)),
+        )
+        roof_cactus_with_pot_card = replace(
+            roof_cactus_only,
+            cards=["cactus", "flower_pot"],
+        )
+        roof_blover_only = replace(roof_cactus_only, cards=["blover"])
+        roof_blover_on_pot = replace(
+            roof_blover_only,
+            preplaced_supports=(("flower_pot", 0, 0),),
+        )
+        roof_cattail_on_pot = replace(
+            roof_cactus_on_pots,
+            cards=["cattail"],
+        )
 
-        fog_issues = self.validate([fog_cactus_only])
-        self.assertTrue(any(issue.capability == "balloon counter" for issue in fog_issues))
-        self.assertFalse(
-            any(issue.capability == "balloon counter" for issue in self.validate([fog_blover]))
-        )
-        self.assertFalse(
-            any(issue.capability == "balloon counter" for issue in self.validate([fog_cattail]))
-        )
-        roof_issues = self.validate([roof_cactus_only])
-        self.assertTrue(any(issue.capability == "balloon counter" for issue in roof_issues))
-        self.assertFalse(
-            any(
-                issue.capability == "balloon counter"
-                for issue in self.validate([roof_cactus_on_pots])
-            )
-        )
+        self.assertTrue(self.has_balloon_issue(roof_cactus_only))
+        self.assertTrue(self.has_balloon_issue(roof_cactus_on_pots))
+        self.assertFalse(self.has_balloon_issue(roof_cactus_all_rows))
+        self.assertFalse(self.has_balloon_issue(roof_cactus_with_pot_card))
+        self.assertTrue(self.has_balloon_issue(roof_blover_only))
+        self.assertFalse(self.has_balloon_issue(roof_blover_on_pot))
+        self.assertTrue(self.has_balloon_issue(roof_cattail_on_pot))
 
     def test_validator_reports_level_code_and_missing_capability(self):
         self.assertTrue(

@@ -6,7 +6,7 @@ WATER_LANE_ZOMBIES = frozenset(
     {"ducky_tube", "snorkel", "dolphin_rider", "bobsled_team"}
 )
 BALLOON_COUNTERS = frozenset({"cactus", "blover", "cattail"})
-GLOBAL_BALLOON_COUNTERS = frozenset({"blover", "cattail"})
+ROOF_SPAWN_ROWS = frozenset(range(5))
 INDEPENDENT_BONUS_STAGE_MODES = frozenset(
     {"mini_wallnut_bowling", "mini_whack_a_zombie", "adventure_vasebreaker"}
 )
@@ -80,12 +80,23 @@ def _has_deployable_balloon_counter(
     if not counters:
         return False
     if battlefield == "roof":
-        return _has_roof_platform(cards, preplaced_supports)
+        if "blover" in counters:
+            return _has_roof_platform(cards, preplaced_supports)
+        if "cactus" in counters:
+            if "flower_pot" in cards:
+                return True
+            planted_rows = {
+                row
+                for kind, row, _col in preplaced_supports
+                if kind == "flower_pot"
+            }
+            return ROOF_SPAWN_ROWS <= planted_rows
+        return False
     if battlefield in {"pool", "fog"}:
-        return bool(counters & GLOBAL_BALLOON_COUNTERS) or (
-            "cactus" in counters and "lily_pad" in cards
-        )
-    return True
+        if "blover" in counters:
+            return True
+        return "lily_pad" in cards and bool(counters & {"cactus", "cattail"})
+    return bool(counters & {"cactus", "blover"})
 
 
 def validate_adventure_levels(
@@ -132,7 +143,7 @@ def validate_adventure_levels(
                 AdventureValidationIssue(
                     code,
                     "balloon counter",
-                    "balloon zombies require a counter that can be deployed on every threatened terrain",
+                    "balloon zombies require a counter deployable in every possible spawn lane",
                 )
             )
 
