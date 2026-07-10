@@ -14,6 +14,15 @@ from urllib.request import Request, urlopen
 
 import pygame
 
+from progression import migrate_save_data, record_adventure_clear
+from wave_director import (
+    advance_recovery_countdown,
+    lanes_within_pressure_limit,
+    next_wave_recovery_delay,
+    normalize_wave_budgets,
+    spawn_cooldown as calculate_spawn_cooldown,
+)
+
 try:
     from mega_content import EXTRA_EVENT_TEXTS, START_TIPS
 except Exception:
@@ -2580,6 +2589,7 @@ ADVENTURE_SPECIAL_WAVE_COUNTS: Dict[str, int] = {
     "1-1": 4,
     "2-5": 8,
     "4-5": 8,
+    "5-5": 12,
     "5-10": 16,
 }
 
@@ -2788,6 +2798,11 @@ def build_adventure_wave_plans() -> Dict[str, Dict[str, object]]:
                 for wave_idx in large:
                     guaranteed.append((wave_idx, "flag_zombie", 1))
             guaranteed.extend(ADVENTURE_LEVEL_EXTRA_GUARANTEES.get(code, ()))
+            wave_points = normalize_wave_budgets(
+                wave_points,
+                guaranteed,
+                ADVENTURE_ZOMBIE_POINT_COSTS,
+            )
             plans[code] = {
                 "flags_first_clear": int(flags),
                 "total_waves": int(total_waves),
@@ -2873,6 +2888,7 @@ class LevelConfig:
     spawn_acc: float
     z_weights: Dict[str, float]
     cards: List[str]
+    wave_interval: float = 19.0
     danger: int = 1
     tag_key: str = "tag_general"
     total_waves: int = 0
@@ -4385,6 +4401,7 @@ class ConfigManager:
                 "cooldown_multiplier": 1.0,
                 "infinite_sun": False,
                 "no_cooldown": False,
+                "debug_unlock_all_levels": False,
             }
         }
 
@@ -4402,7 +4419,7 @@ class ConfigManager:
         if speed not in SPEED_CHOICES:
             speed = min(SPEED_CHOICES, key=lambda x: abs(x - speed))
         out["game_speed"] = speed
-        for key in ("auto_collect_sun", "auto_collect_coins", "show_zombie_hp_bars", "show_plant_hp_bars", "show_wave_number", "show_next_wave_countdown", "infinite_sun", "no_cooldown"):
+        for key in ("auto_collect_sun", "auto_collect_coins", "show_zombie_hp_bars", "show_plant_hp_bars", "show_wave_number", "show_next_wave_countdown", "infinite_sun", "no_cooldown", "debug_unlock_all_levels"):
             out[key] = bool(out.get(key, cfg["battle_settings"][key]))
         for key in ("zombie_health_multiplier", "plant_health_multiplier", "zombie_damage_multiplier", "plant_damage_multiplier", "cooldown_multiplier"):
             try:
@@ -4465,6 +4482,7 @@ class BattleState:
         self.wave_spawn_total = 0
         self.wave_spawn_remaining = 0
         self.wave_pause_t = 0.0
+        self.wave_rng = random.Random(1)
         self.result: Optional[str] = None
         self.almanac_open = False
         self.main: Dict[Tuple[int, int], Plant] = {}
@@ -6361,11 +6379,21 @@ class BattleState:
             budgets = [4 + level.danger for _ in range(total_waves)]
         if len(budgets) < total_waves:
             budgets.extend([budgets[-1] if budgets else 4 + level.danger] * (total_waves - len(budgets)))
+        if self.is_adventure_mainline():
+            budgets = list(
+                normalize_wave_budgets(
+                    budgets[:total_waves],
+                    level.guaranteed_zombies,
+                    ADVENTURE_ZOMBIE_POINT_COSTS,
+                )
+            )
         return total_waves, large_wave_indices, final_wave_index, budgets[:total_waves]
 
     def is_adventure_mainline(self) -> bool:
         if not self.level:
             return False
+        if self.mode_bool("adventure_level_launch", False):
+            return True
         if self.mode_name() or self.mode_family():
             return False
         return 1 <= int(getattr(self.level, "world", 0)) <= 5
@@ -6410,6 +6438,7 @@ class BattleState:
         if not rows:
             return 0
         pressure_limit = self.adventure_lane_pressure_limit() if self.is_adventure_mainline() else max(2, int(self.level.danger) if self.level else 2)
+        rng = self.wave_rng if self.is_adventure_mainline() else random
         scored: List[Tuple[float, float, int]] = []
         cost = self.zombie_point_cost(kind)
         for row in rows:
@@ -6426,10 +6455,10 @@ class BattleState:
                 score += 6.0
             if cost >= 6 and heavy_pressure > 0:
                 score += 4.0
-            scored.append((score, random.random(), row))
+            scored.append((score, rng.random(), row))
         scored.sort(key=lambda item: (item[0], item[1]))
         top_rows = [row for _, _, row in scored[: max(1, min(2, len(scored)))]]
-        return random.choice(top_rows)
+        return rng.choice(top_rows)
 
     def build_adventure_wave_queue(self, wave_idx: int) -> List[str]:
         if not self.level:
@@ -6485,12 +6514,12 @@ class BattleState:
                 elif cost >= 6:
                     base *= 0.72
                 weights.append(base / max(1.0, cost * 0.55))
-            pick = random.choices(affordable, weights=weights, k=1)[0]
+            pick = self.wave_rng.choices(affordable, weights=weights, k=1)[0]
             tail.append(pick)
             remaining -= self.zombie_point_cost(pick)
             if self.zombie_point_cost(pick) >= 6:
                 heavy_added += 1
-        random.shuffle(tail)
+        self.wave_rng.shuffle(tail)
         queue.extend(tail)
         if not queue:
             cheapest = min(pool, key=lambda kind: self.zombie_point_cost(kind))
@@ -9097,7 +9126,13 @@ class BattleState:
         self.target_duration = self.mode_float("duration_override", level.duration)
         if self.target_duration <= 0:
             self.target_duration = level.duration * self.mode_float("duration_mult", 1.0)
-        self.wave_interval = max(10.0, self.mode_float("wave_interval", 25.0))
+        self.wave_interval = max(0.0, self.mode_float("wave_interval", level.wave_interval))
+        raw_wave_seed = self.mode_rules.get("random_seed")
+        if isinstance(raw_wave_seed, int) and not isinstance(raw_wave_seed, bool):
+            wave_seed = raw_wave_seed
+        else:
+            wave_seed = int(level.idx) * 1009 + 17
+        self.wave_rng = random.Random(wave_seed)
         self.total_waves, self.large_wave_indices, self.final_wave_index, self.wave_budgets = self.mode_wave_budgets(level)
         self.elapsed = 0.0
         self.spawn_t = 0.0
@@ -9574,16 +9609,18 @@ class BattleState:
                 self.card_timer[k] = 0.0
         if self.mode_bool("infinite_sun", False):
             self.sun = max(self.sun, 9990)
-        self.wave_pause_t = max(0.0, self.wave_pause_t - dt)
+        if self.current_wave == 0:
+            self.wave_pause_t = max(0.0, self.wave_pause_t - dt)
         if self.uses_wave_system():
             active_zombies = [z for z in self.zombies if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0]
             if self.current_wave == 0 and self.wave_pause_t <= 0.0 and int(self.next_wave) == 1:
                 self.start_next_wave()
-            if self.is_adventure_mainline():
-                wave_prog = 0.0 if self.total_waves <= 1 else max(0.0, (self.current_wave - 1) / max(1, self.total_waves - 1))
-                spawn_cd = max(self.level.spawn_min, self.level.spawn_base - wave_prog * (self.level.spawn_acc * 42.0))
-            else:
-                spawn_cd = max(self.level.spawn_min, self.level.spawn_base - self.elapsed * self.level.spawn_acc)
+            spawn_cd = calculate_spawn_cooldown(
+                self.level.spawn_base,
+                self.level.spawn_min,
+                self.level.spawn_acc,
+                self.elapsed,
+            )
             spawn_cd /= max(0.25, self.mode_float("spawn_rate_mult", 1.0))
             if self.is_special_hud_mode():
                 spawn_cd *= self.special_spawn_gap_scale()
@@ -9617,18 +9654,28 @@ class BattleState:
             lane_pressure_limit = self.adventure_lane_pressure_limit() if self.is_adventure_mainline() else max(2, self.level.danger)
             if self.wave_spawn_remaining <= 0 and self.current_wave > 0:
                 if self.current_wave < self.total_waves:
-                    if len(active_zombies) <= lane_pressure_limit:
-                        if int(self.next_wave) != self.current_wave + 1:
-                            self.next_wave = float(self.current_wave + 1)
-                            if self.is_adventure_mainline():
-                                self.wave_pause_t = 4.2 if (self.current_wave + 1) in self.large_wave_indices else 2.6
-                            else:
-                                self.wave_pause_t = 3.2 if (self.current_wave + 1) in self.large_wave_indices else 1.9
-                        elif self.wave_pause_t <= 0.0:
-                            self.start_next_wave()
+                    upcoming_wave = self.current_wave + 1
+                    required_delay = next_wave_recovery_delay(
+                        self.wave_interval,
+                        upcoming_wave in self.large_wave_indices,
+                    )
+                    pressure_safe = lanes_within_pressure_limit(
+                        (z.row for z in active_zombies),
+                        lane_pressure_limit,
+                    )
+                    newly_started = int(self.next_wave) != upcoming_wave
+                    self.next_wave = float(upcoming_wave)
+                    if newly_started:
+                        self.wave_pause_t = required_delay
                     else:
-                        self.next_wave = 0.0
-                        self.wave_pause_t = 0.0
+                        self.wave_pause_t = advance_recovery_countdown(
+                            self.wave_pause_t,
+                            dt,
+                            pressure_safe,
+                            required_delay,
+                        )
+                        if pressure_safe and self.wave_pause_t <= 0.0:
+                            self.start_next_wave()
                 elif not active_zombies and not self.rolling_nuts:
                     self.result = "win"
         if self.mode_bool("conveyor", False):
@@ -11652,13 +11699,7 @@ class Game:
         self.ensure_original_seed_sprites(force=False, force_zombies=False)
         self.levels = build_levels(50)
         self.save_mgr = SaveManager(Path(__file__).resolve().parent / "save.json")
-        self.save_data = self.save_mgr.load()
-        # User preference: keep all rounds unlocked at all times.
-        self.save_data["unlocked"] = max(1, len(self.levels))
-        cleared_levels = self.save_data.get("cleared_levels", [])
-        if not isinstance(cleared_levels, list):
-            cleared_levels = []
-        self.save_data["cleared_levels"] = [str(item) for item in cleared_levels if item]
+        self.save_data = migrate_save_data(self.save_mgr.load())
         self.save_mgr.save(self.save_data)
         self.config_mgr = ConfigManager(Path(__file__).resolve().parent / "config.json")
         self.config_data = self.config_mgr.load()
@@ -15073,8 +15114,14 @@ class Game:
         return [lv for lv in self.levels if lv.world == world]
 
     def adventure_level_unlocked(self, level: LevelConfig) -> bool:
+        if self.adventure_debug_unlock_enabled():
+            return True
         unlocked = int(self.save_data.get("unlocked", 1))
         return level.idx <= unlocked
+
+    def adventure_debug_unlock_enabled(self) -> bool:
+        settings = getattr(self, "battle_settings", {})
+        return bool(settings.get("debug_unlock_all_levels", False)) if isinstance(settings, dict) else False
 
     def adventure_level_cleared(self, level: LevelConfig) -> bool:
         cleared = self.save_data.get("cleared_levels", [])
@@ -15100,7 +15147,38 @@ class Game:
             cleared.append(code)
             self.save_data["cleared_levels"] = cleared
 
+    def apply_battle_clear_progression(self) -> bool:
+        battle = getattr(self, "battle", None)
+        level = getattr(battle, "level", None)
+        if getattr(battle, "result", None) != "win" or level is None:
+            return False
+        rules = getattr(battle, "mode_rules", {})
+        if not isinstance(rules, dict):
+            rules = {}
+        adventure_launch = bool(rules.get("adventure_level_launch", False))
+        if not adventure_launch and not rules.get("mode_name") and not rules.get("mode_family"):
+            adventure_launch = 1 <= int(getattr(level, "world", 0)) <= 5
+        if not adventure_launch:
+            return False
+        updated = record_adventure_clear(
+            self.save_data,
+            str(level.display_code or level.idx),
+            int(level.idx),
+            adventure_level_launch=True,
+        )
+        changed = (
+            updated.get("unlocked") != self.save_data.get("unlocked")
+            or updated.get("cleared_levels") != self.save_data.get("cleared_levels")
+        )
+        self.save_data.clear()
+        self.save_data.update(updated)
+        if hasattr(battle, "save_data"):
+            battle.save_data = self.save_data
+        return changed
+
     def adventure_chapter_unlocked(self, world: int) -> bool:
+        if self.adventure_debug_unlock_enabled():
+            return True
         unlocked = int(self.save_data.get("unlocked", 1))
         return unlocked >= ((world - 1) * 10 + 1)
 
@@ -21488,9 +21566,8 @@ class Game:
                             duration_ms=self.battle_result_hold_duration_ms(win) + 450,
                         )
                     elif not self.battle_result_hold_active():
-                        if self.battle.result == "win" and not self.battle.mode_rules.get("mode_name"):
-                            self.mark_adventure_level_cleared(self.battle.level)
-                            self.save_data["unlocked"] = max(int(self.save_data.get("unlocked", 1)), self.level_idx + 2)
+                        if self.battle.result == "win":
+                            self.apply_battle_clear_progression()
                         self.save_mgr.save(self.save_data)
                         self.battle_result_hold_result = ""
                         self.battle_result_hold_until_ms = 0

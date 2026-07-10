@@ -14,6 +14,7 @@
     "plant_damage_multiplier": 1.0,
     "cooldown_multiplier": 1.0,
     "infinite_sun": false,
-    "no_cooldown": false
+    "no_cooldown": false,
+    "debug_unlock_all_levels": false
   }
 }
