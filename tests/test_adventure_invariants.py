@@ -173,6 +173,47 @@ class AdventureInvariantTests(unittest.TestCase):
         self.assertTrue(battle.has_umbrella_cover(0, 3))
         self.assertFalse(battle.has_umbrella_cover(0, 0))
 
+    def test_cattail_requires_a_lily_pad_on_a_water_tile(self):
+        day_battle = self.make_battle()
+        day_battle.reset(self.by_code["1-1"])
+        with self.subTest(terrain="land"):
+            self.assertFalse(day_battle.can_place("cattail", 0, 0))
+
+        roof_battle = self.make_battle()
+        roof_battle.reset(self.by_code["5-2"])
+        self.assertTrue(roof_battle.spawn_plant_direct("flower_pot", 0, 0))
+        with self.subTest(terrain="roof_flower_pot"):
+            self.assertFalse(roof_battle.can_place("cattail", 0, 0))
+
+        pool_battle = self.make_battle()
+        pool_battle.reset(self.by_code["3-1"])
+        water_row = pool_battle.field.water_rows[0]
+        with self.subTest(terrain="water_without_lily_pad"):
+            self.assertFalse(pool_battle.can_place("cattail", water_row, 0))
+        self.assertTrue(pool_battle.spawn_plant_direct("lily_pad", water_row, 0))
+        with self.subTest(terrain="water_with_lily_pad"):
+            self.assertTrue(pool_battle.can_place("cattail", water_row, 0))
+
+    def test_cattail_keeps_cross_lane_anti_air_attack(self):
+        battle = self.make_battle()
+        battle.reset(self.by_code["3-1"])
+        water_row = battle.field.water_rows[0]
+        self.assertTrue(battle.spawn_plant_direct("lily_pad", water_row, 0))
+        self.assertTrue(battle.spawn_plant_direct("cattail", water_row, 0))
+
+        balloon_row = 0
+        balloon_x, _ = battle.cell_center(balloon_row, 7)
+        balloon = battle.spawn_zombie_instance("balloon", balloon_row, balloon_x)
+        balloon.state["balloon_state"] = "airborne"
+        battle.zombies.append(balloon)
+        battle.main[(water_row, 0)].cd = 0.0
+
+        battle.update_plants(0.01)
+
+        self.assertTrue(
+            any(projectile.anti_air and projectile.row == balloon_row for projectile in battle.projs)
+        )
+
     def test_validator_skips_independent_bonus_board_rules(self):
         vasebreaker = replace(
             self.by_code["4-5"],

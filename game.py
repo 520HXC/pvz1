@@ -9410,6 +9410,14 @@ class BattleState:
             if kind == "flower_pot" and not self.field.is_roof:
                 return False
             return True
+        if kind == "cattail":
+            support = self.support.get(pos)
+            return (
+                water
+                and pos not in self.main
+                and support is not None
+                and support.kind == "lily_pad"
+            )
         if pos in self.main:
             return False
         if cfg.aquatic_only and not water:
