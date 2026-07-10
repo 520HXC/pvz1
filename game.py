@@ -5135,6 +5135,8 @@ class BattleState:
         self.setup_battle_intro()
         if self.is_battle_intro_active() and isinstance(rules.get("boss_intro_phase", ()), (list, tuple)):
             self.zomboss_intro_index = len(tuple(rules.get("boss_intro_phase", ())))
+        if self.is_adventure_mainline():
+            self.ensure_custom_adventure_wave_queue()
 
     def queue_zomboss_attack(self, kind: str) -> None:
         if self.zomboss_pending_attack or self.result:
@@ -5298,8 +5300,18 @@ class BattleState:
                 self.zomboss_attack_t += dt
         if not intro_active:
             self.zomboss_stomp_t += dt
+            if self.is_adventure_mainline():
+                self.update_custom_adventure_wave_recovery(dt)
             spawn_cycle = self.zomboss_spawn_cycle()
-            spawn_interval = max(2.4, float(spawn_cycle.get("interval", 6.0)))
+            if self.is_adventure_mainline():
+                spawn_interval = calculate_spawn_cooldown(
+                    self.level.spawn_base,
+                    self.level.spawn_min,
+                    self.level.spawn_acc,
+                    self.elapsed,
+                )
+            else:
+                spawn_interval = max(2.4, float(spawn_cycle.get("interval", 6.0)))
             self.zomboss_spawn_t += dt
             if self.zomboss_spawn_t >= spawn_interval:
                 self.zomboss_spawn_t -= spawn_interval
@@ -6432,6 +6444,37 @@ class BattleState:
             return 2 if stage <= 6 else 3
         return 3 if stage <= 6 else 4
 
+    def wave_recovery_ready(self, dt: float, active_zombies: List[Zombie]) -> bool:
+        if self.current_wave <= 0 or self.current_wave >= self.total_waves:
+            return False
+        if self.wave_spawn_remaining > 0 or self.wave_spawn_queue:
+            return False
+        upcoming_wave = self.current_wave + 1
+        required_delay = next_wave_recovery_delay(
+            self.wave_interval,
+            upcoming_wave in self.large_wave_indices,
+        )
+        lane_limit = self.adventure_lane_pressure_limit() if self.is_adventure_mainline() else max(2, self.level.danger)
+        pressure_safe = lanes_within_pressure_limit(
+            (z.row for z in active_zombies),
+            lane_limit,
+        )
+        newly_started = int(self.next_wave) != upcoming_wave
+        self.next_wave = float(upcoming_wave)
+        if newly_started:
+            self.wave_pause_t = required_delay
+            return False
+        self.wave_pause_t = advance_recovery_countdown(
+            self.wave_pause_t,
+            dt,
+            pressure_safe,
+            required_delay,
+        )
+        if pressure_safe and self.wave_pause_t <= 1e-9:
+            self.wave_pause_t = 0.0
+            return True
+        return False
+
     def spawn_rows_for_kind(self, kind: str) -> List[int]:
         if self.is_bobsled_bonanza_mode() and kind in ("bobsled_team", "zomboni"):
             return [row for row in range(self.rows()) if not self.is_water(row)]
@@ -6536,21 +6579,39 @@ class BattleState:
             queue.append(cheapest)
         return queue
 
-    def ensure_custom_adventure_wave_queue(self) -> bool:
+    def start_custom_adventure_wave(self) -> bool:
         if not self.is_adventure_mainline() or self.total_waves <= 0:
             return False
+        if self.current_wave >= self.total_waves:
+            return False
+        self.current_wave += 1
+        self.wave_spawn_queue = self.build_adventure_wave_queue(self.current_wave)
+        self.wave_spawn_total = len(self.wave_spawn_queue)
+        self.wave_spawn_remaining = len(self.wave_spawn_queue)
+        self.next_wave = 0.0
+        self.wave_pause_t = 0.0
+        self.spawn_t = 0.0
+        self.zomboss_spawn_t = 0.0
+        return bool(self.wave_spawn_queue)
+
+    def ensure_custom_adventure_wave_queue(self) -> bool:
         if self.wave_spawn_queue:
             return True
-        while self.current_wave < self.total_waves:
-            self.current_wave += 1
-            self.wave_spawn_queue = self.build_adventure_wave_queue(self.current_wave)
-            self.wave_spawn_total = len(self.wave_spawn_queue)
-            self.wave_spawn_remaining = len(self.wave_spawn_queue)
-            if self.wave_spawn_queue:
-                return True
-        self.wave_spawn_total = 0
-        self.wave_spawn_remaining = 0
+        if self.current_wave == 0:
+            return self.start_custom_adventure_wave()
         return False
+
+    def update_custom_adventure_wave_recovery(self, dt: float) -> bool:
+        if not self.is_adventure_mainline():
+            return False
+        active_zombies = [
+            z
+            for z in self.zombies
+            if z.hp > 0 and float(z.state.get("dying_t", 0.0)) <= 0.0
+        ]
+        if not self.wave_recovery_ready(dt, active_zombies):
+            return False
+        return self.start_custom_adventure_wave()
 
     def consume_custom_adventure_wave_kind(self) -> Optional[str]:
         if not self.ensure_custom_adventure_wave_queue():
@@ -7942,21 +8003,31 @@ class BattleState:
                     z = self.spawn_zombie_instance("bungee", row, float(x), wave_idx=1, hp_scale=0.92, speed_scale=1.0, dps_scale=1.0)
                     z.state["steal_t"] = random.uniform(1.35, 1.7)
                     self.zombies.append(z)
-        ground_interval = max(5.8, self.mode_float("bungee_blitz_ground_interval", 8.8) - self.elapsed * 0.018)
         ground_cap = max(2, int(self.mode_float("bungee_blitz_ground_cap", 5.0)))
-        while self.mode_spawn_t >= ground_interval and len(active_alive) < ground_cap:
-            self.mode_spawn_t -= ground_interval
-            if self.is_adventure_mainline():
+        if self.is_adventure_mainline():
+            self.update_custom_adventure_wave_recovery(dt)
+            ground_interval = calculate_spawn_cooldown(
+                self.level.spawn_base,
+                self.level.spawn_min,
+                self.level.spawn_acc,
+                self.elapsed,
+            )
+            while self.spawn_t >= ground_interval and len(active_alive) < ground_cap:
                 kind = self.consume_custom_adventure_wave_kind()
                 if kind is None:
                     break
+                self.spawn_t -= ground_interval
                 self.spawn_custom_adventure_ground(
                     kind,
                     hp_scale=0.90,
                     speed_scale=0.96,
                     dps_scale=0.92,
                 )
-            else:
+                active_alive = [z for z in self.zombies if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0]
+        else:
+            ground_interval = max(5.8, self.mode_float("bungee_blitz_ground_interval", 8.8) - self.elapsed * 0.018)
+            while self.mode_spawn_t >= ground_interval and len(active_alive) < ground_cap:
+                self.mode_spawn_t -= ground_interval
                 ground_pool = [kind for kind in self.mode_list("bungee_blitz_ground_pool") if kind in self.zombie_types]
                 if not ground_pool:
                     ground_pool = ["normal", "conehead", "buckethead"]
@@ -7964,7 +8035,7 @@ class BattleState:
                 row = self.choose_spawn_row(kind)
                 spawn_x = self.lawn_right() + random.randint(38, 96)
                 self.zombies.append(self.spawn_zombie_instance(kind, row, float(spawn_x), wave_idx=1, hp_scale=0.90, speed_scale=0.96, dps_scale=0.92))
-            active_alive = [z for z in self.zombies if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0]
+                active_alive = [z for z in self.zombies if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0]
 
     def setup_whack_mode(self) -> None:
         self.cards = []
@@ -8140,6 +8211,8 @@ class BattleState:
             self.wave_spawn_total = 0
             self.wave_spawn_remaining = 0
             self.cleaners = [False for _ in range(self.rows())]
+            if self.is_adventure_mainline():
+                self.ensure_custom_adventure_wave_queue()
 
     def update_special_minigame_mode(self, dt: float) -> None:
         if self.is_zomboss_boss_mode():
@@ -9719,31 +9792,10 @@ class BattleState:
                     self.spawn_t -= spawn_cd
                     self.spawn_zombie(self.current_wave)
                     self.wave_spawn_remaining -= 1
-            lane_pressure_limit = self.adventure_lane_pressure_limit() if self.is_adventure_mainline() else max(2, self.level.danger)
             if self.wave_spawn_remaining <= 0 and self.current_wave > 0:
                 if self.current_wave < self.total_waves:
-                    upcoming_wave = self.current_wave + 1
-                    required_delay = next_wave_recovery_delay(
-                        self.wave_interval,
-                        upcoming_wave in self.large_wave_indices,
-                    )
-                    pressure_safe = lanes_within_pressure_limit(
-                        (z.row for z in active_zombies),
-                        lane_pressure_limit,
-                    )
-                    newly_started = int(self.next_wave) != upcoming_wave
-                    self.next_wave = float(upcoming_wave)
-                    if newly_started:
-                        self.wave_pause_t = required_delay
-                    else:
-                        self.wave_pause_t = advance_recovery_countdown(
-                            self.wave_pause_t,
-                            dt,
-                            pressure_safe,
-                            required_delay,
-                        )
-                        if pressure_safe and self.wave_pause_t <= 0.0:
-                            self.start_next_wave()
+                    if self.wave_recovery_ready(dt, active_zombies):
+                        self.start_next_wave()
                 elif not active_zombies and not self.rolling_nuts:
                     self.result = "win"
         if self.mode_bool("conveyor", False):

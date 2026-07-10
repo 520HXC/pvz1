@@ -197,7 +197,15 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
         while True:
             kind = battle.consume_custom_adventure_wave_kind()
             if kind is None:
-                break
+                if battle.current_wave >= battle.total_waves:
+                    break
+                battle.update_custom_adventure_wave_recovery(0.0)
+                delay = next_wave_recovery_delay(
+                    battle.wave_interval,
+                    (battle.current_wave + 1) in battle.large_wave_indices,
+                )
+                battle.update_custom_adventure_wave_recovery(delay)
+                continue
             consumed.append((battle.current_wave, kind))
             costs_by_wave[battle.current_wave] = costs_by_wave.get(battle.current_wave, 0) + battle.zombie_point_cost(kind)
         for wave_idx, cost in costs_by_wave.items():
@@ -225,7 +233,12 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
         self.assertTrue(hasattr(bungee, "ensure_custom_adventure_wave_queue"))
         self.assertTrue(bungee.ensure_custom_adventure_wave_queue())
         expected_bungee = bungee.wave_spawn_queue[0]
-        bungee.mode_spawn_t = 999.0
+        bungee.spawn_t = spawn_cooldown(
+            bungee.level.spawn_base,
+            bungee.level.spawn_min,
+            bungee.level.spawn_acc,
+            bungee.elapsed,
+        )
         bungee.update_bungee_blitz_mode(0.0)
         self.assertEqual(expected_bungee, bungee.zombies[0].kind)
 
@@ -301,6 +314,111 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
         battle.spawn_t = 3.0
         battle.update(0.0)
         self.assertEqual(before - 1, len(battle.wave_spawn_queue))
+
+    def drain_current_custom_queue(self, battle):
+        self.assertTrue(battle.ensure_custom_adventure_wave_queue())
+        while battle.wave_spawn_queue:
+            self.assertIsNotNone(battle.consume_custom_adventure_wave_kind())
+
+    def test_custom_wave_waits_for_lane_pressure_and_full_recovery_interval(self):
+        battle = self.make_battle()
+        battle.reset(self.by_code["5-5"], mode_rules=self.adventure_rules("5-5", random_seed=55))
+        self.drain_current_custom_queue(battle)
+        self.assertEqual(1, battle.current_wave)
+        battle.mode_rules["bungee_blitz_ground_cap"] = 99.0
+        x = battle.lawn_right()
+        battle.zombies.extend(battle.spawn_zombie_instance("normal", 0, x) for _ in range(4))
+        battle.mode_spawn_t = 999.0
+
+        battle.update_bungee_blitz_mode(0.0)
+
+        self.assertEqual(1, battle.current_wave)
+        self.assertEqual(battle.wave_interval, battle.wave_pause_t)
+
+        for row, zombie in enumerate(battle.zombies):
+            zombie.row = row
+        battle.update_bungee_blitz_mode(battle.wave_interval - 0.1)
+        self.assertEqual(1, battle.current_wave)
+        battle.update_bungee_blitz_mode(0.1)
+        self.assertEqual(2, battle.current_wave)
+        self.assertTrue(battle.wave_spawn_queue)
+
+    def test_custom_wave_pressure_spike_resets_recovery_countdown(self):
+        battle = self.make_battle()
+        battle.reset(self.by_code["5-5"], mode_rules=self.adventure_rules("5-5", random_seed=56))
+        self.drain_current_custom_queue(battle)
+        battle.mode_spawn_t = 0.0
+        battle.update_bungee_blitz_mode(0.0)
+        battle.update_bungee_blitz_mode(4.0)
+        self.assertEqual(battle.wave_interval - 4.0, battle.wave_pause_t)
+
+        x = battle.lawn_right()
+        battle.zombies.extend(battle.spawn_zombie_instance("normal", 0, x) for _ in range(4))
+        battle.update_bungee_blitz_mode(0.5)
+        self.assertEqual(battle.wave_interval, battle.wave_pause_t)
+        self.assertEqual(1, battle.current_wave)
+
+    def test_boss_custom_wave_uses_the_same_lane_recovery_gate(self):
+        boss = self.make_battle()
+        boss.reset(self.by_code["5-10"], mode_rules=self.adventure_rules("5-10", random_seed=58))
+        self.drain_current_custom_queue(boss)
+        boss.battle_intro_phase = ""
+        boss.zomboss_intro_index = len(tuple(boss.zomboss_ruleset().get("boss_intro_phase", ())))
+        x = boss.lawn_right()
+        boss.zombies.extend(boss.spawn_zombie_instance("normal", 0, x) for _ in range(5))
+
+        boss.update_zomboss_boss_mode(0.0)
+        self.assertEqual(1, boss.current_wave)
+        self.assertEqual(boss.wave_interval, boss.wave_pause_t)
+
+        for row, zombie in enumerate(boss.zombies):
+            zombie.row = row
+        boss.update_zomboss_boss_mode(boss.wave_interval)
+        self.assertEqual(2, boss.current_wave)
+        self.assertIsNone(boss.result)
+
+    def test_custom_large_wave_recovery_adds_two_seconds(self):
+        battle = self.make_battle()
+        battle.reset(self.by_code["5-5"], mode_rules=self.adventure_rules("5-5", random_seed=57))
+        battle.current_wave = 11
+        battle.wave_spawn_queue = []
+        battle.wave_spawn_remaining = 0
+        battle.mode_spawn_t = 0.0
+
+        battle.update_bungee_blitz_mode(0.0)
+
+        self.assertEqual(11, battle.current_wave)
+        self.assertEqual(battle.wave_interval + 2.0, battle.wave_pause_t)
+
+    def test_custom_ground_spawns_use_exact_adventure_cooldown(self):
+        for code in ("5-5", "5-10"):
+            with self.subTest(code=code):
+                battle = self.make_battle()
+                battle.reset(self.by_code[code], mode_rules=self.adventure_rules(code, random_seed=510))
+                self.assertTrue(battle.ensure_custom_adventure_wave_queue())
+                battle.elapsed = 100.0
+                cooldown = spawn_cooldown(
+                    battle.level.spawn_base,
+                    battle.level.spawn_min,
+                    battle.level.spawn_acc,
+                    battle.elapsed,
+                )
+                if code == "5-10":
+                    battle.battle_intro_phase = ""
+                    battle.zomboss_intro_index = len(tuple(battle.zomboss_ruleset().get("boss_intro_phase", ())))
+                    battle.zomboss_spawn_t = cooldown - 0.01
+                    battle.update_zomboss_boss_mode(0.0)
+                    self.assertEqual([], battle.zombies)
+                    battle.zomboss_spawn_t = cooldown
+                    battle.update_zomboss_boss_mode(0.0)
+                else:
+                    battle.spawn_t = cooldown - 0.01
+                    battle.mode_spawn_t = 0.0
+                    battle.update_bungee_blitz_mode(0.0)
+                    self.assertEqual([], battle.zombies)
+                    battle.spawn_t = cooldown
+                    battle.update_bungee_blitz_mode(0.0)
+                self.assertEqual(1, len(battle.zombies))
 
 
 if __name__ == "__main__":
