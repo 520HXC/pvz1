@@ -175,6 +175,133 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
         battle.update(0.5)
         self.assertEqual(6.0, battle.wave_pause_t)
 
+    def test_custom_adventure_modes_keep_their_point_wave_plans(self):
+        for code in ("5-5", "5-10"):
+            with self.subTest(code=code):
+                battle = self.make_battle()
+                battle.reset(self.by_code[code], mode_rules=self.adventure_rules(code, random_seed=510))
+                self.assertGreater(battle.total_waves, 0)
+                self.assertEqual(battle.total_waves, len(battle.wave_budgets))
+                self.assertTrue(battle.large_wave_indices)
+                self.assertGreater(battle.final_wave_index, 0)
+
+    def consume_all_custom_waves(self, code, seed):
+        battle = self.make_battle()
+        battle.reset(self.by_code[code], mode_rules=self.adventure_rules(code, random_seed=seed))
+        self.assertTrue(
+            hasattr(battle, "consume_custom_adventure_wave_kind"),
+            "custom adventure modes need a point-budget queue consumer",
+        )
+        consumed = []
+        costs_by_wave = {}
+        while True:
+            kind = battle.consume_custom_adventure_wave_kind()
+            if kind is None:
+                break
+            consumed.append((battle.current_wave, kind))
+            costs_by_wave[battle.current_wave] = costs_by_wave.get(battle.current_wave, 0) + battle.zombie_point_cost(kind)
+        for wave_idx, cost in costs_by_wave.items():
+            self.assertLessEqual(cost, battle.wave_budgets[wave_idx - 1])
+        self.assertEqual(battle.total_waves, battle.current_wave)
+        return battle, consumed
+
+    def test_custom_adventure_queues_are_seeded_and_budget_bounded(self):
+        for code in ("5-5", "5-10"):
+            with self.subTest(code=code):
+                first_battle, first = self.consume_all_custom_waves(code, 5510)
+                _second_battle, second = self.consume_all_custom_waves(code, 5510)
+                self.assertTrue(first)
+                self.assertEqual(first, second)
+                if code == "5-10":
+                    first_battle.battle_intro_phase = ""
+                    first_battle.zomboss_intro_index = len(tuple(first_battle.zomboss_ruleset().get("boss_intro_phase", ())))
+                    first_battle.update_zomboss_boss_mode(0.0)
+                    self.assertIsNone(first_battle.result)
+                    self.assertGreater(first_battle.zomboss_hp, 0.0)
+
+    def test_bungee_and_boss_ground_loops_consume_custom_point_queues(self):
+        bungee = self.make_battle()
+        bungee.reset(self.by_code["5-5"], mode_rules=self.adventure_rules("5-5", random_seed=55))
+        self.assertTrue(hasattr(bungee, "ensure_custom_adventure_wave_queue"))
+        self.assertTrue(bungee.ensure_custom_adventure_wave_queue())
+        expected_bungee = bungee.wave_spawn_queue[0]
+        bungee.mode_spawn_t = 999.0
+        bungee.update_bungee_blitz_mode(0.0)
+        self.assertEqual(expected_bungee, bungee.zombies[0].kind)
+
+        boss = self.make_battle()
+        boss.reset(self.by_code["5-10"], mode_rules=self.adventure_rules("5-10", random_seed=510))
+        self.assertTrue(boss.ensure_custom_adventure_wave_queue())
+        expected_boss = boss.wave_spawn_queue[0]
+        boss.battle_intro_phase = ""
+        boss.zomboss_intro_index = len(tuple(boss.zomboss_ruleset().get("boss_intro_phase", ())))
+        boss.zomboss_spawn_t = 999.0
+        boss.update_zomboss_boss_mode(0.0)
+        ground = [z for z in boss.zombies if z.kind != "bungee"]
+        self.assertEqual(1, len(ground))
+        self.assertEqual(expected_boss, ground[0].kind)
+
+    def test_custom_ground_loops_stop_after_all_point_waves_are_consumed(self):
+        bungee, _consumed = self.consume_all_custom_waves("5-5", 55)
+        bungee.mode_spawn_t = 999.0
+        bungee.update_bungee_blitz_mode(0.0)
+        self.assertEqual([], bungee.zombies)
+
+    def test_boss_intro_spawns_do_not_consume_the_ground_budget_queue(self):
+        boss = self.make_battle()
+        boss.reset(self.by_code["5-10"], mode_rules=self.adventure_rules("5-10", random_seed=510))
+        self.assertTrue(boss.ensure_custom_adventure_wave_queue())
+        queued_before = list(boss.wave_spawn_queue)
+        boss.battle_intro_phase = ""
+        boss.zomboss_intro_index = 0
+        boss.update_zomboss_boss_mode(2.0)
+
+        self.assertEqual(2, len(boss.zombies))
+        self.assertEqual(queued_before, boss.wave_spawn_queue)
+
+    def test_non_adventure_boss_keeps_legacy_pack_mode(self):
+        boss = self.make_battle()
+        rules = self.adventure_rules("5-10", random_seed=510)
+        rules.pop("adventure_level_launch")
+        boss.reset(self.by_code["5-10"], mode_rules=rules)
+        self.assertFalse(boss.is_adventure_mainline())
+        self.assertEqual(0, boss.total_waves)
+        self.assertEqual([], boss.wave_budgets)
+
+    def test_boss_identity_guarantee_is_not_spawned_as_a_ground_zombie(self):
+        boss, consumed = self.consume_all_custom_waves("5-10", 510)
+        self.assertNotIn("zomboss", [kind for _wave, kind in consumed])
+        self.assertFalse(any(wave == 16 for wave, _kind in consumed))
+        self.assertGreater(boss.zomboss_hp, 0.0)
+
+    def test_adventure_runtime_spawn_cooldown_ignores_mode_multipliers(self):
+        battle = self.make_battle()
+        level = replace(
+            self.by_code["1-2"],
+            spawn_base=4.0,
+            spawn_min=3.0,
+            spawn_acc=1.0,
+        )
+        battle.reset(
+            level,
+            mode_rules={
+                "adventure_level_launch": True,
+                "random_seed": 12,
+                "spawn_rate_mult": 999.0,
+                "rhythm_cycle": 1.0,
+            },
+        )
+        battle.start_next_wave()
+        battle.elapsed = 100.0
+        battle.spawn_t = 2.99
+        before = len(battle.wave_spawn_queue)
+        battle.update(0.0)
+        self.assertEqual(before, len(battle.wave_spawn_queue))
+
+        battle.spawn_t = 3.0
+        battle.update(0.0)
+        self.assertEqual(before - 1, len(battle.wave_spawn_queue))
+
 
 if __name__ == "__main__":
     unittest.main()

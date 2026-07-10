@@ -5117,10 +5117,11 @@ class BattleState:
         self.zomboss_pending_attack = {}
         self.zomboss_night_tint = 1.0
         self.zomboss_actor = None
-        self.total_waves = 0
-        self.large_wave_indices = ()
-        self.final_wave_index = 0
-        self.wave_budgets = []
+        if not self.is_adventure_mainline():
+            self.total_waves = 0
+            self.large_wave_indices = ()
+            self.final_wave_index = 0
+            self.wave_budgets = []
         self.wave_spawn_queue = []
         self.wave_spawn_total = 0
         self.wave_spawn_remaining = 0
@@ -5312,7 +5313,12 @@ class BattleState:
                 )
                 active_cap = 6 if self.zomboss_stage_key() == "adventure_zomboss_boss" else 7
                 if active_ground < active_cap:
-                    self.spawn_zomboss_pack(self.zomboss_spawn_pack(), wave_idx=1)
+                    if self.is_adventure_mainline():
+                        kind = self.consume_custom_adventure_wave_kind()
+                        if kind is not None:
+                            self.spawn_custom_adventure_ground(kind)
+                    else:
+                        self.spawn_zomboss_pack(self.zomboss_spawn_pack(), wave_idx=1)
             attack_interval = max(4.0, float(rules.get("boss_attack_interval", 8.5)))
             bungee_cycle = rules.get("boss_bungee_cycle", {})
             bungee_interval = 0.0
@@ -6472,12 +6478,16 @@ class BattleState:
         point_budget = self.wave_budgets[budget_idx] if self.wave_budgets else max(1, int(self.level.danger))
         queue: List[str] = []
         guaranteed_cost = 0
+        reserved_boss_identity = False
         for guaranteed_wave, kind, count in self.level.guaranteed_zombies:
             if int(guaranteed_wave) != wave_idx or kind not in self.zombie_types:
                 continue
             for _ in range(max(1, int(count))):
-                queue.append(kind)
                 guaranteed_cost += self.zombie_point_cost(kind)
+                if kind == "zomboss" and self.is_zomboss_boss_mode():
+                    reserved_boss_identity = True
+                    continue
+                queue.append(kind)
         remaining = max(0, int(point_budget) - guaranteed_cost)
         max_cost = 2 + max(0, self.level.world - 1)
         if wave_idx in self.large_wave_indices:
@@ -6521,10 +6531,55 @@ class BattleState:
                 heavy_added += 1
         self.wave_rng.shuffle(tail)
         queue.extend(tail)
-        if not queue:
+        if not queue and not reserved_boss_identity:
             cheapest = min(pool, key=lambda kind: self.zombie_point_cost(kind))
             queue.append(cheapest)
         return queue
+
+    def ensure_custom_adventure_wave_queue(self) -> bool:
+        if not self.is_adventure_mainline() or self.total_waves <= 0:
+            return False
+        if self.wave_spawn_queue:
+            return True
+        while self.current_wave < self.total_waves:
+            self.current_wave += 1
+            self.wave_spawn_queue = self.build_adventure_wave_queue(self.current_wave)
+            self.wave_spawn_total = len(self.wave_spawn_queue)
+            self.wave_spawn_remaining = len(self.wave_spawn_queue)
+            if self.wave_spawn_queue:
+                return True
+        self.wave_spawn_total = 0
+        self.wave_spawn_remaining = 0
+        return False
+
+    def consume_custom_adventure_wave_kind(self) -> Optional[str]:
+        if not self.ensure_custom_adventure_wave_queue():
+            return None
+        kind = self.wave_spawn_queue.pop(0)
+        self.wave_spawn_remaining = len(self.wave_spawn_queue)
+        return kind
+
+    def spawn_custom_adventure_ground(
+        self,
+        kind: str,
+        *,
+        hp_scale: float = 1.0,
+        speed_scale: float = 1.0,
+        dps_scale: float = 1.0,
+    ) -> None:
+        row = self.choose_spawn_row(kind)
+        spawn_x = self.lawn_right() + self.wave_rng.randint(38, 96)
+        self.zombies.append(
+            self.spawn_zombie_instance(
+                kind,
+                row,
+                float(spawn_x),
+                wave_idx=max(1, self.current_wave),
+                hp_scale=hp_scale,
+                speed_scale=speed_scale,
+                dps_scale=dps_scale,
+            )
+        )
 
     def spawn_plant_direct(self, kind: str, row: int, col: int, force_place: bool = False) -> bool:
         if kind not in self.plant_types:
@@ -7891,13 +7946,24 @@ class BattleState:
         ground_cap = max(2, int(self.mode_float("bungee_blitz_ground_cap", 5.0)))
         while self.mode_spawn_t >= ground_interval and len(active_alive) < ground_cap:
             self.mode_spawn_t -= ground_interval
-            ground_pool = [kind for kind in self.mode_list("bungee_blitz_ground_pool") if kind in self.zombie_types]
-            if not ground_pool:
-                ground_pool = ["normal", "conehead", "buckethead"]
-            kind = random.choice(ground_pool)
-            row = self.choose_spawn_row(kind)
-            spawn_x = self.lawn_right() + random.randint(38, 96)
-            self.zombies.append(self.spawn_zombie_instance(kind, row, float(spawn_x), wave_idx=1, hp_scale=0.90, speed_scale=0.96, dps_scale=0.92))
+            if self.is_adventure_mainline():
+                kind = self.consume_custom_adventure_wave_kind()
+                if kind is None:
+                    break
+                self.spawn_custom_adventure_ground(
+                    kind,
+                    hp_scale=0.90,
+                    speed_scale=0.96,
+                    dps_scale=0.92,
+                )
+            else:
+                ground_pool = [kind for kind in self.mode_list("bungee_blitz_ground_pool") if kind in self.zombie_types]
+                if not ground_pool:
+                    ground_pool = ["normal", "conehead", "buckethead"]
+                kind = random.choice(ground_pool)
+                row = self.choose_spawn_row(kind)
+                spawn_x = self.lawn_right() + random.randint(38, 96)
+                self.zombies.append(self.spawn_zombie_instance(kind, row, float(spawn_x), wave_idx=1, hp_scale=0.90, speed_scale=0.96, dps_scale=0.92))
             active_alive = [z for z in self.zombies if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0]
 
     def setup_whack_mode(self) -> None:
@@ -8065,10 +8131,11 @@ class BattleState:
         if self.is_bobsled_bonanza_mode():
             self.setup_bobsled_bonanza_mode()
         if self.is_bungee_blitz_mode():
-            self.total_waves = 0
-            self.large_wave_indices = ()
-            self.final_wave_index = 0
-            self.wave_budgets = []
+            if not self.is_adventure_mainline():
+                self.total_waves = 0
+                self.large_wave_indices = ()
+                self.final_wave_index = 0
+                self.wave_budgets = []
             self.wave_spawn_queue = []
             self.wave_spawn_total = 0
             self.wave_spawn_remaining = 0
@@ -9621,16 +9688,17 @@ class BattleState:
                 self.level.spawn_acc,
                 self.elapsed,
             )
-            spawn_cd /= max(0.25, self.mode_float("spawn_rate_mult", 1.0))
-            if self.is_special_hud_mode():
-                spawn_cd *= self.special_spawn_gap_scale()
-            rhythm_cycle = self.mode_float("rhythm_cycle", 24.0)
-            if rhythm_cycle > 0:
-                phase = (self.elapsed % rhythm_cycle) / rhythm_cycle
-                if phase < 0.22:
-                    spawn_cd *= 1.06 if self.is_adventure_mainline() else 1.10
-                elif phase > 0.82:
-                    spawn_cd *= 0.94 if self.is_adventure_mainline() else 0.84
+            if not self.is_adventure_mainline():
+                spawn_cd /= max(0.25, self.mode_float("spawn_rate_mult", 1.0))
+                if self.is_special_hud_mode():
+                    spawn_cd *= self.special_spawn_gap_scale()
+                rhythm_cycle = self.mode_float("rhythm_cycle", 24.0)
+                if rhythm_cycle > 0:
+                    phase = (self.elapsed % rhythm_cycle) / rhythm_cycle
+                    if phase < 0.22:
+                        spawn_cd *= 1.10
+                    elif phase > 0.82:
+                        spawn_cd *= 0.84
             if self.is_adventure_mainline():
                 while self.wave_spawn_queue and self.spawn_t >= spawn_cd:
                     self.spawn_t -= spawn_cd
