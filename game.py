@@ -9198,9 +9198,10 @@ class BattleState:
         else:
             self.conveyor_pool = []
             self.conveyor_cap = 8
-        for kind, row, col in level.preplaced_supports:
-            if kind in self.plant_types and self.plant_types[kind].is_support:
-                self.spawn_plant_direct(kind, row, col, force_place=False)
+        if self.mode_bool("adventure_level_launch", False):
+            for kind, row, col in level.preplaced_supports:
+                if kind in self.plant_types and self.plant_types[kind].is_support:
+                    self.spawn_plant_direct(kind, row, col, force_place=False)
         if self.is_vasebreaker_mode():
             self.cleaners = [False for _ in range(self.rows())]
             self.total_waves = 0
@@ -15660,6 +15661,7 @@ class Game:
         pick_limit: Optional[int] = None,
         mode_rules: Optional[Dict[str, object]] = None,
         return_scene: str = "adventure_level_select",
+        adventure_launch: bool = False,
     ) -> None:
         if not (0 <= idx < len(self.levels)):
             return
@@ -15668,6 +15670,8 @@ class Game:
         style = stage_style or self.stage_style_for_level(level)
         rules = dict(mode_rules or {})
         rules.setdefault("return_scene", return_scene)
+        if adventure_launch:
+            rules["adventure_level_launch"] = True
         if style == "normal_select":
             self.open_plant_select(
                 idx,
@@ -19101,6 +19105,7 @@ class Game:
                         selected_cards=[],
                         mode_rules=stage_rules,
                         return_scene="adventure_level_select",
+                        adventure_launch=True,
                     )
                     return
             return

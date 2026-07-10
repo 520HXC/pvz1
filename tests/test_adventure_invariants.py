@@ -1,3 +1,4 @@
+import inspect
 import os
 import unittest
 from dataclasses import replace
@@ -35,6 +36,14 @@ class AdventureInvariantTests(unittest.TestCase):
             self.plants,
             conveyor_pools=game.ADVENTURE_CONVEYOR_POOLS,
             conveyor_opening_cards=getattr(game, "ADVENTURE_CONVEYOR_OPENING_CARDS", {}),
+        )
+
+    def make_battle(self):
+        return game.BattleState(
+            self.plants,
+            game.build_zombies(),
+            game.build_battlefields(),
+            {"upgrades": {}},
         )
 
     def test_only_real_platforms_use_the_support_layer(self):
@@ -76,15 +85,10 @@ class AdventureInvariantTests(unittest.TestCase):
             self.assertTrue(opening_cards.get(code), code)
             self.assertEqual("flower_pot", opening_cards[code][0], code)
 
-    def test_reset_preplaces_5_1_pots_without_spending_sun(self):
-        battle = game.BattleState(
-            self.plants,
-            game.build_zombies(),
-            game.build_battlefields(),
-            {"upgrades": {}},
-        )
+    def test_adventure_reset_preplaces_5_1_pots_without_spending_sun(self):
+        battle = self.make_battle()
         level = self.by_code["5-1"]
-        battle.reset(level)
+        battle.reset(level, mode_rules={"adventure_level_launch": True})
 
         self.assertEqual(level.start_sun, battle.sun)
         self.assertEqual(25, len(battle.support))
@@ -94,6 +98,36 @@ class AdventureInvariantTests(unittest.TestCase):
         )
         self.assertTrue(all(plant.kind == "flower_pot" for plant in battle.support.values()))
 
+    def test_non_adventure_reuse_of_5_1_does_not_preplace_pots(self):
+        for mode_name in ("mini_last_stand", "survival_roof"):
+            with self.subTest(mode_name=mode_name):
+                battle = self.make_battle()
+                battle.reset(
+                    self.by_code["5-1"],
+                    mode_rules={"mode_name": mode_name},
+                )
+
+                self.assertEqual({}, battle.support)
+
+    def test_adventure_launch_propagates_explicit_preplacement_flag(self):
+        self.assertIn(
+            "adventure_launch",
+            inspect.signature(game.Game.launch_level_or_mode).parameters,
+            "launch_level_or_mode needs an explicit adventure launch flag",
+        )
+        instance = game.Game.__new__(game.Game)
+        instance.levels = [self.by_code["5-1"]]
+        instance.adventure_chapter_selected = 5
+        captured = {}
+
+        def capture_open(_idx, **kwargs):
+            captured.update(kwargs)
+
+        instance.open_plant_select = capture_open
+        game.Game.launch_level_or_mode(instance, 0, adventure_launch=True)
+
+        self.assertTrue(captured["mode_rules"]["adventure_level_launch"])
+
     def test_roof_conveyor_rules_guarantee_a_pot_first(self):
         instance = game.Game.__new__(game.Game)
         instance.plants = self.plants
@@ -102,6 +136,81 @@ class AdventureInvariantTests(unittest.TestCase):
             rules = game.Game.adventure_stage_mode_rules(instance, self.by_code[code])
             self.assertTrue(rules.get("opening_cards"), code)
             self.assertEqual("flower_pot", rules["opening_cards"][0], code)
+
+    def test_roof_conveyors_emit_a_real_flower_pot_first(self):
+        instance = game.Game.__new__(game.Game)
+        instance.plants = self.plants
+
+        for code in ("5-5", "5-10"):
+            battle = self.make_battle()
+            rules = game.Game.adventure_stage_mode_rules(instance, self.by_code[code])
+            battle.reset(self.by_code[code], mode_rules=rules)
+            battle.conveyor_t = battle.mode_float("conveyor_interval", 1.9)
+            battle.update_conveyor()
+            self.assertEqual(["flower_pot"], battle.cards, code)
+
+    def test_main_layer_support_behaviors_remain_functional(self):
+        battle = self.make_battle()
+        battle.reset(self.by_code["4-1"])
+
+        self.assertTrue(battle.spawn_plant_direct("torchwood", 0, 0))
+        self.assertIn((0, 0), battle.main)
+        self.assertNotIn((0, 0), battle.support)
+        self.assertFalse(battle.can_place("peashooter", 0, 0))
+
+        self.assertTrue(battle.spawn_plant_direct("plantern", 1, 2))
+        plantern_x, _ = battle.cell_center(1, 2)
+        zombie = battle.spawn_zombie_instance("normal", 1, plantern_x)
+        self.assertTrue(battle.zombie_revealed_by_plantern(zombie))
+
+        self.assertTrue(battle.spawn_plant_direct("umbrella_leaf", 1, 4))
+        self.assertTrue(battle.has_umbrella_cover(0, 3))
+        self.assertFalse(battle.has_umbrella_cover(0, 0))
+
+    def test_validator_skips_independent_bonus_board_rules(self):
+        vasebreaker = replace(
+            self.by_code["4-5"],
+            cards=[],
+            adventure_zombie_pool=("ducky_tube", "balloon"),
+        )
+
+        self.assertEqual([], self.validate([vasebreaker]))
+
+    def test_balloon_counter_must_be_deployable_on_the_battlefield(self):
+        fog_cactus_only = replace(
+            self.by_code["4-1"],
+            cards=["cactus"],
+            adventure_zombie_pool=("balloon",),
+        )
+        fog_blover = replace(fog_cactus_only, cards=["blover"])
+        fog_cattail = replace(fog_cactus_only, cards=["cattail"])
+        roof_cactus_only = replace(
+            self.by_code["5-2"],
+            cards=["cactus"],
+            adventure_zombie_pool=("balloon",),
+            preplaced_supports=(),
+        )
+        roof_cactus_on_pots = replace(
+            roof_cactus_only,
+            preplaced_supports=(("flower_pot", 0, 0),),
+        )
+
+        fog_issues = self.validate([fog_cactus_only])
+        self.assertTrue(any(issue.capability == "balloon counter" for issue in fog_issues))
+        self.assertFalse(
+            any(issue.capability == "balloon counter" for issue in self.validate([fog_blover]))
+        )
+        self.assertFalse(
+            any(issue.capability == "balloon counter" for issue in self.validate([fog_cattail]))
+        )
+        roof_issues = self.validate([roof_cactus_only])
+        self.assertTrue(any(issue.capability == "balloon counter" for issue in roof_issues))
+        self.assertFalse(
+            any(
+                issue.capability == "balloon counter"
+                for issue in self.validate([roof_cactus_on_pots])
+            )
+        )
 
     def test_validator_reports_level_code_and_missing_capability(self):
         self.assertTrue(

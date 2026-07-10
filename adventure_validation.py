@@ -1,11 +1,31 @@
 from dataclasses import dataclass
-from typing import Any, Mapping, Sequence
+from typing import Mapping, Protocol, Sequence
 
 
 WATER_LANE_ZOMBIES = frozenset(
     {"ducky_tube", "snorkel", "dolphin_rider", "bobsled_team"}
 )
 BALLOON_COUNTERS = frozenset({"cactus", "blover", "cattail"})
+GLOBAL_BALLOON_COUNTERS = frozenset({"blover", "cattail"})
+INDEPENDENT_BONUS_STAGE_MODES = frozenset(
+    {"mini_wallnut_bowling", "mini_whack_a_zombie", "adventure_vasebreaker"}
+)
+
+
+class AdventurePlantLike(Protocol):
+    aquatic_only: bool
+    damage: float
+
+
+class AdventureLevelLike(Protocol):
+    idx: int
+    display_code: str
+    battlefield: str
+    stage_style: str
+    stage_mode_id: str
+    cards: Sequence[str]
+    adventure_zombie_pool: Sequence[str]
+    preplaced_supports: Sequence[tuple[str, int, int]]
 
 
 @dataclass(frozen=True)
@@ -19,29 +39,58 @@ class AdventureValidationIssue:
 
 
 def _cards_for_level(
-    level: Any,
+    level: AdventureLevelLike,
     conveyor_pools: Mapping[str, Sequence[str]],
 ) -> set[str]:
-    code = str(getattr(level, "display_code", "") or getattr(level, "idx", "?"))
+    code = level.display_code or str(level.idx)
     configured_pool = conveyor_pools.get(code)
     if configured_pool:
         return set(configured_pool)
-    return set(getattr(level, "cards", ()))
+    return set(level.cards)
 
 
-def _has_water_damage_card(cards: set[str], plant_types: Mapping[str, Any]) -> bool:
+def _has_water_damage_card(
+    cards: set[str],
+    plant_types: Mapping[str, AdventurePlantLike],
+) -> bool:
     for card in cards:
         plant = plant_types.get(card)
         if plant is None:
             continue
-        if bool(getattr(plant, "aquatic_only", False)) and float(getattr(plant, "damage", 0.0)) > 0.0:
+        if plant.aquatic_only and plant.damage > 0.0:
             return True
     return False
 
 
+def _has_roof_platform(
+    cards: set[str],
+    preplaced_supports: set[tuple[str, int, int]],
+) -> bool:
+    return "flower_pot" in cards or any(
+        kind == "flower_pot" for kind, _row, _col in preplaced_supports
+    )
+
+
+def _has_deployable_balloon_counter(
+    battlefield: str,
+    cards: set[str],
+    preplaced_supports: set[tuple[str, int, int]],
+) -> bool:
+    counters = cards & BALLOON_COUNTERS
+    if not counters:
+        return False
+    if battlefield == "roof":
+        return _has_roof_platform(cards, preplaced_supports)
+    if battlefield in {"pool", "fog"}:
+        return bool(counters & GLOBAL_BALLOON_COUNTERS) or (
+            "cactus" in counters and "lily_pad" in cards
+        )
+    return True
+
+
 def validate_adventure_levels(
-    levels: Sequence[Any],
-    plant_types: Mapping[str, Any],
+    levels: Sequence[AdventureLevelLike],
+    plant_types: Mapping[str, AdventurePlantLike],
     *,
     conveyor_pools: Mapping[str, Sequence[str]] | None = None,
     conveyor_opening_cards: Mapping[str, Sequence[str]] | None = None,
@@ -51,12 +100,18 @@ def validate_adventure_levels(
     issues: list[AdventureValidationIssue] = []
 
     for level in levels:
-        code = str(getattr(level, "display_code", "") or getattr(level, "idx", "?"))
+        code = level.display_code or str(level.idx)
         cards = _cards_for_level(level, pools)
-        zombies = set(getattr(level, "adventure_zombie_pool", ()))
-        battlefield = str(getattr(level, "battlefield", ""))
-        stage_style = str(getattr(level, "stage_style", "normal_select"))
-        preplaced = set(getattr(level, "preplaced_supports", ()))
+        zombies = set(level.adventure_zombie_pool)
+        battlefield = level.battlefield
+        stage_style = level.stage_style
+        preplaced = set(level.preplaced_supports)
+
+        if (
+            stage_style == "bonus_special"
+            and level.stage_mode_id in INDEPENDENT_BONUS_STAGE_MODES
+        ):
+            continue
 
         if battlefield in {"pool", "fog"} and zombies & WATER_LANE_ZOMBIES:
             if "lily_pad" not in cards and not _has_water_damage_card(cards, plant_types):
@@ -68,18 +123,21 @@ def validate_adventure_levels(
                     )
                 )
 
-        if "balloon" in zombies and not cards & BALLOON_COUNTERS:
+        if "balloon" in zombies and not _has_deployable_balloon_counter(
+            battlefield,
+            cards,
+            preplaced,
+        ):
             issues.append(
                 AdventureValidationIssue(
                     code,
                     "balloon counter",
-                    "balloon zombies require cactus, blover, or cattail",
+                    "balloon zombies require a counter that can be deployed on every threatened terrain",
                 )
             )
 
         if battlefield == "roof" and stage_style == "normal_select":
-            has_preplaced_pot = any(kind == "flower_pot" for kind, _row, _col in preplaced)
-            if "flower_pot" not in cards and not has_preplaced_pot:
+            if not _has_roof_platform(cards, preplaced):
                 issues.append(
                     AdventureValidationIssue(
                         code,
