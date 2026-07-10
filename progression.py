@@ -11,8 +11,10 @@ def _normalized_clears(raw: object) -> list[str]:
         return []
     clears: list[str] = []
     for item in raw:
+        if item is None:
+            continue
         code = str(item).strip()
-        if code and code not in clears:
+        if _adventure_level_index(code) > 0 and code not in clears:
             clears.append(code)
     return clears
 
@@ -40,14 +42,12 @@ def migrate_save_data(raw_data: Mapping[str, object] | None) -> dict[str, object
         unlocked = 1
     unlocked = max(1, min(MAX_ADVENTURE_LEVEL, unlocked))
 
-    is_legacy_force_unlock = (
-        "save_version" not in source
-        and unlocked >= MAX_ADVENTURE_LEVEL
-        and not clears
-    )
+    is_legacy_force_unlock = "save_version" not in source and unlocked >= MAX_ADVENTURE_LEVEL
     highest_clear = max((_adventure_level_index(code) for code in clears), default=0)
-    repaired_unlock = max(unlocked, min(MAX_ADVENTURE_LEVEL, highest_clear + 1)) if highest_clear else unlocked
-    migrated["unlocked"] = 1 if is_legacy_force_unlock else repaired_unlock
+    if is_legacy_force_unlock:
+        migrated["unlocked"] = min(MAX_ADVENTURE_LEVEL, highest_clear + 1) if highest_clear else 1
+    else:
+        migrated["unlocked"] = max(unlocked, min(MAX_ADVENTURE_LEVEL, highest_clear + 1)) if highest_clear else unlocked
     migrated["cleared_levels"] = clears
     migrated["save_version"] = SAVE_VERSION
     migrated.setdefault("coins", 0)

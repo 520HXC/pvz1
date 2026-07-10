@@ -56,6 +56,23 @@ class ProgressionPureTests(unittest.TestCase):
         migrated = migrate_save_data({"unlocked": 1, "cleared_levels": ["9-99"]})
         self.assertEqual(1, migrated["unlocked"])
 
+    def test_legacy_force_unlock_derives_progress_from_valid_clears(self):
+        migrated = migrate_save_data({"unlocked": 50, "cleared_levels": ["1-1"], "coins": 9})
+        self.assertEqual(2, migrated["unlocked"])
+        self.assertEqual(["1-1"], migrated["cleared_levels"])
+        self.assertEqual(9, migrated["coins"])
+
+    def test_legacy_force_unlock_rejects_invalid_clear_values(self):
+        for invalid in (["9-99"], [None], ["junk"]):
+            with self.subTest(invalid=invalid):
+                migrated = migrate_save_data({"unlocked": 50, "cleared_levels": invalid})
+                self.assertEqual(1, migrated["unlocked"])
+                self.assertEqual([], migrated["cleared_levels"])
+
+    def test_versioned_save_is_not_reset_by_legacy_migration(self):
+        migrated = migrate_save_data({"save_version": SAVE_VERSION, "unlocked": 50, "cleared_levels": ["1-1"]})
+        self.assertEqual(50, migrated["unlocked"])
+
     def test_record_clear_adds_code_once_and_unlocks_next_level(self):
         saved = {"unlocked": 10, "cleared_levels": ["1-9"], "coins": 4}
         first = record_adventure_clear(saved, "1-10", 10, adventure_level_launch=True)
@@ -120,6 +137,18 @@ class ProgressionGameIntegrationTests(unittest.TestCase):
     def test_debug_unlock_defaults_to_false(self):
         defaults = game.ConfigManager.default(game.ConfigManager.__new__(game.ConfigManager))
         self.assertFalse(defaults["battle_settings"]["debug_unlock_all_levels"])
+
+    def test_mark_clear_delegates_to_versioned_progression_and_keeps_battle_reference(self):
+        instance = game.Game.__new__(game.Game)
+        instance.save_data = {"save_version": SAVE_VERSION, "unlocked": 1, "cleared_levels": []}
+        instance.battle = SimpleNamespace(save_data=instance.save_data)
+        level = next(level for level in game.build_levels() if level.display_code == "1-1")
+
+        game.Game.mark_adventure_level_cleared(instance, level)
+
+        self.assertEqual(2, instance.save_data["unlocked"])
+        self.assertEqual(["1-1"], instance.save_data["cleared_levels"])
+        self.assertIs(instance.save_data, instance.battle.save_data)
 
 
 if __name__ == "__main__":

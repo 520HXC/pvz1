@@ -1,4 +1,5 @@
 import os
+import random
 import unittest
 from dataclasses import replace
 
@@ -166,10 +167,10 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
 
         battle.update(0.5)
         self.assertEqual(2.0, battle.next_wave)
-        self.assertEqual(6.0, battle.wave_pause_t)
+        self.assertEqual(5.5, battle.wave_pause_t)
 
         battle.update(1.0)
-        self.assertEqual(5.0, battle.wave_pause_t)
+        self.assertEqual(4.5, battle.wave_pause_t)
 
         battle.zombies.append(battle.spawn_zombie_instance("normal", 0, x))
         battle.update(0.5)
@@ -473,6 +474,90 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
         self.assertEqual([], battle.zombies)
         battle.update(0.01)
         self.assertEqual(1, len(battle.zombies))
+
+    def test_adventure_bungee_cannot_win_early_from_duration(self):
+        battle = self.make_battle()
+        battle.reset(self.by_code["5-5"], mode_rules=self.adventure_rules("5-5", random_seed=555))
+        battle.elapsed = 118.1
+        battle.current_wave = 4
+        battle.wave_spawn_queue = ["normal"]
+        battle.wave_spawn_remaining = 1
+        battle.zombies.clear()
+
+        battle.update(0.0)
+
+        self.assertIsNone(battle.result)
+        self.assertEqual(4, battle.current_wave)
+        self.assertEqual(["normal"], battle.wave_spawn_queue)
+
+    def test_adventure_bungee_wins_only_after_all_custom_waves_and_cleanup(self):
+        battle = self.make_battle()
+        battle.reset(self.by_code["5-5"], mode_rules=self.adventure_rules("5-5", random_seed=556))
+        battle.elapsed = 10.0
+        battle.current_wave = battle.total_waves
+        battle.wave_spawn_queue = []
+        battle.wave_spawn_remaining = 0
+        battle.spawn_plant_direct("flower_pot", 0, 0)
+        battle.mode_event_t = 999.0
+        x = battle.lawn_right()
+        battle.zombies.append(battle.spawn_zombie_instance("normal", 0, x))
+
+        battle.update(0.0)
+
+        self.assertIsNone(battle.result)
+        self.assertEqual(1, len(battle.zombies))
+
+        battle.zombies.clear()
+        battle.update(0.0)
+        self.assertEqual("win", battle.result)
+
+    def actual_adventure_spawn_sequence(self, disturb_global_random):
+        battle = self.make_battle()
+        battle.reset(self.by_code["4-10"], mode_rules=self.adventure_rules("4-10", random_seed=4410))
+        battle.start_next_wave()
+        kinds = list(battle.wave_spawn_queue)
+        if disturb_global_random:
+            for _ in range(200):
+                random.random()
+        records = []
+        for kind in kinds + ["digger", "catapult"]:
+            battle.spawn_zombie(battle.current_wave, forced_kind=kind)
+            zombie = battle.zombies[-1]
+            records.append(
+                (
+                    zombie.kind,
+                    zombie.row,
+                    zombie.x,
+                    zombie.hp,
+                    zombie.speed,
+                    zombie.dps,
+                    zombie.state.get("digger_target_x"),
+                    zombie.state.get("catapult_phase_t"),
+                )
+            )
+        return records
+
+    def test_adventure_gameplay_spawns_ignore_global_random_consumption(self):
+        baseline = self.actual_adventure_spawn_sequence(False)
+        disturbed = self.actual_adventure_spawn_sequence(True)
+        self.assertEqual(baseline, disturbed)
+
+    def test_recovery_frame_partition_matches_single_dt(self):
+        def recovering_battle():
+            battle = self.make_battle()
+            battle.reset(self.by_code["1-1"], mode_rules={"adventure_level_launch": True, "random_seed": 11})
+            battle.current_wave = 1
+            battle.wave_spawn_queue = []
+            battle.wave_spawn_remaining = 0
+            battle.next_wave = 0.0
+            return battle
+
+        single = recovering_battle()
+        split = recovering_battle()
+        single.wave_recovery_ready(5.0, [])
+        split.wave_recovery_ready(2.0, [])
+        split.wave_recovery_ready(3.0, [])
+        self.assertEqual(single.wave_pause_t, split.wave_pause_t)
 
 
 if __name__ == "__main__":
