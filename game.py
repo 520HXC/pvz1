@@ -5300,8 +5300,9 @@ class BattleState:
                 self.zomboss_attack_t += dt
         if not intro_active:
             self.zomboss_stomp_t += dt
+            started_custom_wave = False
             if self.is_adventure_mainline():
-                self.update_custom_adventure_wave_recovery(dt)
+                started_custom_wave = self.update_custom_adventure_wave_recovery(dt)
             spawn_cycle = self.zomboss_spawn_cycle()
             if self.is_adventure_mainline():
                 spawn_interval = calculate_spawn_cooldown(
@@ -5312,8 +5313,9 @@ class BattleState:
                 )
             else:
                 spawn_interval = max(2.4, float(spawn_cycle.get("interval", 6.0)))
-            self.zomboss_spawn_t += dt
-            if self.zomboss_spawn_t >= spawn_interval:
+            if not started_custom_wave:
+                self.zomboss_spawn_t += dt
+            if not started_custom_wave and self.zomboss_spawn_t >= spawn_interval:
                 self.zomboss_spawn_t -= spawn_interval
                 active_ground = sum(
                     1

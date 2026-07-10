@@ -420,6 +420,60 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
                     battle.update_bungee_blitz_mode(0.0)
                 self.assertEqual(1, len(battle.zombies))
 
+    def test_boss_recovery_frame_does_not_count_toward_new_wave_spawn(self):
+        boss = self.make_battle()
+        boss.reset(self.by_code["5-10"], mode_rules=self.adventure_rules("5-10", random_seed=5910))
+        boss.level = replace(boss.level, spawn_acc=0.0)
+        self.drain_current_custom_queue(boss)
+        boss.battle_intro_phase = ""
+        boss.zomboss_intro_index = len(tuple(boss.zomboss_ruleset().get("boss_intro_phase", ())))
+        boss.zomboss_attack_t = -999.0
+        boss.zomboss_stomp_t = -999.0
+        boss.zomboss_bungee_t = -999.0
+        boss.zomboss_rv_t = -999.0
+        boss.update_zomboss_boss_mode(0.0)
+
+        boss.update_zomboss_boss_mode(boss.wave_interval)
+
+        self.assertEqual(2, boss.current_wave)
+        self.assertEqual(0.0, boss.zomboss_spawn_t)
+        self.assertEqual([], [z for z in boss.zombies if z.kind != "bungee"])
+
+        cooldown = spawn_cooldown(
+            boss.level.spawn_base,
+            boss.level.spawn_min,
+            boss.level.spawn_acc,
+            boss.elapsed,
+        )
+        boss.update_zomboss_boss_mode(cooldown - 0.01)
+        self.assertEqual([], [z for z in boss.zombies if z.kind != "bungee"])
+        boss.update_zomboss_boss_mode(0.01)
+        self.assertEqual(1, len([z for z in boss.zombies if z.kind != "bungee"]))
+
+    def test_bungee_recovery_frame_also_starts_ground_cooldown_at_zero(self):
+        battle = self.make_battle()
+        battle.reset(self.by_code["5-5"], mode_rules=self.adventure_rules("5-5", random_seed=595))
+        battle.level = replace(battle.level, spawn_acc=0.0)
+        self.drain_current_custom_queue(battle)
+        battle.update_bungee_blitz_mode(0.0)
+
+        battle.update_bungee_blitz_mode(battle.wave_interval)
+
+        self.assertEqual(2, battle.current_wave)
+        self.assertEqual(0.0, battle.spawn_t)
+        self.assertEqual([], battle.zombies)
+
+        cooldown = spawn_cooldown(
+            battle.level.spawn_base,
+            battle.level.spawn_min,
+            battle.level.spawn_acc,
+            battle.elapsed,
+        )
+        battle.update(cooldown - 0.01)
+        self.assertEqual([], battle.zombies)
+        battle.update(0.01)
+        self.assertEqual(1, len(battle.zombies))
+
 
 if __name__ == "__main__":
     unittest.main()
