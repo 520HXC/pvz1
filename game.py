@@ -970,7 +970,7 @@ SPECIAL_MINIGAME_RULESETS: Dict[str, Dict[str, object]] = {
 
 ZOMBOSS_BOSS_RULESETS: Dict[str, Dict[str, object]] = {
     "adventure_zomboss_boss": {
-        "opening_cards": ["cabbage_pult", "jalapeno", "cabbage_pult", "ice_shroom"],
+        "opening_cards": ["flower_pot", "cabbage_pult", "jalapeno", "cabbage_pult", "ice_shroom"],
         "conveyor_pool": ["flower_pot", "cabbage_pult", "kernel_pult", "melon_pult", "jalapeno", "ice_shroom"],
         "conveyor_weights": {
             "flower_pot": 0.24,
@@ -2612,11 +2612,16 @@ ADVENTURE_STAGE_PRESET_IDS: Dict[str, str] = {
 ADVENTURE_CONVEYOR_POOLS: Dict[str, Tuple[str, ...]] = {
     "1-10": ("peashooter", "wallnut", "potato_mine", "snowpea", "repeater", "cherrybomb", "chomper"),
     "2-10": ("puff_shroom", "fume_shroom", "scaredy_shroom", "hypno_shroom", "grave_buster", "ice_shroom", "wallnut", "snowpea"),
-    "3-5": ("sunflower", "peashooter", "wallnut", "potato_mine", "snowpea", "repeater", "cherrybomb", "jalapeno", "torchwood", "spikeweed"),
+    "3-5": ("lily_pad", "sunflower", "peashooter", "wallnut", "potato_mine", "snowpea", "repeater", "cherrybomb", "jalapeno", "torchwood", "spikeweed"),
     "3-10": ("lily_pad", "tangle_kelp", "threepeater", "repeater", "torchwood", "wallnut", "jalapeno", "tall_nut"),
     "4-10": ("lily_pad", "sea_shroom", "plantern", "blover", "starfruit", "pumpkin", "cactus", "jalapeno"),
     "5-5": ("flower_pot", "chomper", "pumpkin", "cherrybomb"),
     "5-10": ("flower_pot", "cabbage_pult", "kernel_pult", "melon_pult", "jalapeno", "ice_shroom"),
+}
+
+ADVENTURE_CONVEYOR_OPENING_CARDS: Dict[str, Tuple[str, ...]] = {
+    "5-5": ("flower_pot",),
+    "5-10": ("flower_pot", "cabbage_pult", "jalapeno", "cabbage_pult", "ice_shroom"),
 }
 
 MODE_ENTRY_STYLES: Dict[str, str] = {
@@ -2885,6 +2890,7 @@ class LevelConfig:
     adventure_zombie_pool: Tuple[str, ...] = ()
     guaranteed_zombies: Tuple[Tuple[int, str, int], ...] = ()
     ambush_rules: Tuple[str, ...] = ()
+    preplaced_supports: Tuple[Tuple[str, int, int], ...] = ()
 
 
 @dataclass
@@ -3816,10 +3822,10 @@ def build_plants() -> Dict[str, PlantType]:
     _add(p, PlantType("tangle_kelp", "Tangle Kelp", 25, 90, 30.0, "kelp", damage=9999, aquatic_only=True))
     _add(p, PlantType("jalapeno", "Jalapeno", 125, 999, 50.0, "row_blast", damage=9999))
     _add(p, PlantType("spikeweed", "Spikeweed", 100, 210, 7.5, "spike", damage=10))
-    _add(p, PlantType("torchwood", "Torchwood", 175, 300, 7.5, "support", is_support=True))
+    _add(p, PlantType("torchwood", "Torchwood", 175, 300, 7.5, "support"))
     _add(p, PlantType("tall_nut", "Tall-nut", 125, 1200, 30.0, "block"))
     _add(p, PlantType("sea_shroom", "Sea-shroom", 0, 80, 7.5, "shoot_short", damage=20, is_mushroom=True, aquatic_only=True))
-    _add(p, PlantType("plantern", "Plantern", 25, 300, 7.5, "support", is_support=True))
+    _add(p, PlantType("plantern", "Plantern", 25, 300, 7.5, "support"))
     _add(p, PlantType("cactus", "Cactus", 125, 300, 7.5, "shoot_balloon", damage=20))
     _add(p, PlantType("blover", "Blover", 100, 80, 7.5, "blover"))
     _add(p, PlantType("split_pea", "Split Pea", 125, 130, 7.5, "split", damage=20))
@@ -3831,7 +3837,7 @@ def build_plants() -> Dict[str, PlantType]:
     _add(p, PlantType("kernel_pult", "Kernel-pult", 100, 140, 7.5, "kernel_pult", damage=30, lobbed=True))
     _add(p, PlantType("coffee_bean", "Coffee Bean", 75, 80, 7.5, "coffee"))
     _add(p, PlantType("garlic", "Garlic", 50, 350, 7.5, "garlic"))
-    _add(p, PlantType("umbrella_leaf", "Umbrella Leaf", 100, 300, 7.5, "support", is_support=True))
+    _add(p, PlantType("umbrella_leaf", "Umbrella Leaf", 100, 300, 7.5, "support"))
     _add(p, PlantType("marigold", "Marigold", 50, 120, 7.5, "marigold"))
     _add(p, PlantType("melon_pult", "Melon-pult", 300, 180, 7.5, "melon_pult", damage=80, lobbed=True))
     _add(p, PlantType("twin_sunflower", "Twin Sunflower", 150, 150, 50.0, "sun", sun_amount=50, interval=9.0))
@@ -3857,7 +3863,7 @@ def build_plants() -> Dict[str, PlantType]:
         "tall_nut": PlantType("tall_nut", "Tall-nut", 125, 1200, 30.0, "block"),
         "lily_pad": PlantType("lily_pad", "Lily Pad", 25, 220, 7.5, "support", is_support=True),
         "jalapeno": PlantType("jalapeno", "Jalapeno", 125, 999, 50.0, "row_blast", damage=9999),
-        "torchwood": PlantType("torchwood", "Torchwood", 175, 300, 7.5, "support", is_support=True),
+        "torchwood": PlantType("torchwood", "Torchwood", 175, 300, 7.5, "support"),
         "threepeater": PlantType("threepeater", "Threepeater", 325, 130, 7.5, "threepeat", damage=20),
         "spikeweed": PlantType("spikeweed", "Spikeweed", 100, 210, 7.5, "spike", damage=10),
         "pumpkin": PlantType("pumpkin", "Pumpkin", 125, 400, 30.0, "armor", is_overlay=True),
@@ -3983,8 +3989,8 @@ def build_levels(total: int = 50) -> List[LevelConfig]:
 
     cards_day = pool(core + ["squash", "jalapeno", "torchwood", "tall_nut"])
     cards_night = pool(core + ["squash", "jalapeno"] + mushroom_pack + ["pumpkin"])
-    cards_pool = pool(core + ["squash", "jalapeno", "torchwood", "tall_nut"] + mushroom_pack[:4] + pool_pack + ["pumpkin"])
-    cards_fog = pool(core + ["squash", "jalapeno", "torchwood", "tall_nut"] + mushroom_pack + pool_pack + fog_pack)
+    cards_pool = pool(["lily_pad"] + core + ["squash", "jalapeno", "torchwood", "tall_nut"] + mushroom_pack[:4] + pool_pack[1:] + ["pumpkin"])
+    cards_fog = pool(["lily_pad", "cactus"] + core + ["squash", "jalapeno", "torchwood", "tall_nut"] + mushroom_pack + pool_pack[1:] + fog_pack)
     cards_roof = pool(core + day_tools + roof_pack + pool_pack[:2] + fog_pack + late_pack)
 
     levels: List[LevelConfig] = []
@@ -4018,6 +4024,7 @@ def build_levels(total: int = 50) -> List[LevelConfig]:
         tag_key: str,
         preview_theme: str,
         boss: bool = False,
+        preplaced_supports: Tuple[Tuple[str, int, int], ...] = (),
     ) -> None:
         idx = (world - 1) * 10 + stage
         display_code = f"{world}-{stage}"
@@ -4054,6 +4061,7 @@ def build_levels(total: int = 50) -> List[LevelConfig]:
                 adventure_zombie_pool=tuple(str(x) for x in plan.get("available_zombies", tuple(weights(z_pairs).keys()))),
                 guaranteed_zombies=tuple((int(w), str(k), int(c)) for w, k, c in plan.get("guaranteed_zombies", tuple())),
                 ambush_rules=tuple(str(x) for x in plan.get("ambush_rules", tuple())),
+                preplaced_supports=preplaced_supports,
             )
         )
 
@@ -4192,6 +4200,12 @@ def build_levels(total: int = 50) -> List[LevelConfig]:
     world5_tags = ["tag_roof_intro", "tag_roof_lob", "tag_roof_ladder", "tag_roof_siege", "tag_roof_pressure", "tag_roof_breaker", "tag_roof_split", "tag_roof_peak", "tag_roof_peak", "tag_final_boss"]
     world5_previews = ["roof_intro", "roof_flowerpot", "roof_cabbage", "roof_kernel", "roof_melon", "roof_catapult", "roof_umbrella", "roof_gargantuar", "roof_peak", "roof_boss"]
     for stage in range(1, 11):
+        roof_card_limit = min(len(cards_roof), 9 + stage)
+        roof_cards = cards_roof if stage >= 8 else cards_roof[:roof_card_limit]
+        if stage == 1:
+            roof_cards = [card for card in roof_cards if card != "flower_pot"]
+        else:
+            roof_cards = ["flower_pot"] + [card for card in roof_cards if card != "flower_pot"]
         add_level(
             world=5,
             stage=stage,
@@ -4201,11 +4215,16 @@ def build_levels(total: int = 50) -> List[LevelConfig]:
             spawn_min=2.6 if stage == 10 else (3.5 - stage * 0.04),
             spawn_acc=0.0026 if stage == 10 else (0.0020 + stage * 0.00018),
             z_pairs=world5_zombies[stage - 1],
-            cards=cards_roof if stage >= 8 else cards_roof[: min(len(cards_roof), 9 + stage)],
+            cards=roof_cards,
             danger=6 if stage == 10 else min(6, 4 + (stage - 1) // 2),
             tag_key=world5_tags[stage - 1],
             preview_theme=world5_previews[stage - 1],
             boss=stage == 10,
+            preplaced_supports=tuple(
+                ("flower_pot", row, col)
+                for row in range(5)
+                for col in range(5)
+            ) if stage == 1 else (),
         )
 
     if total <= 0:
@@ -9179,6 +9198,9 @@ class BattleState:
         else:
             self.conveyor_pool = []
             self.conveyor_cap = 8
+        for kind, row, col in level.preplaced_supports:
+            if kind in self.plant_types and self.plant_types[kind].is_support:
+                self.spawn_plant_direct(kind, row, col, force_place=False)
         if self.is_vasebreaker_mode():
             self.cleaners = [False for _ in range(self.rows())]
             self.total_waves = 0
@@ -15590,6 +15612,7 @@ class Game:
                 "return_scene": "adventure_level_select",
                 "conveyor": True,
                 "conveyor_pool": self.adventure_conveyor_pool(level),
+                "opening_cards": list(ADVENTURE_CONVEYOR_OPENING_CARDS.get(code, ())),
                 "conveyor_interval": 1.28,
                 "conveyor_cap": 9,
                 "no_sun_cost": True,
