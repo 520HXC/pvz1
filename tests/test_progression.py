@@ -90,6 +90,27 @@ class ProgressionPureTests(unittest.TestCase):
             record_adventure_clear(saved, "4-10", 40, adventure_level_launch=False),
         )
 
+    def test_invalid_or_mismatched_clear_identity_cannot_advance_progress(self):
+        saved = {"save_version": SAVE_VERSION, "unlocked": 1, "cleared_levels": [], "coins": 7}
+        invalid_cases = (
+            ("junk", 1),
+            ("1-1", 2),
+            ("5-10", 51),
+            ("0", 0),
+        )
+        for code, index in invalid_cases:
+            with self.subTest(code=code, index=index):
+                self.assertEqual(
+                    saved,
+                    record_adventure_clear(saved, code, index, adventure_level_launch=True),
+                )
+
+    def test_numeric_clear_code_must_match_index(self):
+        saved = {"save_version": SAVE_VERSION, "unlocked": 1, "cleared_levels": []}
+        updated = record_adventure_clear(saved, "1", 1, adventure_level_launch=True)
+        self.assertEqual(["1"], updated["cleared_levels"])
+        self.assertEqual(2, updated["unlocked"])
+
 
 @unittest.skipUnless(PROGRESSION_AVAILABLE, "progression API not implemented yet")
 class ProgressionGameIntegrationTests(unittest.TestCase):

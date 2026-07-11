@@ -4483,6 +4483,7 @@ class BattleState:
         self.wave_spawn_remaining = 0
         self.wave_pause_t = 0.0
         self.wave_rng = random.Random(1)
+        self.combat_rng = random.Random(2)
         self.result: Optional[str] = None
         self.almanac_open = False
         self.main: Dict[Tuple[int, int], Plant] = {}
@@ -4989,8 +4990,9 @@ class BattleState:
         patterns = self.zomboss_pattern_pool()
         if not patterns:
             return None
+        rng = self.gameplay_rng()
         if self.zomboss_pattern_id < 0 or self.zomboss_pattern_id >= len(patterns):
-            self.zomboss_pattern_id = random.randrange(len(patterns))
+            self.zomboss_pattern_id = rng.randrange(len(patterns))
             self.zomboss_pattern_step = 0
         pattern = patterns[self.zomboss_pattern_id]
         if not pattern:
@@ -5002,7 +5004,7 @@ class BattleState:
             if len(patterns) > 1:
                 choices = [idx for idx in range(len(patterns)) if idx != self.zomboss_pattern_id]
                 if choices:
-                    self.zomboss_pattern_id = random.choice(choices)
+                    self.zomboss_pattern_id = rng.choice(choices)
         return attack
 
     def spawn_zomboss_lane_projectile(self, kind: str, row: int) -> None:
@@ -5044,10 +5046,10 @@ class BattleState:
         payload["resolved"] = True
         kind = str(payload.get("kind", ""))
         if kind == "fireball":
-            row = int(payload.get("row", random.randrange(self.rows())))
+            row = int(payload.get("row", self.gameplay_rng().randrange(self.rows())))
             self.spawn_zomboss_lane_projectile("fireball", row)
         elif kind == "iceball":
-            row = int(payload.get("row", random.randrange(self.rows())))
+            row = int(payload.get("row", self.gameplay_rng().randrange(self.rows())))
             self.spawn_zomboss_lane_projectile("iceball", row)
         elif kind == "stomp_smash":
             row = int(payload.get("row", max(0, self.rows() // 2 - 1)))
@@ -5108,7 +5110,7 @@ class BattleState:
         self.zomboss_bungee_t = 0.0
         self.zomboss_stomp_t = max(0.0, float(self.zomboss_ruleset().get("boss_stomp_cycle", {}).get("interval", 20.0)))
         self.zomboss_rv_t = 0.0
-        self.zomboss_pattern_id = random.randrange(max(1, len(self.zomboss_pattern_pool()))) if self.zomboss_pattern_pool() else 0
+        self.zomboss_pattern_id = self.gameplay_rng().randrange(max(1, len(self.zomboss_pattern_pool()))) if self.zomboss_pattern_pool() else 0
         self.zomboss_pattern_step = 0
         self.zomboss_attack_phase = ""
         self.zomboss_exposed_t = 0.0
@@ -5142,10 +5144,11 @@ class BattleState:
         if self.zomboss_pending_attack or self.result:
             return
         kind = {"bungee": "bungee_call", "rv": "rv_call"}.get(kind, kind)
+        rng = self.gameplay_rng()
         payload: Dict[str, object] = {"kind": kind, "phase": "", "t": 0.0, "total": 0.0, "resolved": False}
         if kind in {"fireball", "iceball"}:
-            row = random.randrange(self.rows())
-            col = random.randint(5, 7 if COLS >= 8 else COLS - 1)
+            row = rng.randrange(self.rows())
+            col = rng.randint(5, 7 if COLS >= 8 else COLS - 1)
             payload["row"] = float(row)
             payload["col"] = float(col)
             self.set_zomboss_attack_phase(payload, "head_dip_row_select", self.zomboss_phase_window(kind, "row_select", 0.40), eye_mode=("fire" if kind == "fireball" else "ice"), row=row)
@@ -5155,9 +5158,9 @@ class BattleState:
             height = max(1, int(float(stomp_cycle.get("height", 2)) if isinstance(stomp_cycle, dict) else 2.0))
             min_col = max(4, COLS - 3)
             max_col = 6 if COLS >= 8 else max(4, COLS - width)
-            col = random.randint(min_col, max_col) if max_col >= min_col else min_col
+            col = rng.randint(min_col, max_col) if max_col >= min_col else min_col
             row_max = max(0, self.rows() - height)
-            row = random.randint(0, row_max) if row_max > 0 else 0
+            row = rng.randint(0, row_max) if row_max > 0 else 0
             payload["row"] = float(row)
             payload["col"] = float(col)
             payload["width"] = float(width)
@@ -5171,9 +5174,9 @@ class BattleState:
             width = max(2, int(float(rv_cycle.get("width", 2)) if isinstance(rv_cycle, dict) else 2.0))
             height = max(1, int(float(rv_cycle.get("height", 2)) if isinstance(rv_cycle, dict) else 2.0))
             max_col = 6 if COLS >= 8 else max(4, COLS - width)
-            col = random.randint(5, max_col) if max_col >= 5 else max_col
+            col = rng.randint(5, max_col) if max_col >= 5 else max_col
             row_max = max(0, self.rows() - height)
-            row = random.randint(0, row_max) if row_max > 0 else 0
+            row = rng.randint(0, row_max) if row_max > 0 else 0
             payload["row"] = float(row)
             payload["col"] = float(col)
             payload["width"] = float(width)
@@ -5223,7 +5226,7 @@ class BattleState:
         kind = str(payload.get("kind", ""))
         phase = str(payload.get("phase", ""))
         if kind in {"fireball", "iceball"}:
-            row = int(payload.get("row", random.randrange(self.rows())))
+            row = int(payload.get("row", self.gameplay_rng().randrange(self.rows())))
             eye_mode = "fire" if kind == "fireball" else "ice"
             if phase == "head_dip_row_select":
                 next_phase = "windup_fire" if kind == "fireball" else "windup_ice"
@@ -5967,7 +5970,7 @@ class BattleState:
         return score
 
     def choose_bungee_target(self) -> Optional[Tuple[Tuple[int, int], Plant]]:
-        rng = self.wave_rng if self.is_adventure_mainline() else random
+        rng = self.gameplay_rng()
         candidates: List[Tuple[float, Tuple[int, int], Plant]] = []
         for collection in (self.armor, self.main, self.support):
             for pos, plant in collection.items():
@@ -6083,7 +6086,7 @@ class BattleState:
         return False
 
     def update_catapult_state(self, zombie: Zombie, dt: float) -> bool:
-        rng = self.wave_rng if self.is_adventure_mainline() else random
+        rng = self.gameplay_rng()
         state = self.catapult_state(zombie)
         phase_t = max(0.0, float(zombie.state.get("catapult_phase_t", 0.0)) - dt)
         zombie.state["catapult_phase_t"] = phase_t
@@ -6420,6 +6423,9 @@ class BattleState:
             return False
         return 1 <= int(getattr(self.level, "world", 0)) <= 5
 
+    def gameplay_rng(self):
+        return self.combat_rng if self.is_adventure_mainline() else random
+
     def adventure_wave_plan(self) -> Dict[str, object]:
         if not self.level:
             return {}
@@ -6638,7 +6644,7 @@ class BattleState:
         dps_scale: float = 1.0,
     ) -> None:
         row = self.choose_spawn_row(kind)
-        spawn_x = self.lawn_right() + self.wave_rng.randint(38, 96)
+        spawn_x = self.lawn_right() + self.gameplay_rng().randint(38, 96)
         self.zombies.append(
             self.spawn_zombie_instance(
                 kind,
@@ -6701,7 +6707,7 @@ class BattleState:
     ) -> Zombie:
         zcfg = self.zombie_types.get(kind, self.zombie_types["normal"])
         wave_prog = 0.0 if self.total_waves <= 1 else (wave_idx - 1) / max(1, self.total_waves - 1)
-        rng = self.wave_rng if self.is_adventure_mainline() else random
+        rng = self.gameplay_rng()
         if self.is_adventure_mainline():
             hp = rng.uniform(zcfg.hp * 0.96, zcfg.hp * 1.04) * (1.0 + wave_prog * 0.04)
             spd = rng.uniform(zcfg.speed[0], zcfg.speed[1]) * (1.0 + wave_prog * 0.018)
@@ -6713,9 +6719,9 @@ class BattleState:
                 hp *= 1.05
                 dps *= 1.04
         else:
-            hp = random.uniform(zcfg.hp * 0.95, zcfg.hp * 1.05) * (1.0 + wave_prog * 0.08)
-            spd = random.uniform(zcfg.speed[0], zcfg.speed[1]) * (1.0 + wave_prog * 0.04)
-            dps = random.uniform(zcfg.dps[0], zcfg.dps[1]) * (1.0 + wave_prog * 0.05)
+            hp = rng.uniform(zcfg.hp * 0.95, zcfg.hp * 1.05) * (1.0 + wave_prog * 0.08)
+            spd = rng.uniform(zcfg.speed[0], zcfg.speed[1]) * (1.0 + wave_prog * 0.04)
+            dps = rng.uniform(zcfg.dps[0], zcfg.dps[1]) * (1.0 + wave_prog * 0.05)
             if wave_idx in self.large_wave_indices:
                 hp *= 1.06
                 dps *= 1.04
@@ -8016,7 +8022,7 @@ class BattleState:
                 raid_count = min(2, max(1, raid_count))
                 for _ in range(raid_count):
                     target_rows = sorted({r for r, _ in plant_positions}) or list(range(self.rows()))
-                    rng = self.wave_rng if self.is_adventure_mainline() else random
+                    rng = self.gameplay_rng()
                     row = rng.choice(target_rows)
                     x = self.lawn_right() + rng.randint(24, 72)
                     z = self.spawn_zombie_instance("bungee", row, float(x), wave_idx=1, hp_scale=0.92, speed_scale=1.0, dps_scale=1.0)
@@ -8563,7 +8569,8 @@ class BattleState:
             zombie.state.setdefault("zomboni_crush_total", 0.42)
         elif zombie.kind == "catapult":
             zombie.state.setdefault("catapult_state", "walk")
-            zombie.state.setdefault("catapult_phase_t", random.uniform(1.7, 2.8))
+            if "catapult_phase_t" not in zombie.state:
+                zombie.state["catapult_phase_t"] = self.gameplay_rng().uniform(1.7, 2.8)
             zombie.state.setdefault("catapult_phase_total", float(zombie.state.get("catapult_phase_t", 2.0)))
             zombie.state.setdefault("catapult_target_col", -1.0)
         elif zombie.kind == "pogo":
@@ -9292,6 +9299,7 @@ class BattleState:
         else:
             wave_seed = int(level.idx) * 1009 + 17
         self.wave_rng = random.Random(wave_seed)
+        self.combat_rng = random.Random(wave_seed * 1009 + 97)
         self.total_waves, self.large_wave_indices, self.final_wave_index, self.wave_budgets = self.mode_wave_budgets(level)
         self.elapsed = 0.0
         self.spawn_t = 0.0
@@ -9446,7 +9454,8 @@ class BattleState:
             return
         roster_caps = self.special_roster_caps()
         active_counts = self.active_zombie_counts()
-        rng = self.wave_rng if self.is_adventure_mainline() else random
+        composition_rng = self.wave_rng if self.is_adventure_mainline() else random
+        combat_rng = self.gameplay_rng()
         if forced_kind and forced_kind in self.zombie_types and active_counts.get(forced_kind, 0) < roster_caps.get(forced_kind, 999):
             kind = forced_kind
         else:
@@ -9462,7 +9471,7 @@ class BattleState:
                 if pairs:
                     kinds = [k for k, _ in pairs]
                     weights = [v for _, v in pairs]
-                    kind = rng.choices(kinds, weights=weights, k=1)[0]
+                    kind = composition_rng.choices(kinds, weights=weights, k=1)[0]
                 else:
                     fallback_pairs = [
                         (kind_name, weight)
@@ -9472,7 +9481,7 @@ class BattleState:
                     if not fallback_pairs:
                         fallback_pairs = list(self.level.z_weights.items())
                     kinds = [k for k, _ in fallback_pairs]
-                    kind = rng.choices(kinds, weights=[v for _, v in fallback_pairs], k=1)[0]
+                    kind = composition_rng.choices(kinds, weights=[v for _, v in fallback_pairs], k=1)[0]
             else:
                 forced_pool = [
                     k
@@ -9480,7 +9489,7 @@ class BattleState:
                     if k in self.zombie_types and active_counts.get(k, 0) < roster_caps.get(k, 999)
                 ]
                 if forced_pool:
-                    kind = rng.choice(forced_pool)
+                    kind = composition_rng.choice(forced_pool)
                 else:
                     fallback_pairs = [
                         (kind_name, weight)
@@ -9490,10 +9499,10 @@ class BattleState:
                     if not fallback_pairs:
                         fallback_pairs = list(self.level.z_weights.items())
                     kinds = [k for k, _ in fallback_pairs]
-                    kind = rng.choices(kinds, weights=[v for _, v in fallback_pairs], k=1)[0]
+                    kind = composition_rng.choices(kinds, weights=[v for _, v in fallback_pairs], k=1)[0]
         row = self.choose_spawn_row(kind)
         row_load = sum(1 for z in self.zombies if z.row == row and z.hp > 0 and float(z.state.get("dying_t", 0.0)) <= 0.0)
-        spawn_x = self.lawn_right() + rng.randint(26, 108) + row_load * 12
+        spawn_x = self.lawn_right() + combat_rng.randint(26, 108) + row_load * 12
         z = self.spawn_zombie_instance(kind, row, spawn_x, wave_idx=wave_idx or max(1, self.current_wave))
         self.zombies.append(z)
 
@@ -9772,9 +9781,13 @@ class BattleState:
         if self.current_wave == 0:
             self.wave_pause_t = max(0.0, self.wave_pause_t - dt)
         if self.uses_wave_system():
-            active_zombies = [z for z in self.zombies if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0]
             if self.current_wave == 0 and self.wave_pause_t <= 0.0 and int(self.next_wave) == 1:
                 self.start_next_wave()
+            pending_spawns_at_frame_start = (
+                bool(self.wave_spawn_queue)
+                if self.is_adventure_mainline()
+                else self.wave_spawn_remaining > 0
+            )
             spawn_cd = calculate_spawn_cooldown(
                 self.level.spawn_base,
                 self.level.spawn_min,
@@ -9812,11 +9825,18 @@ class BattleState:
                     self.spawn_t -= spawn_cd
                     self.spawn_zombie(self.current_wave)
                     self.wave_spawn_remaining -= 1
+            active_zombies = [
+                z
+                for z in self.zombies
+                if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0
+            ]
             if self.wave_spawn_remaining <= 0 and self.current_wave > 0:
                 if self.current_wave < self.total_waves:
-                    if self.wave_recovery_ready(dt, active_zombies):
+                    emptied_spawn_queue_this_frame = pending_spawns_at_frame_start
+                    recovery_dt = 0.0 if emptied_spawn_queue_this_frame else dt
+                    if self.wave_recovery_ready(recovery_dt, active_zombies):
                         self.start_next_wave()
-                elif not active_zombies and not self.rolling_nuts:
+                elif not self.zombies and not self.rolling_nuts:
                     self.result = "win"
         if self.mode_bool("conveyor", False):
             self.update_conveyor()
@@ -10401,6 +10421,7 @@ class BattleState:
                 self.rolling_nuts.remove(nut)
 
     def update_zombies(self, dt: float) -> None:
+        rng = self.gameplay_rng()
         for z in list(self.zombies):
             self.ensure_zombie_anim_state(z)
             z.state["walk_t"] = z.state.get("walk_t", 0.0) + dt * max(0.6, z.speed / 30.0)
@@ -10456,13 +10477,16 @@ class BattleState:
                 z.state["spawn_t"] = 9.0
                 for rr in (z.row - 1, z.row, z.row + 1):
                     if 0 <= rr < self.rows():
-                        b = self.zombie_types["backup_dancer"]
-                        nz = Zombie("backup_dancer", rr, z.x + random.randint(10, 24), float(b.hp), float(b.hp), random.uniform(*b.speed), random.uniform(*b.dps))
-                        self.ensure_zombie_anim_state(nz)
+                        nz = self.spawn_zombie_instance(
+                            "backup_dancer",
+                            rr,
+                            z.x + rng.randint(10, 24),
+                            wave_idx=max(1, self.current_wave),
+                        )
                         self.zombies.append(nz)
             else:
                 z.state["spawn_t"] = z.state.get("spawn_t", 0.0) - dt
-            if z.kind == "jack_in_the_box" and random.random() < 0.0012:
+            if z.kind == "jack_in_the_box" and rng.random() < 0.0012:
                 self.boom(z.x, self.row_y(z.row), 135, 9999)
                 self.slay_zombie(z, source="jack_in_the_box")
                 continue
@@ -10565,7 +10589,7 @@ class BattleState:
                 if target.kind == "hypno_shroom" and target.hp <= 0:
                     z.hypnotized = True
                 if target.kind == "garlic" and target.hp > 0:
-                    z.row = int(clamp(z.row + random.choice([-1, 1]), 0, self.rows() - 1))
+                    z.row = int(clamp(z.row + rng.choice([-1, 1]), 0, self.rows() - 1))
                 if target.hp <= 0:
                     self.armor.pop(pos, None)
                     self.main.pop(pos, None)

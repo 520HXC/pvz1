@@ -64,12 +64,18 @@ def record_adventure_clear(
 ) -> dict[str, object]:
     if not adventure_level_launch:
         return deepcopy(dict(save_data))
-    updated = migrate_save_data(save_data)
     code = str(level_code).strip()
+    try:
+        requested_idx = int(level_idx)
+    except (TypeError, ValueError):
+        requested_idx = 0
+    if _adventure_level_index(code) != requested_idx or not 1 <= requested_idx <= MAX_ADVENTURE_LEVEL:
+        return deepcopy(dict(save_data))
+    updated = migrate_save_data(save_data)
     clears = _normalized_clears(updated.get("cleared_levels", []))
     if code and code not in clears:
         clears.append(code)
     updated["cleared_levels"] = clears
     current = max(1, int(updated.get("unlocked", 1)))
-    updated["unlocked"] = max(current, min(MAX_ADVENTURE_LEVEL, int(level_idx) + 1))
+    updated["unlocked"] = max(current, min(MAX_ADVENTURE_LEVEL, requested_idx + 1))
     return updated
