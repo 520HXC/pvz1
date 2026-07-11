@@ -145,6 +145,37 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
             outputs.append((list(battle.wave_spawn_queue), [battle.choose_spawn_row("normal") for _ in range(8)]))
         self.assertEqual(outputs[0], outputs[1])
 
+    def test_spawn_row_calls_do_not_change_future_wave_composition(self):
+        level = self.by_code["4-10"]
+        control = self.make_battle()
+        disturbed = self.make_battle()
+        rules = self.adventure_rules("4-10", random_seed=780)
+        control.reset(level, mode_rules=rules)
+        disturbed.reset(level, mode_rules=rules)
+        control.start_next_wave()
+        disturbed.start_next_wave()
+
+        for _ in range(25):
+            disturbed.choose_spawn_row("normal")
+        control.start_next_wave()
+        disturbed.start_next_wave()
+
+        self.assertEqual(control.wave_spawn_queue, disturbed.wave_spawn_queue)
+
+    def test_extra_wave_build_does_not_change_spawn_row_sequence(self):
+        level = self.by_code["4-10"]
+        control = self.make_battle()
+        disturbed = self.make_battle()
+        rules = self.adventure_rules("4-10", random_seed=781)
+        control.reset(level, mode_rules=rules)
+        disturbed.reset(level, mode_rules=rules)
+
+        disturbed.build_adventure_wave_queue(1)
+        control_rows = [control.choose_spawn_row("normal") for _ in range(20)]
+        disturbed_rows = [disturbed.choose_spawn_row("normal") for _ in range(20)]
+
+        self.assertEqual(control_rows, disturbed_rows)
+
     def test_combat_randomness_does_not_change_future_adventure_wave_queue(self):
         level = self.by_code["4-10"]
         control = self.make_battle()
@@ -204,6 +235,58 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
         battle.zombies.append(battle.spawn_zombie_instance("normal", 0, x))
         battle.update(0.5)
         self.assertEqual(6.0, battle.wave_pause_t)
+
+    def non_adventure_recovery_battle(self, large_wave=False):
+        level = replace(
+            self.one_zombie_wave_level(total_waves=2),
+            wave_interval=19.0,
+            large_wave_indices=(2,) if large_wave else (),
+        )
+        battle = self.make_battle()
+        battle.reset(level, mode_rules={"mode_name": "survival_recovery_test", "random_seed": 113})
+        battle.current_wave = 1
+        battle.wave_spawn_queue = []
+        battle.wave_spawn_remaining = 0
+        battle.next_wave = 0.0
+        return battle
+
+    def test_non_adventure_recovery_keeps_legacy_normal_and_large_delays(self):
+        normal = self.non_adventure_recovery_battle(large_wave=False)
+        large = self.non_adventure_recovery_battle(large_wave=True)
+
+        normal.update(0.0)
+        large.update(0.0)
+
+        self.assertEqual(1.9, normal.wave_pause_t)
+        self.assertEqual(3.2, large.wave_pause_t)
+
+        normal.update(1.89)
+        large.update(3.19)
+        self.assertEqual(1, normal.current_wave)
+        self.assertEqual(1, large.current_wave)
+
+        normal.update(0.01)
+        large.update(0.01)
+        self.assertEqual(2, normal.current_wave)
+        self.assertEqual(2, large.current_wave)
+
+    def test_non_adventure_recovery_keeps_global_active_count_gate(self):
+        battle = self.non_adventure_recovery_battle()
+        x = battle.lawn_right()
+        battle.zombies.extend(
+            battle.spawn_zombie_instance("normal", row, x)
+            for row in range(3)
+        )
+
+        battle.update(0.0)
+
+        self.assertEqual(0.0, battle.next_wave)
+        self.assertEqual(0.0, battle.wave_pause_t)
+
+        battle.zombies.pop()
+        battle.update(0.0)
+        self.assertEqual(2.0, battle.next_wave)
+        self.assertEqual(1.9, battle.wave_pause_t)
 
     def test_custom_adventure_modes_keep_their_point_wave_plans(self):
         for code in ("5-5", "5-10"):
@@ -540,6 +623,26 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
         battle.update(0.0)
         self.assertEqual("win", battle.result)
 
+    def test_adventure_bungee_waits_for_dying_entity_removal_before_win(self):
+        battle = self.make_battle()
+        battle.reset(self.by_code["5-5"], mode_rules=self.adventure_rules("5-5", random_seed=557))
+        battle.current_wave = battle.total_waves
+        battle.wave_spawn_queue = []
+        battle.wave_spawn_remaining = 0
+        zombie = battle.spawn_zombie_instance("normal", 0, battle.lawn_right())
+        zombie.hp = 0.0
+        zombie.state["dying_t"] = 0.2
+        battle.zombies.append(zombie)
+
+        battle.update(0.0)
+
+        self.assertIsNone(battle.result)
+        self.assertEqual(1, len(battle.zombies))
+
+        battle.update(0.2)
+        self.assertEqual([], battle.zombies)
+        self.assertEqual("win", battle.result)
+
     def actual_adventure_spawn_sequence(self, disturb_global_random):
         battle = self.make_battle()
         battle.reset(self.by_code["4-10"], mode_rules=self.adventure_rules("4-10", random_seed=4410))
@@ -643,6 +746,62 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
         self.assertEqual(1, split.current_wave)
         self.assertEqual(6.0, single.wave_pause_t)
         self.assertEqual(6.0, split.wave_pause_t)
+
+    def runtime_wave_snapshot(self, battle):
+        return (
+            battle.current_wave,
+            tuple(battle.wave_spawn_queue),
+            battle.wave_spawn_remaining,
+            round(battle.wave_pause_t, 6),
+            round(battle.spawn_t, 6),
+            tuple(
+                (z.kind, z.row, round(z.x, 4), round(z.hp, 4))
+                for z in battle.zombies
+            ),
+            battle.result,
+        )
+
+    def test_large_dt_matches_partitioned_updates_for_normal_adventure(self):
+        level = replace(
+            self.one_zombie_wave_level(total_waves=3),
+            wave_budgets=(1, 1, 1),
+            spawn_base=1.0,
+            spawn_min=1.0,
+            wave_interval=2.0,
+        )
+
+        def make_runtime_battle():
+            battle = self.make_battle()
+            battle.reset(level, mode_rules={"adventure_level_launch": True, "random_seed": 114})
+            return battle
+
+        single = make_runtime_battle()
+        partitioned = make_runtime_battle()
+        single.update(18.0)
+        for _ in range(18):
+            partitioned.update(1.0)
+
+        self.assertEqual(self.runtime_wave_snapshot(partitioned), self.runtime_wave_snapshot(single))
+
+    def test_large_dt_matches_partitioned_updates_for_boss_custom_path(self):
+        def make_boss():
+            boss = self.make_battle()
+            boss.reset(self.by_code["5-10"], mode_rules=self.adventure_rules("5-10", random_seed=115))
+            boss.battle_intro_phase = "combat_live"
+            boss.zomboss_intro_index = len(tuple(boss.zomboss_ruleset().get("boss_intro_phase", ())))
+            boss.zomboss_attack_t = -1000.0
+            boss.zomboss_stomp_t = -1000.0
+            boss.zomboss_bungee_t = -1000.0
+            boss.zomboss_rv_t = -1000.0
+            return boss
+
+        single = make_boss()
+        partitioned = make_boss()
+        single.update(18.0)
+        for _ in range(18):
+            partitioned.update(1.0)
+
+        self.assertEqual(self.runtime_wave_snapshot(partitioned), self.runtime_wave_snapshot(single))
 
     def dancing_backup_records(self, disturb_global_random):
         random.seed(8877)

@@ -2,6 +2,35 @@ from collections import Counter
 from typing import Iterable, Mapping, Sequence
 
 
+ADVENTURE_ZOMBIE_POINT_COSTS: dict[str, int] = {
+    "normal": 1,
+    "flag_zombie": 1,
+    "conehead": 2,
+    "pole_vaulting": 2,
+    "newspaper": 2,
+    "ducky_tube": 2,
+    "backup_dancer": 2,
+    "snorkel": 3,
+    "dolphin_rider": 3,
+    "balloon": 3,
+    "buckethead": 4,
+    "screen_door": 4,
+    "dancing": 4,
+    "bungee": 4,
+    "ladder": 4,
+    "digger": 4,
+    "pogo": 4,
+    "football": 6,
+    "jack_in_the_box": 6,
+    "zomboni": 7,
+    "bobsled_team": 7,
+    "catapult": 8,
+    "gargantuar": 10,
+    "imp": 2,
+    "zomboss": 18,
+}
+
+
 def spawn_cooldown(
     spawn_base: float,
     spawn_min: float,

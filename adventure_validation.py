@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Mapping, Protocol, Sequence
 
+from wave_director import ADVENTURE_ZOMBIE_POINT_COSTS, validate_guarantees_fit_budgets
+
 
 WATER_LANE_ZOMBIES = frozenset(
     {"ducky_tube", "snorkel", "dolphin_rider", "bobsled_team"}
@@ -25,6 +27,8 @@ class AdventureLevelLike(Protocol):
     stage_mode_id: str
     cards: Sequence[str]
     adventure_zombie_pool: Sequence[str]
+    wave_budgets: Sequence[int]
+    guaranteed_zombies: Sequence[tuple[int, str, int]]
     preplaced_supports: Sequence[tuple[str, int, int]]
 
 
@@ -117,6 +121,13 @@ def validate_adventure_levels(
         battlefield = level.battlefield
         stage_style = level.stage_style
         preplaced = set(level.preplaced_supports)
+
+        for detail in validate_guarantees_fit_budgets(
+            level.wave_budgets,
+            level.guaranteed_zombies,
+            ADVENTURE_ZOMBIE_POINT_COSTS,
+        ):
+            issues.append(AdventureValidationIssue(code, "wave budget", detail))
 
         if (
             stage_style == "bonus_special"

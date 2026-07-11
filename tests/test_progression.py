@@ -111,6 +111,66 @@ class ProgressionPureTests(unittest.TestCase):
         self.assertEqual(["1"], updated["cleared_levels"])
         self.assertEqual(2, updated["unlocked"])
 
+    def test_future_save_version_is_preserved_without_downgrade(self):
+        future = {
+            "save_version": SAVE_VERSION + 1,
+            "unlocked": 50,
+            "cleared_levels": ["5-10"],
+            "future_field": {"keep": True},
+        }
+
+        migrated = migrate_save_data(future)
+        recorded = record_adventure_clear(
+            future,
+            "1-1",
+            1,
+            adventure_level_launch=True,
+        )
+
+        self.assertEqual(future, migrated)
+        self.assertEqual(future, recorded)
+        self.assertIsNot(future, migrated)
+        self.assertIsNot(future, recorded)
+
+    def test_clear_requires_real_integer_index(self):
+        saved = {"save_version": SAVE_VERSION, "unlocked": 1, "cleared_levels": []}
+        for invalid_index in (True, 1.0, "1"):
+            with self.subTest(invalid_index=invalid_index):
+                self.assertEqual(
+                    saved,
+                    record_adventure_clear(
+                        saved,
+                        "1-1",
+                        invalid_index,
+                        adventure_level_launch=True,
+                    ),
+                )
+
+    def test_clear_rejects_noncanonical_level_codes(self):
+        saved = {"save_version": SAVE_VERSION, "unlocked": 1, "cleared_levels": []}
+        invalid_codes = ("01", "01-01", "1-01", " 1-1", "1-1 ", "+1")
+        for invalid_code in invalid_codes:
+            with self.subTest(invalid_code=invalid_code):
+                self.assertEqual(
+                    saved,
+                    record_adventure_clear(
+                        saved,
+                        invalid_code,
+                        1,
+                        adventure_level_launch=True,
+                    ),
+                )
+
+    def test_save_migration_keeps_only_canonical_string_clear_codes(self):
+        migrated = migrate_save_data(
+            {
+                "unlocked": 1,
+                "cleared_levels": [1, " 1-1", "1-1 ", "01", "01-01", "1-1"],
+            }
+        )
+
+        self.assertEqual(["1-1"], migrated["cleared_levels"])
+
 
 @unittest.skipUnless(PROGRESSION_AVAILABLE, "progression API not implemented yet")
 class ProgressionGameIntegrationTests(unittest.TestCase):

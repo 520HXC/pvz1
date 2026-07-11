@@ -11,29 +11,42 @@ def _normalized_clears(raw: object) -> list[str]:
         return []
     clears: list[str] = []
     for item in raw:
-        if item is None:
+        if not isinstance(item, str):
             continue
-        code = str(item).strip()
+        code = item
         if _adventure_level_index(code) > 0 and code not in clears:
             clears.append(code)
     return clears
 
 
 def _adventure_level_index(code: str) -> int:
-    try:
-        if "-" in code:
-            world_text, stage_text = code.split("-", 1)
-            world = int(world_text)
-            stage = int(stage_text)
-            return (world - 1) * 10 + stage if 1 <= world <= 5 and 1 <= stage <= 10 else 0
-        level_idx = int(code)
-        return level_idx if 1 <= level_idx <= MAX_ADVENTURE_LEVEL else 0
-    except (TypeError, ValueError):
+    if not isinstance(code, str) or code != code.strip():
         return 0
+    if "-" in code:
+        parts = code.split("-")
+        if len(parts) != 2:
+            return 0
+        world_text, stage_text = parts
+        if world_text not in {str(world) for world in range(1, 6)}:
+            return 0
+        if stage_text not in {str(stage) for stage in range(1, 11)}:
+            return 0
+        return (int(world_text) - 1) * 10 + int(stage_text)
+    if not code.isdigit() or str(int(code)) != code:
+        return 0
+    level_idx = int(code)
+    return level_idx if 1 <= level_idx <= MAX_ADVENTURE_LEVEL else 0
+
+
+def _is_future_save(source: Mapping[str, object]) -> bool:
+    version = source.get("save_version")
+    return type(version) is int and version > SAVE_VERSION
 
 
 def migrate_save_data(raw_data: Mapping[str, object] | None) -> dict[str, object]:
     source = dict(raw_data or {})
+    if _is_future_save(source):
+        return deepcopy(source)
     migrated = deepcopy(source)
     clears = _normalized_clears(source.get("cleared_levels", []))
     try:
@@ -62,16 +75,18 @@ def record_adventure_clear(
     *,
     adventure_level_launch: bool,
 ) -> dict[str, object]:
+    source = dict(save_data)
     if not adventure_level_launch:
-        return deepcopy(dict(save_data))
-    code = str(level_code).strip()
-    try:
-        requested_idx = int(level_idx)
-    except (TypeError, ValueError):
-        requested_idx = 0
+        return deepcopy(source)
+    if _is_future_save(source):
+        return deepcopy(source)
+    if not isinstance(level_code, str) or type(level_idx) is not int:
+        return deepcopy(source)
+    code = level_code
+    requested_idx = level_idx
     if _adventure_level_index(code) != requested_idx or not 1 <= requested_idx <= MAX_ADVENTURE_LEVEL:
-        return deepcopy(dict(save_data))
-    updated = migrate_save_data(save_data)
+        return deepcopy(source)
+    updated = migrate_save_data(source)
     clears = _normalized_clears(updated.get("cleared_levels", []))
     if code and code not in clears:
         clears.append(code)

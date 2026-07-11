@@ -303,6 +303,18 @@ class AdventureInvariantTests(unittest.TestCase):
         self.assertIn("5-2", rendered)
         self.assertIn("roof platform", rendered)
 
+    def test_validator_reports_guarantees_that_exceed_wave_budget(self):
+        invalid = replace(
+            self.by_code["1-1"],
+            wave_budgets=(1,),
+            guaranteed_zombies=((1, "buckethead", 1),),
+        )
+
+        issues = self.validate([invalid])
+
+        self.assertTrue(any(issue.capability == "wave budget" for issue in issues))
+        self.assertIn("1-1", "\n".join(str(issue) for issue in issues))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,6 +16,7 @@ import pygame
 
 from progression import migrate_save_data, record_adventure_clear
 from wave_director import (
+    ADVENTURE_ZOMBIE_POINT_COSTS,
     advance_recovery_countdown,
     lanes_within_pressure_limit,
     next_wave_recovery_delay,
@@ -32,6 +33,7 @@ except Exception:
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 FPS = 60
+MAX_SIM_STEP = 1.0 / 16.0
 
 SIDE_W = 250
 COLS = 9
@@ -2549,34 +2551,6 @@ PLANT_DESCRIPTIONS: Dict[str, Dict[str, Dict[str, str]]] = {}
 
 ZOMBIE_DESCRIPTIONS: Dict[str, Dict[str, Dict[str, str]]] = {}
 
-ADVENTURE_ZOMBIE_POINT_COSTS: Dict[str, int] = {
-    "normal": 1,
-    "flag_zombie": 1,
-    "conehead": 2,
-    "pole_vaulting": 2,
-    "newspaper": 2,
-    "ducky_tube": 2,
-    "backup_dancer": 2,
-    "snorkel": 3,
-    "dolphin_rider": 3,
-    "balloon": 3,
-    "buckethead": 4,
-    "screen_door": 4,
-    "dancing": 4,
-    "bungee": 4,
-    "ladder": 4,
-    "digger": 4,
-    "pogo": 4,
-    "football": 6,
-    "jack_in_the_box": 6,
-    "zomboni": 7,
-    "bobsled_team": 7,
-    "catapult": 8,
-    "gargantuar": 10,
-    "imp": 2,
-    "zomboss": 18,
-}
-
 ADVENTURE_FLAGS_FIRST_CLEAR: Dict[int, Tuple[int, ...]] = {
     1: (1, 1, 1, 1, 1, 1, 2, 1, 2, 2),
     2: (1, 1, 1, 2, 1, 2, 2, 2, 2, 2),
@@ -4483,6 +4457,7 @@ class BattleState:
         self.wave_spawn_remaining = 0
         self.wave_pause_t = 0.0
         self.wave_rng = random.Random(1)
+        self.row_rng = random.Random(2)
         self.combat_rng = random.Random(2)
         self.result: Optional[str] = None
         self.almanac_open = False
@@ -6460,15 +6435,26 @@ class BattleState:
         if self.wave_spawn_remaining > 0 or self.wave_spawn_queue:
             return False
         upcoming_wave = self.current_wave + 1
-        required_delay = next_wave_recovery_delay(
-            self.wave_interval,
-            upcoming_wave in self.large_wave_indices,
-        )
-        lane_limit = self.adventure_lane_pressure_limit() if self.is_adventure_mainline() else max(2, self.level.danger)
-        pressure_safe = lanes_within_pressure_limit(
-            (z.row for z in active_zombies),
-            lane_limit,
-        )
+        if self.is_adventure_mainline():
+            required_delay = next_wave_recovery_delay(
+                self.wave_interval,
+                upcoming_wave in self.large_wave_indices,
+            )
+            pressure_safe = lanes_within_pressure_limit(
+                (z.row for z in active_zombies),
+                self.adventure_lane_pressure_limit(),
+            )
+        else:
+            required_delay = 3.2 if upcoming_wave in self.large_wave_indices else 1.9
+            pressure_safe = len(active_zombies) <= max(2, int(self.level.danger))
+        if not pressure_safe:
+            if self.is_adventure_mainline():
+                self.next_wave = float(upcoming_wave)
+                self.wave_pause_t = required_delay
+            else:
+                self.next_wave = 0.0
+                self.wave_pause_t = 0.0
+            return False
         newly_started = int(self.next_wave) != upcoming_wave
         self.next_wave = float(upcoming_wave)
         if newly_started:
@@ -6502,7 +6488,7 @@ class BattleState:
         if not rows:
             return 0
         pressure_limit = self.adventure_lane_pressure_limit() if self.is_adventure_mainline() else max(2, int(self.level.danger) if self.level else 2)
-        rng = self.wave_rng if self.is_adventure_mainline() else random
+        rng = self.row_rng if self.is_adventure_mainline() else random
         scored: List[Tuple[float, float, int]] = []
         cost = self.zombie_point_cost(kind)
         for row in rows:
@@ -9299,6 +9285,7 @@ class BattleState:
         else:
             wave_seed = int(level.idx) * 1009 + 17
         self.wave_rng = random.Random(wave_seed)
+        self.row_rng = random.Random(wave_seed * 1013 + 193)
         self.combat_rng = random.Random(wave_seed * 1009 + 97)
         self.total_waves, self.large_wave_indices, self.final_wave_index, self.wave_budgets = self.mode_wave_budgets(level)
         self.elapsed = 0.0
@@ -9752,6 +9739,16 @@ class BattleState:
             del self.support[pos]
 
     def update(self, dt: float) -> None:
+        remaining = max(0.0, float(dt))
+        if remaining <= 0.0:
+            self._update_step(0.0)
+            return
+        while remaining > 1e-9:
+            step = min(MAX_SIM_STEP, remaining)
+            self._update_step(step)
+            remaining -= step
+
+    def _update_step(self, dt: float) -> None:
         if not self.level or self.result or self.paused or self.almanac_open:
             return
         if self.is_battle_intro_active():
@@ -9783,11 +9780,14 @@ class BattleState:
         if self.uses_wave_system():
             if self.current_wave == 0 and self.wave_pause_t <= 0.0 and int(self.next_wave) == 1:
                 self.start_next_wave()
-            pending_spawns_at_frame_start = (
-                bool(self.wave_spawn_queue)
-                if self.is_adventure_mainline()
-                else self.wave_spawn_remaining > 0
-            )
+            active_zombies = [
+                z
+                for z in self.zombies
+                if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0
+            ]
+            if self.wave_spawn_remaining <= 0 and self.current_wave > 0 and self.current_wave < self.total_waves:
+                if self.wave_recovery_ready(dt, active_zombies):
+                    self.start_next_wave()
             spawn_cd = calculate_spawn_cooldown(
                 self.level.spawn_base,
                 self.level.spawn_min,
@@ -9825,18 +9825,15 @@ class BattleState:
                     self.spawn_t -= spawn_cd
                     self.spawn_zombie(self.current_wave)
                     self.wave_spawn_remaining -= 1
-            active_zombies = [
-                z
-                for z in self.zombies
-                if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0
-            ]
+            if self.wave_spawn_remaining <= 0 and 0 < self.current_wave < self.total_waves:
+                active_after_spawn = [
+                    z
+                    for z in self.zombies
+                    if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0
+                ]
+                self.wave_recovery_ready(0.0, active_after_spawn)
             if self.wave_spawn_remaining <= 0 and self.current_wave > 0:
-                if self.current_wave < self.total_waves:
-                    emptied_spawn_queue_this_frame = pending_spawns_at_frame_start
-                    recovery_dt = 0.0 if emptied_spawn_queue_this_frame else dt
-                    if self.wave_recovery_ready(recovery_dt, active_zombies):
-                        self.start_next_wave()
-                elif not self.zombies and not self.rolling_nuts:
+                if self.current_wave >= self.total_waves and not self.zombies and not self.rolling_nuts:
                     self.result = "win"
         if self.mode_bool("conveyor", False):
             self.update_conveyor()
@@ -9887,11 +9884,7 @@ class BattleState:
                 and not self.wave_spawn_queue
                 and self.wave_spawn_remaining <= 0
             )
-            active_zombies = any(
-                z.hp > 0 and float(z.state.get("dying_t", 0.0)) <= 0.0
-                for z in self.zombies
-            )
-            if waves_complete and not active_zombies and not self.rolling_nuts:
+            if waves_complete and not self.zombies and not self.rolling_nuts:
                 self.result = "win"
         if self.is_vasebreaker_mode() and not self.vases and (not any(z.hp > 0 or z.state.get("dying_t", 0.0) > 0.0 for z in self.zombies)):
             endless_mode = bool(self.mode_bool("vasebreaker_endless", False)) or self.mode_name() == "puzzle_vasebreaker_endless"
