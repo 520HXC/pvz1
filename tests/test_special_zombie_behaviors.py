@@ -225,6 +225,52 @@ class SpecialZombieBattleTests(unittest.TestCase):
 
         self.assertLess(plant.hp, start_hp)
 
+    def test_snorkel_resubmerges_after_eating_then_surfaces_at_next_plant_at_60_fps(self):
+        battle = self.make_battle("3-1")
+        battle.total_waves = 0
+        battle.current_wave = 0
+        battle.final_wave_index = 0
+        battle.wave_spawn_queue.clear()
+        battle.wave_spawn_remaining = 0
+        row = battle.field.water_rows[0]
+        first_col = 5
+        second_col = 3
+        for col in (first_col, second_col):
+            self.assertTrue(battle.spawn_plant_direct("lily_pad", row, col))
+            self.assertTrue(battle.spawn_plant_direct("sunflower", row, col))
+        first = battle.main[(row, first_col)]
+        second = battle.main[(row, second_col)]
+        second_start_hp = second.hp
+        zombie = self.spawn(battle, "snorkel", row=row, col=first_col)
+
+        first_was_eaten = False
+        saw_submerging = False
+        saw_submerged_motion = False
+        saw_second_surface = False
+        submerged_x = zombie.x
+        for _frame in range(60 * 30):
+            battle.update(1.0 / 60.0)
+            state = battle.snorkel_state(zombie)
+            if not first_was_eaten and first.hp <= 0.0:
+                first_was_eaten = True
+            if first_was_eaten and state == "submerging":
+                saw_submerging = True
+                self.assertFalse(battle.zombie_can_attack_plants(zombie))
+            if first_was_eaten and state == "submerged":
+                if zombie.x < submerged_x - 0.1:
+                    saw_submerged_motion = True
+                submerged_x = zombie.x
+            if first_was_eaten and state in {"surfacing", "surfaced"} and zombie.x < battle.cell_center(row, first_col)[0] - game.CELL_W:
+                saw_second_surface = True
+            if second.hp < second_start_hp:
+                break
+
+        self.assertTrue(first_was_eaten)
+        self.assertTrue(saw_submerging)
+        self.assertTrue(saw_submerged_motion)
+        self.assertTrue(saw_second_surface)
+        self.assertLess(second.hp, second_start_hp)
+
     def test_dolphin_vaults_first_normal_plant_without_biting_and_slows_after_landing(self):
         battle = self.make_battle("3-3")
         row = battle.field.water_rows[0]

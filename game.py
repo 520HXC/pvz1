@@ -6300,6 +6300,21 @@ class BattleState:
                 if surface_t <= 0.0:
                     zombie.state["snorkel_state"] = "surfaced"
                 return True
+            if state == "surfaced":
+                _pos, target, _main_target = self.zombie_cell_targets(zombie)
+                if target is None:
+                    zombie.state["snorkel_state"] = "submerging"
+                    zombie.state["snorkel_surface_t"] = 0.32
+                    zombie.state["bite_t"] = 0.0
+                    return True
+                return False
+            if state == "submerging":
+                surface_t = max(0.0, float(zombie.state.get("snorkel_surface_t", 0.0)) - dt)
+                zombie.state["snorkel_surface_t"] = surface_t
+                zombie.state["bite_t"] = 0.0
+                if surface_t <= 0.0:
+                    zombie.state["snorkel_state"] = "submerged"
+                return True
             return False
         if zombie.kind == "balloon":
             state = self.balloon_state(zombie)
