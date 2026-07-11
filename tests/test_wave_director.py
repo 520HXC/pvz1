@@ -255,19 +255,19 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
         normal = self.non_adventure_recovery_battle(large_wave=False)
         large = self.non_adventure_recovery_battle(large_wave=True)
 
-        normal.update(0.0)
-        large.update(0.0)
+        normal.update(game.SIM_QUANTUM)
+        large.update(game.SIM_QUANTUM)
 
-        self.assertEqual(1.9, normal.wave_pause_t)
-        self.assertEqual(3.2, large.wave_pause_t)
+        self.assertAlmostEqual(1.9 - game.SIM_QUANTUM, normal.wave_pause_t)
+        self.assertAlmostEqual(3.2 - game.SIM_QUANTUM, large.wave_pause_t)
 
-        normal.update(1.89)
-        large.update(3.19)
+        normal.update(1.9 - 2.0 * game.SIM_QUANTUM)
+        large.update(3.2 - 2.0 * game.SIM_QUANTUM)
         self.assertEqual(1, normal.current_wave)
         self.assertEqual(1, large.current_wave)
 
-        normal.update(0.01)
-        large.update(0.01)
+        normal.update(game.SIM_QUANTUM)
+        large.update(game.SIM_QUANTUM)
         self.assertEqual(2, normal.current_wave)
         self.assertEqual(2, large.current_wave)
 
@@ -279,15 +279,15 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
             for row in range(3)
         )
 
-        battle.update(0.0)
+        battle.update(game.SIM_QUANTUM)
 
         self.assertEqual(0.0, battle.next_wave)
         self.assertEqual(0.0, battle.wave_pause_t)
 
         battle.zombies.pop()
-        battle.update(0.0)
+        battle.update(game.SIM_QUANTUM)
         self.assertEqual(2.0, battle.next_wave)
-        self.assertEqual(1.9, battle.wave_pause_t)
+        self.assertAlmostEqual(1.9 - game.SIM_QUANTUM, battle.wave_pause_t)
 
     def test_custom_adventure_modes_keep_their_point_wave_plans(self):
         for code in ("5-5", "5-10"):
@@ -420,13 +420,13 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
         )
         battle.start_next_wave()
         battle.elapsed = 100.0
-        battle.spawn_t = 2.99
+        battle.spawn_t = 3.0 - game.SIM_QUANTUM - 0.01
         before = len(battle.wave_spawn_queue)
-        battle.update(0.0)
+        battle.update(game.SIM_QUANTUM)
         self.assertEqual(before, len(battle.wave_spawn_queue))
 
-        battle.spawn_t = 3.0
-        battle.update(0.0)
+        battle.spawn_t = 3.0 - game.SIM_QUANTUM
+        battle.update(game.SIM_QUANTUM)
         self.assertEqual(before - 1, len(battle.wave_spawn_queue))
 
     def drain_current_custom_queue(self, battle):
@@ -721,9 +721,7 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
         battle.zombies[0].hp = 0.0
         battle.update(0.0)
         self.assertIsNone(battle.result)
-        battle.update(0.34 + game.SIM_QUANTUM)
-        self.assertIsNone(battle.result)
-        battle.update(0.0)
+        battle.update(0.34 + 2.0 * game.SIM_QUANTUM)
         self.assertEqual("win", battle.result)
 
     def test_frame_that_empties_spawn_queue_does_not_consume_recovery_dt(self):
@@ -877,6 +875,62 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
         self.assertEqual(0, update_step.call_count)
         self.assertEqual(before, self.jack_timing_snapshot(battle))
 
+    def zero_dt_snapshot(self, battle):
+        return (
+            self.jack_timing_snapshot(battle),
+            battle.wave_rng.getstate(),
+            battle.row_rng.getstate(),
+            battle.combat_rng.getstate(),
+            random.getstate(),
+            battle.spawn_t,
+            battle.sky_t,
+            battle.conveyor_t,
+            battle.grave_t,
+            tuple(
+                (
+                    pos,
+                    plant.kind,
+                    plant.hp,
+                    plant.cd,
+                    tuple(sorted(plant.state.items())),
+                )
+                for pos, plant in sorted(battle.main.items())
+            ),
+            tuple(
+                (projectile.x, projectile.y, projectile.teleport_cd)
+                for projectile in battle.projs
+            ),
+            tuple((token.x, token.y, token.life) for token in battle.tokens),
+        )
+
+    def add_zero_dt_runtime_entities(self, battle):
+        self.assertTrue(battle.spawn_plant_direct("sunflower", 0, 0, force_place=True))
+        battle.add_projectile(0, 300.0, 200.0, 20.0, speed=120.0)
+        battle.tokens.append(game.Token(250.0, 180.0, 25, 8.0, "sun"))
+
+    def test_zero_dt_does_not_step_jack_or_consume_any_rng(self):
+        random.seed(1134)
+        battle = self.make_jack_timing_battle(seed=1134)
+        self.add_zero_dt_runtime_entities(battle)
+        before = self.zero_dt_snapshot(battle)
+
+        with patch.object(battle, "_update_step", wraps=battle._update_step) as update_step:
+            battle.update(0.0)
+
+        self.assertEqual(before, self.zero_dt_snapshot(battle))
+        self.assertEqual(0, update_step.call_count)
+
+    def test_repeated_zero_dt_calls_leave_non_settling_state_unchanged(self):
+        random.seed(1135)
+        battle = self.make_jack_timing_battle(seed=1135)
+        self.add_zero_dt_runtime_entities(battle)
+        before = self.zero_dt_snapshot(battle)
+
+        for _ in range(10):
+            battle.update(0.0)
+
+        self.assertEqual(before, self.zero_dt_snapshot(battle))
+
     def test_suspended_battles_do_not_accumulate_large_dt_or_catch_up(self):
         for state_name, state_value in (
             ("paused", True),
@@ -916,12 +970,52 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
         self.assertGreaterEqual(battle._sim_accumulator, 0.0)
         self.assertLess(battle._sim_accumulator, game.SIM_QUANTUM)
 
+    def test_real_entity_catchup_is_capped_at_twenty_seconds(self):
+        battle = self.make_battle()
+        battle.reset(
+            self.by_code["1-1"],
+            mode_rules={"adventure_level_launch": True, "random_seed": 123},
+        )
+        battle.current_wave = battle.total_waves
+        battle.wave_spawn_queue = []
+        battle.wave_spawn_remaining = 0
+        for index in range(100):
+            battle.zombies.append(
+                battle.spawn_zombie_instance(
+                    "normal",
+                    index % battle.rows(),
+                    battle.lawn_right() + index,
+                )
+            )
+
+        battle.update(game.SIM_QUANTUM * 1260)
+
+        self.assertAlmostEqual(20.0, battle.elapsed)
+        self.assertEqual(100, len(battle.zombies))
+        self.assertLess(battle._sim_accumulator, game.SIM_QUANTUM)
+
     def test_zero_dt_still_runs_immediate_battle_settlement(self):
         battle = self.make_battle()
         battle.reset(self.by_code["5-5"], mode_rules=self.adventure_rules("5-5", random_seed=120))
         battle.current_wave = battle.total_waves
         battle.wave_spawn_queue = []
         battle.wave_spawn_remaining = 0
+
+        battle.update(0.0)
+
+        self.assertEqual("win", battle.result)
+
+    def test_zero_dt_settles_empty_normal_final_wave(self):
+        battle = self.make_battle()
+        battle.reset(
+            self.by_code["1-1"],
+            mode_rules={"adventure_level_launch": True, "random_seed": 124},
+        )
+        battle.current_wave = battle.total_waves
+        battle.wave_spawn_queue = []
+        battle.wave_spawn_remaining = 0
+        battle.zombies.clear()
+        battle.rolling_nuts.clear()
 
         battle.update(0.0)
 

@@ -34,7 +34,7 @@ SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 FPS = 60
 SIM_QUANTUM = 1.0 / FPS
-MAX_SIM_CATCHUP_STEPS = FPS * 120
+MAX_SIM_CATCHUP_STEPS = FPS * 20
 TIME_EPSILON = 1e-9
 
 SIDE_W = 250
@@ -9752,7 +9752,7 @@ class BattleState:
         if not math.isfinite(frame_dt) or frame_dt < 0.0:
             return
         if frame_dt == 0.0:
-            self._update_step(0.0)
+            self._settle_immediate_results()
             return
         self._sim_accumulator += frame_dt
         steps = 0
@@ -9766,8 +9766,68 @@ class BattleState:
         if steps >= MAX_SIM_CATCHUP_STEPS and self._sim_accumulator >= SIM_QUANTUM:
             self._sim_accumulator = math.fmod(self._sim_accumulator, SIM_QUANTUM)
 
+    def _settle_immediate_results(self) -> None:
+        if not self.level or self.result:
+            return
+        waves_complete = (
+            self.current_wave > 0
+            and self.current_wave >= self.total_waves
+            and not self.wave_spawn_queue
+            and self.wave_spawn_remaining <= 0
+        )
+        if (
+            self.uses_wave_system()
+            and waves_complete
+            and not self.zombies
+            and not self.rolling_nuts
+        ):
+            self.result = "win"
+            return
+        if (
+            self.is_bungee_blitz_mode()
+            and self.is_adventure_mainline()
+            and waves_complete
+            and not self.zombies
+            and not self.rolling_nuts
+        ):
+            self.result = "win"
+            return
+        if self.is_vasebreaker_mode():
+            endless_mode = bool(self.mode_bool("vasebreaker_endless", False)) or self.mode_name() == "puzzle_vasebreaker_endless"
+            board_clear = not self.vases and not any(
+                z.hp > 0 or z.state.get("dying_t", 0.0) > 0.0
+                for z in self.zombies
+            )
+            if board_clear and not endless_mode:
+                self.result = "win"
+            return
+        if self.is_i_zombie_mode():
+            if not self.brains:
+                self.result = "win"
+            elif (
+                not any(z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0 for z in self.zombies)
+                and not self.can_play_any_i_zombie_card()
+            ):
+                self.result = "lose"
+            return
+        target_duration = self.target_duration if self.target_duration > 0 else self.level.duration
+        if (
+            not self.uses_wave_system()
+            and not self.is_beghouled_mode()
+            and not self.is_beghouled_twist_mode()
+            and not self.is_zombiquarium_mode()
+            and not self.is_whack_mode()
+            and not (self.is_bungee_blitz_mode() and self.is_adventure_mainline())
+            and self.elapsed >= target_duration
+            and not self.zombies
+        ):
+            self.result = "win"
+
     def _update_step(self, dt: float) -> None:
         if not self.level or self.result or self.paused or self.almanac_open:
+            return
+        self._settle_immediate_results()
+        if self.result:
             return
         if self.is_battle_intro_active():
             self.update_battle_intro(dt)
@@ -9850,9 +9910,6 @@ class BattleState:
                     if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0
                 ]
                 self.wave_recovery_ready(0.0, active_after_spawn)
-            if self.wave_spawn_remaining <= 0 and self.current_wave > 0:
-                if self.current_wave >= self.total_waves and not self.zombies and not self.rolling_nuts:
-                    self.result = "win"
         if self.mode_bool("conveyor", False):
             self.update_conveyor()
         sun_interval = 7.2 * self.mode_float("sky_sun_interval_scale", 1.0)
@@ -9896,14 +9953,9 @@ class BattleState:
             if t.life <= 0:
                 self.tokens.remove(t)
         self.update_special_mode_logic(dt)
-        if self.is_bungee_blitz_mode() and self.is_adventure_mainline():
-            waves_complete = (
-                self.current_wave >= self.total_waves
-                and not self.wave_spawn_queue
-                and self.wave_spawn_remaining <= 0
-            )
-            if waves_complete and not self.zombies and not self.rolling_nuts:
-                self.result = "win"
+        self._settle_immediate_results()
+        if self.result:
+            return
         if self.is_vasebreaker_mode() and not self.vases and (not any(z.hp > 0 or z.state.get("dying_t", 0.0) > 0.0 for z in self.zombies)):
             endless_mode = bool(self.mode_bool("vasebreaker_endless", False)) or self.mode_name() == "puzzle_vasebreaker_endless"
             if endless_mode:
@@ -9914,27 +9966,6 @@ class BattleState:
                 self.mode_rules["vasebreaker_round"] = float(next_round)
                 self.mode_rules["vasebreaker_tier"] = float(max(tier_now + 1, next_round - 1))
                 self.setup_vasebreaker_board()
-            else:
-                self.result = "win"
-        if self.is_i_zombie_mode():
-            if not self.brains:
-                self.result = "win"
-            elif (not any(z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0 for z in self.zombies)) and (not self.can_play_any_i_zombie_card()):
-                self.result = "lose"
-        target_duration = self.target_duration if self.target_duration > 0 else self.level.duration
-        if (
-            (not self.uses_wave_system())
-            and (not self.is_vasebreaker_mode())
-            and (not self.is_i_zombie_mode())
-            and (not self.is_beghouled_mode())
-            and (not self.is_beghouled_twist_mode())
-            and (not self.is_zombiquarium_mode())
-            and (not self.is_whack_mode())
-            and not (self.is_bungee_blitz_mode() and self.is_adventure_mainline())
-            and self.elapsed >= target_duration
-            and not self.zombies
-        ):
-            self.result = "win"
 
     def update_conveyor(self) -> None:
         if not self.conveyor_pool:
