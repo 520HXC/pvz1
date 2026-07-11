@@ -5758,6 +5758,13 @@ class BattleState:
             return False
         return True
 
+    def zombie_movement_direction(self, zombie: Zombie) -> int:
+        if zombie.hypnotized:
+            return 1
+        if zombie.kind == "digger" and self.digger_state(zombie) == "surface_attack":
+            return 1
+        return -1
+
     def plant_damage_stage(self, plant: Plant) -> str:
         hp_max = max(1.0, float(plant.state.get("hp_max", plant.hp)))
         ratio = clamp(plant.hp / hp_max, 0.0, 1.0)
@@ -6259,7 +6266,7 @@ class BattleState:
             return 0.0
         if zombie.kind == "balloon":
             state = self.balloon_state(zombie)
-            if state == "airborne" and source == "blover":
+            if state == "airborne" and source in {"blover", "cleaner"}:
                 zombie.hp = 0.0
                 return max(amount, 1.0)
             if state == "airborne" and source == "anti_air_projectile":
@@ -9512,6 +9519,17 @@ class BattleState:
             for z in self.zombies
         )
 
+    def exposed_zomboss_targetable(self) -> bool:
+        return (
+            self.is_zomboss_boss_mode()
+            and self.zomboss_hp > 0.0
+            and self.zomboss_exposed_t > 0.0
+            and not self.result
+        )
+
+    def has_lobbed_attack_target(self, row: int, x: float) -> bool:
+        return self.z_ahead(row, x) or self.exposed_zomboss_targetable()
+
     def z_near(self, row: int, x: float, r: float) -> Optional[Zombie]:
         near = None
         best = 1e9
@@ -9813,6 +9831,7 @@ class BattleState:
         target_duration = self.target_duration if self.target_duration > 0 else self.level.duration
         if (
             not self.uses_wave_system()
+            and not self.is_zomboss_boss_mode()
             and not self.is_beghouled_mode()
             and not self.is_beghouled_twist_mode()
             and not self.is_zombiquarium_mode()
@@ -9967,6 +9986,33 @@ class BattleState:
                 self.mode_rules["vasebreaker_tier"] = float(max(tier_now + 1, next_round - 1))
                 self.setup_vasebreaker_board()
 
+    def any_conveyor_card_placeable(self) -> bool:
+        for kind in set(self.cards):
+            if kind not in self.plant_types:
+                continue
+            for row in range(self.rows()):
+                for col in range(COLS):
+                    if self.can_place(kind, row, col):
+                        return True
+        return False
+
+    def recover_roof_conveyor_softlock(self) -> bool:
+        if (
+            not self.field.is_roof
+            or len(self.cards) < self.conveyor_cap
+            or "flower_pot" in self.cards
+            or self.any_conveyor_card_placeable()
+        ):
+            return False
+        if not any(
+            self.can_place("flower_pot", row, col)
+            for row in range(self.rows())
+            for col in range(COLS)
+        ):
+            return False
+        self.cards[-1] = "flower_pot"
+        return True
+
     def update_conveyor(self) -> None:
         if not self.conveyor_pool:
             return
@@ -9974,6 +10020,7 @@ class BattleState:
         while self.conveyor_t >= interval:
             self.conveyor_t -= interval
             if len(self.cards) >= self.conveyor_cap:
+                self.recover_roof_conveyor_softlock()
                 continue
             if self.conveyor_opening_queue:
                 choice = self.conveyor_opening_queue.pop(0)
@@ -10280,7 +10327,7 @@ class BattleState:
                         self.damage_zombie(z, 140, source="magnet")
                         plant.cd = 8.0
                         break
-            elif b in {"pult", "kernel_pult", "melon_pult"} and plant.cd <= 0 and self.z_ahead(plant.row, cx):
+            elif b in {"pult", "kernel_pult", "melon_pult"} and plant.cd <= 0 and self.has_lobbed_attack_target(plant.row, cx):
                 slow = 0.0
                 splash = 0.0
                 color = (119, 196, 92)
@@ -10325,9 +10372,15 @@ class BattleState:
                     self.save_data["coins"] = int(self.save_data.get("coins", 0)) + t.value
                 if pulled:
                     plant.cd = 2.5
-            elif b == "cob" and plant.cd <= 0 and self.zombies:
-                target = max(self.zombies, key=lambda z: z.x)
-                self.boom(target.x, self.row_y(target.row), 130, 1200 * plant_dmg_scale)
+            elif b == "cob" and plant.cd <= 0:
+                cob_targets = [z for z in self.zombies if self.zombie_targetable(z)]
+                if cob_targets:
+                    target = max(cob_targets, key=lambda z: z.x)
+                    self.boom(target.x, self.row_y(target.row), 130, 1200 * plant_dmg_scale)
+                elif self.exposed_zomboss_targetable():
+                    self.damage_zomboss(1200 * plant_dmg_scale)
+                else:
+                    continue
                 plant.cd = 35.0
                 plant.state["recoil_t"] = 0.34
 
@@ -10638,7 +10691,7 @@ class BattleState:
                     self.support.pop(pos, None)
             else:
                 z.state["sun_bite_t"] = 0.0
-                direction = 1 if z.hypnotized else -1
+                direction = self.zombie_movement_direction(z)
                 mul = 0.55 if z.slow_t > 0 else 1.0
                 z.x += direction * z.speed * mul * dt
                 if self.is_portal_combat_mode():
@@ -10647,8 +10700,11 @@ class BattleState:
                     z.state["portal_cd"] = portal_cd
                 if self.is_bobsled_bonanza_mode() and z.kind in ("bobsled_team", "zomboni") and not z.hypnotized:
                     self.ice_rows[z.row] = max(float(self.ice_rows.get(z.row, 0.0)), 9999.0)
-            # Hypnotized zombies that walk off the right edge should leave battle.
-            if z.hypnotized and z.x > self.lawn_right() + 72:
+            # Right-moving allies and surfaced diggers leave after crossing the far edge.
+            exits_right = z.hypnotized or (
+                z.kind == "digger" and self.digger_state(z) == "surface_attack"
+            )
+            if exits_right and z.x > self.lawn_right() + 72:
                 if z in self.zombies:
                     self.zombies.remove(z)
                 continue
