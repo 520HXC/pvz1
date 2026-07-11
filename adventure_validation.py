@@ -32,6 +32,24 @@ class AdventureLevelLike(Protocol):
     preplaced_supports: Sequence[tuple[str, int, int]]
 
 
+class AdventureCatalogLevelLike(Protocol):
+    code: str
+    battlefield: str
+    available_cards: Sequence[str]
+    zombie_roster: Sequence[str]
+    first_threat: str
+    reward_plant: str
+    stage_style: str
+    stage_mode_id: str
+    special_rules: Sequence[str]
+    fixed_waves: Sequence[Sequence[str]]
+    large_wave_indices: Sequence[int]
+    preplaced_supports: Sequence[tuple[str, int, int]]
+    guaranteed_zombies: Sequence[tuple[int, str, int]]
+    start_sun: int
+    wave_interval: float
+
+
 @dataclass(frozen=True)
 class AdventureValidationIssue:
     level_code: str
@@ -178,5 +196,133 @@ def validate_adventure_levels(
                         "roof conveyors must guarantee flower_pot as the first card",
                     )
                 )
+
+    return issues
+
+
+def _catalog_total_points(level: AdventureCatalogLevelLike) -> int:
+    return sum(
+        ADVENTURE_ZOMBIE_POINT_COSTS.get(kind, 0)
+        for wave in level.fixed_waves
+        for kind in wave
+    )
+
+
+def validate_adventure_catalog(
+    levels: Sequence[AdventureCatalogLevelLike],
+    plant_types: Mapping[str, AdventurePlantLike],
+) -> list[AdventureValidationIssue]:
+    issues: list[AdventureValidationIssue] = []
+    ordered = sorted(
+        levels,
+        key=lambda level: tuple(int(part) for part in level.code.split("-", 1)),
+    )
+    codes = [level.code for level in ordered]
+    if len(codes) != len(set(codes)):
+        issues.append(AdventureValidationIssue("catalog", "level identity", "level codes must be unique"))
+    expected = [f"{world}-{stage}" for world in range(1, 6) for stage in range(1, 11)]
+    if codes != expected:
+        issues.append(AdventureValidationIssue("catalog", "level identity", "catalog must contain 1-1 through 5-10 in order"))
+
+    last_normal: AdventureCatalogLevelLike | None = None
+    for position, level in enumerate(ordered):
+        code = level.code
+        cards = set(level.available_cards)
+        roster = set(level.zombie_roster)
+        rules = set(level.special_rules)
+        preplaced = set(level.preplaced_supports)
+        waves = tuple(tuple(wave) for wave in level.fixed_waves)
+        try:
+            world, stage = (int(part) for part in code.split("-", 1))
+        except (TypeError, ValueError):
+            issues.append(AdventureValidationIssue(code, "level identity", "code must use world-stage numeric form"))
+            continue
+
+        unknown_cards = sorted(cards - set(plant_types))
+        if unknown_cards:
+            issues.append(AdventureValidationIssue(code, "card catalog", f"unknown cards {unknown_cards}"))
+        if len(level.available_cards) != len(cards):
+            issues.append(AdventureValidationIssue(code, "card catalog", "available cards must be unique"))
+        if not waves or any(not wave for wave in waves):
+            issues.append(AdventureValidationIssue(code, "fixed waves", "every level and wave needs a fixed composition"))
+        wave_kinds = {kind for wave in waves for kind in wave}
+        unknown_zombies = sorted(wave_kinds - set(ADVENTURE_ZOMBIE_POINT_COSTS))
+        if unknown_zombies:
+            issues.append(AdventureValidationIssue(code, "fixed waves", f"unknown zombies {unknown_zombies}"))
+        undeclared = sorted(wave_kinds - roster - {"flag_zombie"})
+        if undeclared:
+            issues.append(AdventureValidationIssue(code, "fixed waves", f"undeclared zombies {undeclared}"))
+        if not waves or level.first_threat not in waves[0]:
+            issues.append(AdventureValidationIssue(code, "first threat", "first_threat must appear in the opening fixed wave"))
+        if level.first_threat not in roster:
+            issues.append(AdventureValidationIssue(code, "first threat", "first_threat must be part of the declared roster"))
+        boss_appearances = [
+            (wave_idx, wave.count("zomboss"))
+            for wave_idx, wave in enumerate(waves, start=1)
+            if "zomboss" in wave
+        ]
+        if code == "5-10":
+            if boss_appearances != [(len(waves), 1)]:
+                issues.append(AdventureValidationIssue(code, "boss identity", "zomboss must appear exactly once in the final fixed wave"))
+        elif boss_appearances:
+            issues.append(AdventureValidationIssue(code, "boss identity", "zomboss cannot be a regular ground-wave unit"))
+
+        for wave_idx, kind, count in level.guaranteed_zombies:
+            if not 1 <= int(wave_idx) <= len(waves):
+                issues.append(AdventureValidationIssue(code, "fixed waves", f"guarantee wave {wave_idx} is out of range"))
+            elif waves[int(wave_idx) - 1].count(kind) < int(count):
+                issues.append(AdventureValidationIssue(code, "fixed waves", f"wave {wave_idx} is missing guaranteed {kind}"))
+
+        if level.battlefield in {"pool", "fog"}:
+            if "lily_pad" not in cards:
+                issues.append(AdventureValidationIssue(code, "water-lane deployment", "all pool and fog levels require lily_pad"))
+        if "balloon" in roster and not _has_deployable_balloon_counter(level.battlefield, cards, preplaced):
+            issues.append(AdventureValidationIssue(code, "balloon counter", "balloon must follow a deployable cactus, blover, or cattail counter"))
+        unsupported = sorted({kind for kind, _row, _col in preplaced if kind not in {"lily_pad", "flower_pot"}})
+        if unsupported:
+            issues.append(AdventureValidationIssue(code, "support classification", f"invalid support kinds {unsupported}"))
+
+        if code == "5-1":
+            expected_pots = {("flower_pot", row, col) for row in range(5) for col in range(5)}
+            if preplaced != expected_pots or "flower_pot" in cards or level.reward_plant != "flower_pot":
+                issues.append(AdventureValidationIssue(code, "roof intro", "5-1 needs 25 pots, no pot card, and flower_pot reward"))
+        if world == 5 and stage >= 2 and "flower_pot" not in cards:
+            issues.append(AdventureValidationIssue(code, "roof platform", "5-2 onward requires flower_pot in the explicit card pool"))
+
+        if level.reward_plant and level.reward_plant in cards:
+            issues.append(AdventureValidationIssue(code, "reward order", f"{level.reward_plant} must not be selectable before it is rewarded"))
+        next_level = ordered[position + 1] if position + 1 < len(ordered) else None
+        if level.reward_plant and next_level is not None and level.reward_plant not in set(next_level.available_cards):
+            issues.append(AdventureValidationIssue(code, "reward order", f"{level.reward_plant} must be available in the next level"))
+
+        previous_level = ordered[position - 1] if position > 0 else None
+        if "preparation_bonus" in rules and previous_level is not None:
+            has_sun_bonus = int(level.start_sun) >= int(previous_level.start_sun) + 25
+            has_time_bonus = float(level.wave_interval) >= float(previous_level.wave_interval) + 2.0
+            if not has_sun_bonus and not has_time_bonus:
+                issues.append(
+                    AdventureValidationIssue(
+                        code,
+                        "preparation bonus",
+                        "flag and finale preparation must add at least 25 sun or 2 seconds",
+                    )
+                )
+
+        if "special_curve" not in rules:
+            if last_normal is not None:
+                previous_total = _catalog_total_points(last_normal)
+                current_total = _catalog_total_points(level)
+                limit = 0.35 if "preparation_bonus" in rules else 0.25
+                if previous_total > 0 and current_total > previous_total * (1.0 + limit) + 1e-9:
+                    issues.append(
+                        AdventureValidationIssue(
+                            code,
+                            "difficulty curve",
+                            f"threat points grow from {previous_total} to {current_total} above {int(limit * 100)} percent",
+                        )
+                    )
+            last_normal = level
+        elif not rules - {"special_curve", "preparation_bonus"}:
+            issues.append(AdventureValidationIssue(code, "special rules", "special curve levels need an explicit mode rule"))
 
     return issues

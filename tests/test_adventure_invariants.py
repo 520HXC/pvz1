@@ -285,7 +285,7 @@ class AdventureInvariantTests(unittest.TestCase):
         )
         invalid_pool = replace(self.by_code["3-1"], cards=["torchwood"])
         invalid_fog = replace(
-            self.by_code["4-1"],
+            self.by_code["4-3"],
             cards=["lily_pad", "peashooter"],
         )
         invalid_roof = replace(
@@ -298,7 +298,7 @@ class AdventureInvariantTests(unittest.TestCase):
         rendered = "\n".join(str(issue) for issue in issues)
         self.assertIn("3-1", rendered)
         self.assertIn("water-lane deployment", rendered)
-        self.assertIn("4-1", rendered)
+        self.assertIn("4-3", rendered)
         self.assertIn("balloon counter", rendered)
         self.assertIn("5-2", rendered)
         self.assertIn("roof platform", rendered)

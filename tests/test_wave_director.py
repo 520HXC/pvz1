@@ -398,7 +398,7 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
     def test_boss_identity_guarantee_is_not_spawned_as_a_ground_zombie(self):
         boss, consumed = self.consume_all_custom_waves("5-10", 510)
         self.assertNotIn("zomboss", [kind for _wave, kind in consumed])
-        self.assertFalse(any(wave == 16 for wave, _kind in consumed))
+        self.assertTrue(any(wave == 16 for wave, _kind in consumed))
         self.assertGreater(boss.zomboss_hp, 0.0)
 
     def test_adventure_runtime_spawn_cooldown_ignores_mode_multipliers(self):

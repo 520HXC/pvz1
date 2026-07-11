@@ -14,6 +14,7 @@ from urllib.request import Request, urlopen
 
 import pygame
 
+from adventure_levels import ADVENTURE_LEVELS
 from progression import migrate_save_data, record_adventure_clear
 from zombie_behaviors import ZOMBIE_COMBAT_PROFILES, movement_multiplier, state_name
 from wave_director import (
@@ -2554,48 +2555,6 @@ PLANT_DESCRIPTIONS: Dict[str, Dict[str, Dict[str, str]]] = {}
 
 ZOMBIE_DESCRIPTIONS: Dict[str, Dict[str, Dict[str, str]]] = {}
 
-ADVENTURE_FLAGS_FIRST_CLEAR: Dict[int, Tuple[int, ...]] = {
-    1: (1, 1, 1, 1, 1, 1, 2, 1, 2, 2),
-    2: (1, 1, 1, 2, 1, 2, 2, 2, 2, 2),
-    3: (1, 1, 1, 2, 1, 2, 2, 2, 2, 2),
-    4: (1, 1, 1, 2, 1, 2, 2, 2, 2, 2),
-    5: (1, 1, 1, 2, 1, 2, 2, 2, 2, 2),
-}
-
-ADVENTURE_SPECIAL_WAVE_COUNTS: Dict[str, int] = {
-    "1-1": 4,
-    "2-5": 8,
-    "4-5": 8,
-    "5-5": 12,
-    "5-10": 16,
-}
-
-ADVENTURE_STAGE_STYLE_OVERRIDES: Dict[str, str] = {
-    "1-5": "bonus_special",
-    "1-10": "conveyor",
-    "2-5": "bonus_special",
-    "2-10": "conveyor",
-    "3-5": "conveyor",
-    "3-10": "conveyor",
-    "4-5": "bonus_special",
-    "4-10": "conveyor",
-    "5-5": "bonus_special",
-    "5-10": "boss_conveyor",
-}
-
-ADVENTURE_STAGE_PRESET_IDS: Dict[str, str] = {
-    "1-5": "mini_wallnut_bowling",
-    "1-10": "adventure_conveyor_day",
-    "2-5": "mini_whack_a_zombie",
-    "2-10": "adventure_conveyor_night",
-    "3-5": "mini_big_trouble_little_zombie",
-    "3-10": "adventure_conveyor_pool",
-    "4-5": "adventure_vasebreaker",
-    "4-10": "adventure_conveyor_fog",
-    "5-5": "adventure_bungee_blitz",
-    "5-10": "adventure_zomboss_boss",
-}
-
 ADVENTURE_CONVEYOR_POOLS: Dict[str, Tuple[str, ...]] = {
     "1-10": ("peashooter", "wallnut", "potato_mine", "snowpea", "repeater", "cherrybomb", "chomper"),
     "2-10": ("puff_shroom", "fume_shroom", "scaredy_shroom", "hypno_shroom", "grave_buster", "ice_shroom", "wallnut", "snowpea"),
@@ -2621,179 +2580,6 @@ MODE_ENTRY_STYLES: Dict[str, str] = {
     "mini_zombiquarium": "bonus_special",
     "mini_dr_zomboss_revenge": "boss_conveyor",
 }
-
-ADVENTURE_WORLD_ZOMBIE_POOLS: Dict[int, Tuple[Tuple[str, ...], ...]] = {
-    1: (
-        ("normal",),
-        ("normal", "conehead"),
-        ("normal", "conehead"),
-        ("normal", "conehead"),
-        ("normal", "conehead", "pole_vaulting"),
-        ("normal", "conehead", "pole_vaulting"),
-        ("normal", "conehead", "pole_vaulting", "buckethead"),
-        ("normal", "conehead", "pole_vaulting", "buckethead"),
-        ("normal", "conehead", "pole_vaulting", "buckethead"),
-        ("normal", "conehead", "pole_vaulting", "buckethead"),
-    ),
-    2: (
-        ("normal", "conehead", "newspaper"),
-        ("normal", "conehead", "newspaper"),
-        ("normal", "conehead", "newspaper", "screen_door"),
-        ("normal", "conehead", "newspaper", "screen_door", "dancing", "backup_dancer"),
-        ("normal", "conehead", "newspaper", "screen_door", "dancing", "backup_dancer"),
-        ("normal", "conehead", "buckethead", "screen_door", "dancing", "backup_dancer"),
-        ("normal", "conehead", "buckethead", "screen_door", "dancing", "backup_dancer"),
-        ("normal", "conehead", "buckethead", "screen_door", "dancing", "backup_dancer", "football"),
-        ("normal", "conehead", "buckethead", "screen_door", "dancing", "backup_dancer", "football", "jack_in_the_box"),
-        ("normal", "conehead", "buckethead", "screen_door", "dancing", "backup_dancer", "football", "jack_in_the_box"),
-    ),
-    3: (
-        ("normal", "conehead", "ducky_tube", "snorkel"),
-        ("normal", "conehead", "ducky_tube", "snorkel"),
-        ("normal", "conehead", "ducky_tube", "snorkel", "dolphin_rider"),
-        ("normal", "conehead", "buckethead", "ducky_tube", "snorkel", "dolphin_rider"),
-        ("normal", "conehead", "buckethead", "ducky_tube", "snorkel", "dolphin_rider"),
-        ("normal", "conehead", "buckethead", "ducky_tube", "snorkel", "dolphin_rider"),
-        ("normal", "conehead", "buckethead", "ducky_tube", "snorkel", "dolphin_rider", "zomboni"),
-        ("normal", "conehead", "buckethead", "ducky_tube", "snorkel", "dolphin_rider", "zomboni"),
-        ("normal", "conehead", "buckethead", "ducky_tube", "snorkel", "dolphin_rider", "zomboni", "bobsled_team"),
-        ("normal", "conehead", "buckethead", "ducky_tube", "snorkel", "dolphin_rider", "zomboni", "bobsled_team"),
-    ),
-    4: (
-        ("normal", "conehead", "ducky_tube", "snorkel", "balloon"),
-        ("normal", "conehead", "ducky_tube", "snorkel", "balloon", "bungee"),
-        ("normal", "conehead", "buckethead", "ducky_tube", "snorkel", "balloon", "bungee", "ladder"),
-        ("normal", "conehead", "buckethead", "ducky_tube", "snorkel", "balloon", "bungee", "ladder"),
-        ("normal", "conehead", "buckethead", "ducky_tube", "snorkel", "balloon", "bungee", "ladder"),
-        ("normal", "conehead", "buckethead", "screen_door", "balloon", "bungee", "ladder", "digger"),
-        ("normal", "conehead", "buckethead", "screen_door", "balloon", "bungee", "ladder", "digger", "pogo"),
-        ("normal", "conehead", "buckethead", "screen_door", "football", "balloon", "bungee", "ladder", "digger", "pogo"),
-        ("normal", "conehead", "buckethead", "screen_door", "football", "balloon", "bungee", "ladder", "digger", "pogo"),
-        ("normal", "conehead", "buckethead", "screen_door", "football", "balloon", "bungee", "ladder", "digger", "pogo"),
-    ),
-    5: (
-        ("normal", "conehead", "buckethead", "bungee"),
-        ("normal", "conehead", "buckethead", "bungee", "ladder"),
-        ("normal", "conehead", "buckethead", "bungee", "ladder", "catapult"),
-        ("normal", "conehead", "buckethead", "bungee", "ladder", "catapult"),
-        ("normal", "conehead", "buckethead", "screen_door", "bungee", "ladder", "catapult", "football"),
-        ("normal", "conehead", "buckethead", "screen_door", "bungee", "ladder", "catapult", "football"),
-        ("normal", "conehead", "buckethead", "screen_door", "bungee", "ladder", "catapult", "football", "gargantuar", "imp"),
-        ("normal", "conehead", "buckethead", "screen_door", "bungee", "ladder", "catapult", "football", "gargantuar", "imp"),
-        ("normal", "conehead", "buckethead", "screen_door", "bungee", "ladder", "catapult", "football", "gargantuar", "imp"),
-        ("buckethead", "catapult", "gargantuar", "imp", "zomboss"),
-    ),
-}
-
-ADVENTURE_LEVEL_EXTRA_GUARANTEES: Dict[str, Tuple[Tuple[int, str, int], ...]] = {
-    "5-1": ((6, "bungee", 1),),
-    "5-2": ((6, "bungee", 1),),
-    "5-3": ((6, "bungee", 1),),
-    "5-4": ((10, "ladder", 1),),
-    "5-5": ((6, "bungee", 1), (12, "football", 1)),
-    "5-6": ((12, "catapult", 1),),
-    "5-7": ((12, "gargantuar", 1),),
-    "5-8": ((12, "gargantuar", 1), (12, "imp", 2)),
-    "5-9": ((12, "gargantuar", 1), (12, "imp", 2)),
-    "5-10": ((8, "imp", 2), (12, "gargantuar", 1), (16, "zomboss", 1)),
-}
-
-ADVENTURE_FLAGLESS_SPECIALS = {"1-1", "2-5", "4-5", "5-10"}
-
-
-def adventure_wave_count_for_flags(code: str, flags: int) -> int:
-    if code in ADVENTURE_SPECIAL_WAVE_COUNTS:
-        return ADVENTURE_SPECIAL_WAVE_COUNTS[code]
-    return max(10, flags * 10)
-
-
-def adventure_large_wave_indices(total_waves: int, flags: int) -> Tuple[int, ...]:
-    if total_waves <= 0:
-        return ()
-    if flags <= 1:
-        return (total_waves,)
-    markers: List[int] = []
-    for idx in range(1, flags + 1):
-        wave = max(1, round(total_waves * idx / flags))
-        if wave not in markers:
-            markers.append(wave)
-    if markers[-1] != total_waves:
-        markers.append(total_waves)
-    return tuple(markers)
-
-
-def adventure_wave_points_for_level(world: int, stage: int, flags: int, total_waves: int, boss: bool = False) -> Tuple[int, ...]:
-    if boss:
-        return (3, 3, 4, 4, 4, 5, 5, 6, 5, 6, 7, 8, 7, 9, 10, 12)
-    if world == 1 and stage == 1:
-        return (1, 1, 1, 2)
-    points: List[int] = []
-    base = 1 + max(0, world - 1)
-    if world >= 3:
-        base += 1
-    if stage >= 5:
-        base += 1
-    chunk = max(4, total_waves // max(1, flags))
-    large = set(adventure_large_wave_indices(total_waves, flags))
-    for wave_idx in range(1, total_waves + 1):
-        within = ((wave_idx - 1) % chunk) + 1
-        score = base
-        if within >= max(3, chunk // 2):
-            score += 1 if world >= 2 or stage >= 4 else 0
-        if within >= max(4, chunk - 1):
-            score += 1
-        if wave_idx in large:
-            score += 1 + min(2, max(0, world - 1))
-        if wave_idx == total_waves:
-            score += 1 + max(1, world // 2)
-        if world == 1 and stage <= 5:
-            score = min(score, 3)
-        elif world == 2 and stage <= 3:
-            score = max(2, score - 1)
-        elif world == 3 and stage <= 3:
-            score = max(2, score - 1)
-        if world == 1 and stage <= 4 and wave_idx <= min(2, total_waves):
-            score = max(1, score - 1)
-        if world == 2 and stage <= 3 and wave_idx <= min(3, total_waves):
-            score = max(2, score - 1)
-        points.append(int(score))
-    return tuple(points)
-
-
-def build_adventure_wave_plans() -> Dict[str, Dict[str, object]]:
-    plans: Dict[str, Dict[str, object]] = {}
-    for world, flag_row in ADVENTURE_FLAGS_FIRST_CLEAR.items():
-        pools = ADVENTURE_WORLD_ZOMBIE_POOLS[world]
-        for stage, flags in enumerate(flag_row, start=1):
-            code = f"{world}-{stage}"
-            boss = code == "5-10"
-            total_waves = adventure_wave_count_for_flags(code, flags)
-            large = adventure_large_wave_indices(total_waves, flags if not boss else 2)
-            wave_points = adventure_wave_points_for_level(world, stage, flags, total_waves, boss=boss)
-            guaranteed: List[Tuple[int, str, int]] = []
-            if code not in ADVENTURE_FLAGLESS_SPECIALS:
-                for wave_idx in large:
-                    guaranteed.append((wave_idx, "flag_zombie", 1))
-            guaranteed.extend(ADVENTURE_LEVEL_EXTRA_GUARANTEES.get(code, ()))
-            wave_points = normalize_wave_budgets(
-                wave_points,
-                guaranteed,
-                ADVENTURE_ZOMBIE_POINT_COSTS,
-            )
-            plans[code] = {
-                "flags_first_clear": int(flags),
-                "total_waves": int(total_waves),
-                "large_wave_indices": tuple(sorted(set(int(w) for w in large))),
-                "final_wave_index": int(total_waves),
-                "wave_points": tuple(int(p) for p in wave_points),
-                "available_zombies": tuple(pools[stage - 1]),
-                "guaranteed_zombies": tuple(guaranteed),
-                "ambush_rules": tuple(),
-            }
-    return plans
-
-
-ADVENTURE_WAVE_PLANS = build_adventure_wave_plans()
 
 def clamp(v: float, lo: float, hi: float) -> float:
     return max(lo, min(v, hi))
@@ -2884,6 +2670,10 @@ class LevelConfig:
     guaranteed_zombies: Tuple[Tuple[int, str, int], ...] = ()
     ambush_rules: Tuple[str, ...] = ()
     preplaced_supports: Tuple[Tuple[str, int, int], ...] = ()
+    first_threat: str = "normal"
+    reward_plant: str = ""
+    special_rules: Tuple[str, ...] = ()
+    fixed_waves: Tuple[Tuple[str, ...], ...] = ()
 
 
 @dataclass
@@ -3955,269 +3745,46 @@ def build_zombies() -> Dict[str, ZombieType]:
 
 
 def build_levels(total: int = 50) -> List[LevelConfig]:
-    all_plants = build_plants()
-    zombie_keys = set(build_zombies().keys())
-
-    def pool(keys: List[str]) -> List[str]:
-        return [k for k in keys if k in all_plants]
-
-    def weights(pairs: List[Tuple[str, float]]) -> Dict[str, float]:
-        out: Dict[str, float] = {}
-        for k, v in pairs:
-            if k in zombie_keys:
-                out[k] = v
-        return out or {"normal": 1.0}
-
-    core = ["sunflower", "peashooter", "wallnut", "potato_mine", "snowpea", "repeater", "cherrybomb", "chomper"]
-    day_tools = ["squash", "jalapeno", "spikeweed", "torchwood", "tall_nut", "threepeater", "gatling"]
-    mushroom_pack = ["puff_shroom", "sun_shroom", "fume_shroom", "scaredy_shroom", "hypno_shroom", "ice_shroom", "doom_shroom", "grave_buster", "coffee_bean"]
-    pool_pack = ["lily_pad", "tangle_kelp", "sea_shroom", "cattail", "split_pea", "starfruit"]
-    fog_pack = ["plantern", "blover", "pumpkin", "magnet_shroom", "umbrella_leaf", "garlic"]
-    roof_pack = ["flower_pot", "cabbage_pult", "kernel_pult", "melon_pult", "winter_melon", "cob_cannon", "spikerock"]
-    late_pack = ["marigold", "gold_magnet", "gloom_shroom", "imitater"]
-
-    cards_day = pool(core + ["squash", "jalapeno", "torchwood", "tall_nut"])
-    cards_night = pool(core + ["squash", "jalapeno"] + mushroom_pack + ["pumpkin"])
-    cards_pool = pool(["lily_pad"] + core + ["squash", "jalapeno", "torchwood", "tall_nut"] + mushroom_pack[:4] + pool_pack[1:] + ["pumpkin"])
-    cards_fog = pool(["lily_pad", "cactus"] + core + ["squash", "jalapeno", "torchwood", "tall_nut"] + mushroom_pack + pool_pack[1:] + fog_pack)
-    cards_roof = pool(core + day_tools + roof_pack + pool_pack[:2] + fog_pack + late_pack)
-
+    if total <= 0:
+        return []
     levels: List[LevelConfig] = []
-
-    def build_wave_plan(world: int, stage: int, danger: int, battlefield: str, boss: bool = False) -> Tuple[int, Tuple[int, ...], int, Tuple[int, ...]]:
-        code = f"{world}-{stage}"
-        plan = ADVENTURE_WAVE_PLANS.get(code)
-        if plan:
-            return (
-                int(plan["total_waves"]),
-                tuple(int(x) for x in plan["large_wave_indices"]),
-                int(plan["final_wave_index"]),
-                tuple(int(x) for x in plan["wave_points"]),
-            )
-        total_waves = 6 if battlefield in ("pool", "fog", "roof") else 5
-        large = adventure_large_wave_indices(total_waves, 1)
-        budgets = adventure_wave_points_for_level(world, stage, 1, total_waves, boss=boss)
-        return total_waves, large, total_waves, budgets
-
-    def add_level(
-        world: int,
-        stage: int,
-        battlefield: str,
-        start_sun: int,
-        spawn_base: float,
-        spawn_min: float,
-        spawn_acc: float,
-        z_pairs: List[Tuple[str, float]],
-        cards: List[str],
-        danger: int,
-        tag_key: str,
-        preview_theme: str,
-        boss: bool = False,
-        preplaced_supports: Tuple[Tuple[str, int, int], ...] = (),
-    ) -> None:
-        idx = (world - 1) * 10 + stage
-        display_code = f"{world}-{stage}"
-        plan = ADVENTURE_WAVE_PLANS.get(display_code, {})
-        stage_style = ADVENTURE_STAGE_STYLE_OVERRIDES.get(display_code, "normal_select")
-        stage_mode_id = ADVENTURE_STAGE_PRESET_IDS.get(display_code, "")
-        total_waves, large_wave_indices, final_wave_index, wave_budgets = build_wave_plan(world, stage, danger, battlefield, boss=boss)
+    for idx, spec in enumerate(ADVENTURE_LEVELS, start=1):
         levels.append(
             LevelConfig(
                 idx=idx,
-                name=f"Level {display_code}",
-                battlefield=battlefield,
-                duration=96 + world * 16 + stage * 4 + (10 if battlefield in ("pool", "fog", "roof") else 0),
-                start_sun=start_sun,
-                spawn_base=spawn_base,
-                spawn_min=spawn_min,
-                spawn_acc=spawn_acc,
-                z_weights=weights(z_pairs),
-                cards=list(dict.fromkeys(cards)),
-                danger=int(clamp(float(danger), 1.0, 6.0)),
-                tag_key=tag_key,
-                total_waves=total_waves,
-                large_wave_indices=large_wave_indices,
-                final_wave_index=final_wave_index,
-                wave_budgets=wave_budgets,
-                world=world,
-                stage=stage,
-                display_code=display_code,
-                chapter_key=f"chapter_{world}",
-                preview_theme=preview_theme,
-                stage_style=stage_style,
-                stage_mode_id=stage_mode_id,
-                flags_first_clear=int(plan.get("flags_first_clear", 1)),
-                adventure_zombie_pool=tuple(str(x) for x in plan.get("available_zombies", tuple(weights(z_pairs).keys()))),
-                guaranteed_zombies=tuple((int(w), str(k), int(c)) for w, k, c in plan.get("guaranteed_zombies", tuple())),
-                ambush_rules=tuple(str(x) for x in plan.get("ambush_rules", tuple())),
-                preplaced_supports=preplaced_supports,
+                name=f"Level {spec.code}",
+                battlefield=spec.battlefield,
+                duration=96 + spec.world * 16 + spec.stage * 4 + (10 if spec.battlefield in ("pool", "fog", "roof") else 0),
+                start_sun=spec.start_sun,
+                spawn_base=spec.spawn_base,
+                spawn_min=spec.spawn_min,
+                spawn_acc=spec.spawn_acc,
+                z_weights={kind: 1.0 for kind in spec.zombie_roster},
+                cards=list(spec.available_cards),
+                wave_interval=spec.wave_interval,
+                danger=spec.danger,
+                tag_key=spec.tag_key,
+                total_waves=len(spec.fixed_waves),
+                large_wave_indices=spec.large_wave_indices,
+                final_wave_index=len(spec.fixed_waves),
+                wave_budgets=spec.wave_budgets,
+                world=spec.world,
+                stage=spec.stage,
+                display_code=spec.code,
+                chapter_key=f"chapter_{spec.world}",
+                preview_theme=spec.preview_theme,
+                stage_style=spec.stage_style,
+                stage_mode_id=spec.stage_mode_id,
+                flags_first_clear=max(1, len(spec.large_wave_indices)),
+                adventure_zombie_pool=spec.zombie_roster,
+                guaranteed_zombies=spec.guaranteed_zombies,
+                preplaced_supports=spec.preplaced_supports,
+                first_threat=spec.first_threat,
+                reward_plant=spec.reward_plant,
+                special_rules=spec.special_rules,
+                fixed_waves=spec.fixed_waves,
             )
         )
-
-    world1_zombies = [
-        [("normal", 1.0)],
-        [("normal", 0.88), ("conehead", 0.12)],
-        [("normal", 0.80), ("conehead", 0.20)],
-        [("normal", 0.72), ("conehead", 0.18), ("flag_zombie", 0.10)],
-        [("normal", 0.64), ("conehead", 0.18), ("pole_vaulting", 0.18)],
-        [("normal", 0.56), ("conehead", 0.18), ("pole_vaulting", 0.16), ("flag_zombie", 0.10)],
-        [("normal", 0.48), ("conehead", 0.18), ("buckethead", 0.12), ("pole_vaulting", 0.14), ("flag_zombie", 0.08)],
-        [("normal", 0.42), ("conehead", 0.18), ("buckethead", 0.14), ("pole_vaulting", 0.14), ("flag_zombie", 0.12)],
-        [("normal", 0.36), ("conehead", 0.18), ("buckethead", 0.18), ("pole_vaulting", 0.14), ("flag_zombie", 0.14)],
-        [("normal", 0.32), ("conehead", 0.18), ("buckethead", 0.20), ("pole_vaulting", 0.14), ("flag_zombie", 0.16)],
-    ]
-    world1_tags = ["tag_tutorial", "tag_tutorial", "tag_economy", "tag_pressure", "tag_rush", "tag_armored", "tag_lane_split", "tag_flag_wave", "tag_pressure", "tag_flag_wave"]
-    world1_previews = ["day_intro", "day_pea", "day_sunflower", "day_wallnut", "day_snowpea", "day_repeater", "day_cherry", "day_chomper", "day_flag", "day_bucket"]
-    for stage in range(1, 11):
-        add_level(
-            world=1,
-            stage=stage,
-            battlefield="day",
-            start_sun=max(235, 282 - (stage - 1) * 4),
-            spawn_base=6.7 - stage * 0.10,
-            spawn_min=4.9 - stage * 0.05,
-            spawn_acc=0.0012 + stage * 0.00012,
-            z_pairs=world1_zombies[stage - 1],
-            cards=cards_day[: min(len(cards_day), 5 + stage)],
-            danger=min(4, 1 + (stage - 1) // 3),
-            tag_key=world1_tags[stage - 1],
-            preview_theme=world1_previews[stage - 1],
-        )
-
-    world2_zombies = [
-        [("normal", 0.58), ("conehead", 0.18), ("newspaper", 0.24)],
-        [("normal", 0.52), ("conehead", 0.18), ("newspaper", 0.20), ("screen_door", 0.10)],
-        [("normal", 0.48), ("conehead", 0.18), ("newspaper", 0.18), ("screen_door", 0.10), ("flag_zombie", 0.06)],
-        [("normal", 0.42), ("conehead", 0.16), ("newspaper", 0.16), ("screen_door", 0.10), ("dancing", 0.16)],
-        [("normal", 0.38), ("conehead", 0.16), ("buckethead", 0.12), ("dancing", 0.16), ("backup_dancer", 0.18)],
-        [("normal", 0.34), ("conehead", 0.16), ("buckethead", 0.16), ("screen_door", 0.14), ("dancing", 0.12), ("backup_dancer", 0.08)],
-        [("normal", 0.30), ("conehead", 0.14), ("buckethead", 0.16), ("screen_door", 0.14), ("dancing", 0.12), ("backup_dancer", 0.08), ("flag_zombie", 0.06)],
-        [("normal", 0.26), ("conehead", 0.12), ("buckethead", 0.16), ("screen_door", 0.14), ("football", 0.08), ("dancing", 0.12), ("backup_dancer", 0.08), ("flag_zombie", 0.04)],
-        [("normal", 0.24), ("conehead", 0.12), ("buckethead", 0.16), ("screen_door", 0.14), ("football", 0.10), ("dancing", 0.12), ("backup_dancer", 0.06), ("jack_in_the_box", 0.06)],
-        [("normal", 0.22), ("conehead", 0.10), ("buckethead", 0.16), ("screen_door", 0.14), ("football", 0.12), ("dancing", 0.10), ("backup_dancer", 0.06), ("jack_in_the_box", 0.10)],
-    ]
-    world2_tags = ["tag_night_intro", "tag_night_control", "tag_night_control", "tag_night_dance", "tag_night_swarm", "tag_night_trick", "tag_night_armor", "tag_night_rush", "tag_night_peak", "tag_night_peak"]
-    world2_previews = ["night_intro", "night_puff", "night_fume", "night_grave", "night_dance", "night_scaredy", "night_hypno", "night_screen", "night_football", "night_jack"]
-    for stage in range(1, 11):
-        add_level(
-            world=2,
-            stage=stage,
-            battlefield="night",
-            start_sun=max(195, 238 - (stage - 1) * 4),
-            spawn_base=6.1 - stage * 0.10,
-            spawn_min=4.4 - stage * 0.05,
-            spawn_acc=0.0015 + stage * 0.00015,
-            z_pairs=world2_zombies[stage - 1],
-            cards=cards_night[: min(len(cards_night), 8 + stage)],
-            danger=min(5, 2 + (stage - 1) // 3),
-            tag_key=world2_tags[stage - 1],
-            preview_theme=world2_previews[stage - 1],
-        )
-
-    world3_zombies = [
-        [("normal", 0.40), ("conehead", 0.18), ("ducky_tube", 0.42)],
-        [("normal", 0.32), ("conehead", 0.18), ("ducky_tube", 0.30), ("snorkel", 0.20)],
-        [("normal", 0.28), ("conehead", 0.16), ("ducky_tube", 0.26), ("snorkel", 0.16), ("dolphin_rider", 0.14)],
-        [("normal", 0.24), ("conehead", 0.14), ("buckethead", 0.10), ("ducky_tube", 0.22), ("snorkel", 0.14), ("dolphin_rider", 0.16)],
-        [("normal", 0.22), ("conehead", 0.14), ("buckethead", 0.12), ("ducky_tube", 0.22), ("snorkel", 0.12), ("dolphin_rider", 0.14), ("flag_zombie", 0.04)],
-        [("normal", 0.18), ("conehead", 0.12), ("buckethead", 0.14), ("ducky_tube", 0.20), ("snorkel", 0.14), ("dolphin_rider", 0.14), ("flag_zombie", 0.08)],
-        [("normal", 0.16), ("conehead", 0.12), ("buckethead", 0.16), ("ducky_tube", 0.18), ("snorkel", 0.12), ("dolphin_rider", 0.12), ("zomboni", 0.10), ("flag_zombie", 0.04)],
-        [("normal", 0.14), ("conehead", 0.12), ("buckethead", 0.16), ("ducky_tube", 0.16), ("snorkel", 0.12), ("dolphin_rider", 0.12), ("zomboni", 0.10), ("flag_zombie", 0.08)],
-        [("normal", 0.12), ("conehead", 0.10), ("buckethead", 0.16), ("ducky_tube", 0.16), ("snorkel", 0.10), ("dolphin_rider", 0.12), ("zomboni", 0.12), ("bobsled_team", 0.12)],
-        [("normal", 0.10), ("conehead", 0.10), ("buckethead", 0.16), ("ducky_tube", 0.14), ("snorkel", 0.10), ("dolphin_rider", 0.12), ("zomboni", 0.14), ("bobsled_team", 0.14)],
-    ]
-    world3_tags = ["tag_pool_intro", "tag_pool_lane", "tag_pool_dolphin", "tag_pool_dolphin", "tag_pool_armor", "tag_pool_vehicle", "tag_pool_pressure", "tag_pool_split", "tag_pool_peak", "tag_pool_peak"]
-    world3_previews = ["pool_intro", "pool_lily", "pool_dolphin", "pool_snorkel", "pool_tallnut", "pool_zomboni", "pool_tangle", "pool_threepeater", "pool_bobsled", "pool_peak"]
-    for stage in range(1, 11):
-        add_level(
-            world=3,
-            stage=stage,
-            battlefield="pool",
-            start_sun=max(210, 252 - (stage - 1) * 3),
-            spawn_base=5.8 - stage * 0.09,
-            spawn_min=4.0 - stage * 0.04,
-            spawn_acc=0.0016 + stage * 0.00016,
-            z_pairs=world3_zombies[stage - 1],
-            cards=cards_pool[: min(len(cards_pool), 8 + stage)],
-            danger=min(5, 3 + (stage - 1) // 3),
-            tag_key=world3_tags[stage - 1],
-            preview_theme=world3_previews[stage - 1],
-        )
-
-    world4_zombies = [
-        [("normal", 0.28), ("conehead", 0.16), ("ducky_tube", 0.18), ("snorkel", 0.12), ("balloon", 0.26)],
-        [("normal", 0.24), ("conehead", 0.16), ("buckethead", 0.10), ("ducky_tube", 0.14), ("snorkel", 0.10), ("balloon", 0.16), ("bungee", 0.10)],
-        [("normal", 0.20), ("conehead", 0.14), ("buckethead", 0.12), ("ducky_tube", 0.14), ("snorkel", 0.10), ("balloon", 0.14), ("bungee", 0.10), ("ladder", 0.06)],
-        [("normal", 0.18), ("conehead", 0.12), ("buckethead", 0.12), ("ducky_tube", 0.12), ("snorkel", 0.10), ("balloon", 0.12), ("bungee", 0.12), ("ladder", 0.08), ("digger", 0.06)],
-        [("normal", 0.16), ("conehead", 0.12), ("buckethead", 0.14), ("screen_door", 0.08), ("balloon", 0.12), ("bungee", 0.10), ("ladder", 0.10), ("digger", 0.08), ("flag_zombie", 0.10)],
-        [("normal", 0.14), ("conehead", 0.10), ("buckethead", 0.14), ("screen_door", 0.10), ("balloon", 0.12), ("bungee", 0.10), ("ladder", 0.10), ("digger", 0.10), ("pogo", 0.10)],
-        [("normal", 0.12), ("conehead", 0.10), ("buckethead", 0.14), ("screen_door", 0.10), ("balloon", 0.12), ("bungee", 0.10), ("ladder", 0.10), ("digger", 0.10), ("pogo", 0.08), ("flag_zombie", 0.04)],
-        [("normal", 0.10), ("conehead", 0.08), ("buckethead", 0.14), ("screen_door", 0.10), ("football", 0.08), ("balloon", 0.12), ("bungee", 0.10), ("ladder", 0.10), ("digger", 0.10), ("pogo", 0.08)],
-        [("normal", 0.08), ("conehead", 0.08), ("buckethead", 0.14), ("screen_door", 0.10), ("football", 0.10), ("balloon", 0.12), ("bungee", 0.10), ("ladder", 0.10), ("digger", 0.10), ("pogo", 0.08)],
-        [("normal", 0.08), ("conehead", 0.08), ("buckethead", 0.12), ("screen_door", 0.10), ("football", 0.10), ("balloon", 0.12), ("bungee", 0.10), ("ladder", 0.10), ("digger", 0.10), ("pogo", 0.10)],
-    ]
-    world4_tags = ["tag_fog_intro", "tag_fog_vision", "tag_fog_air", "tag_fog_flank", "tag_fog_combo", "tag_fog_rush", "tag_fog_heavy", "tag_fog_peak", "tag_fog_peak", "tag_fog_peak"]
-    world4_previews = ["fog_intro", "fog_plantern", "fog_balloon", "fog_bungee", "fog_digger", "fog_pogo", "fog_ladder", "fog_umbrella", "fog_peak", "fog_peak_plus"]
-    for stage in range(1, 11):
-        add_level(
-            world=4,
-            stage=stage,
-            battlefield="fog",
-            start_sun=max(205, 238 - (stage - 1) * 3),
-            spawn_base=5.5 - stage * 0.08,
-            spawn_min=3.8 - stage * 0.04,
-            spawn_acc=0.0018 + stage * 0.00018,
-            z_pairs=world4_zombies[stage - 1],
-            cards=cards_fog[: min(len(cards_fog), 10 + stage)],
-            danger=min(6, 4 + (stage - 1) // 3),
-            tag_key=world4_tags[stage - 1],
-            preview_theme=world4_previews[stage - 1],
-        )
-
-    world5_zombies = [
-        [("normal", 0.26), ("conehead", 0.20), ("buckethead", 0.20), ("bungee", 0.22), ("flag_zombie", 0.12)],
-        [("normal", 0.20), ("conehead", 0.18), ("buckethead", 0.20), ("bungee", 0.16), ("ladder", 0.18), ("flag_zombie", 0.08)],
-        [("normal", 0.18), ("conehead", 0.16), ("buckethead", 0.18), ("bungee", 0.12), ("ladder", 0.16), ("catapult", 0.16), ("flag_zombie", 0.04)],
-        [("normal", 0.16), ("conehead", 0.14), ("buckethead", 0.18), ("bungee", 0.12), ("ladder", 0.16), ("catapult", 0.18), ("flag_zombie", 0.06)],
-        [("normal", 0.12), ("conehead", 0.14), ("buckethead", 0.18), ("screen_door", 0.12), ("bungee", 0.10), ("ladder", 0.14), ("catapult", 0.14), ("football", 0.10)],
-        [("normal", 0.10), ("conehead", 0.12), ("buckethead", 0.18), ("screen_door", 0.12), ("bungee", 0.10), ("ladder", 0.14), ("catapult", 0.16), ("football", 0.08)],
-        [("normal", 0.08), ("conehead", 0.10), ("buckethead", 0.16), ("screen_door", 0.12), ("bungee", 0.10), ("ladder", 0.12), ("catapult", 0.16), ("football", 0.08), ("gargantuar", 0.08)],
-        [("normal", 0.08), ("conehead", 0.08), ("buckethead", 0.16), ("screen_door", 0.12), ("bungee", 0.10), ("ladder", 0.12), ("catapult", 0.16), ("football", 0.10), ("gargantuar", 0.08)],
-        [("normal", 0.06), ("conehead", 0.08), ("buckethead", 0.14), ("screen_door", 0.12), ("bungee", 0.10), ("ladder", 0.12), ("catapult", 0.18), ("football", 0.10), ("gargantuar", 0.10)],
-        [("zomboss", 1.0), ("gargantuar", 0.28), ("imp", 0.32), ("catapult", 0.18), ("buckethead", 0.22)],
-    ]
-    world5_tags = ["tag_roof_intro", "tag_roof_lob", "tag_roof_ladder", "tag_roof_siege", "tag_roof_pressure", "tag_roof_breaker", "tag_roof_split", "tag_roof_peak", "tag_roof_peak", "tag_final_boss"]
-    world5_previews = ["roof_intro", "roof_flowerpot", "roof_cabbage", "roof_kernel", "roof_melon", "roof_catapult", "roof_umbrella", "roof_gargantuar", "roof_peak", "roof_boss"]
-    for stage in range(1, 11):
-        roof_card_limit = min(len(cards_roof), 9 + stage)
-        roof_cards = cards_roof if stage >= 8 else cards_roof[:roof_card_limit]
-        if stage == 1:
-            roof_cards = [card for card in roof_cards if card != "flower_pot"]
-        else:
-            roof_cards = ["flower_pot"] + [card for card in roof_cards if card != "flower_pot"]
-        add_level(
-            world=5,
-            stage=stage,
-            battlefield="roof",
-            start_sun=450 if stage == 10 else max(220, 258 - (stage - 1) * 2),
-            spawn_base=4.2 if stage == 10 else (5.1 - stage * 0.08),
-            spawn_min=2.6 if stage == 10 else (3.5 - stage * 0.04),
-            spawn_acc=0.0026 if stage == 10 else (0.0020 + stage * 0.00018),
-            z_pairs=world5_zombies[stage - 1],
-            cards=roof_cards,
-            danger=6 if stage == 10 else min(6, 4 + (stage - 1) // 2),
-            tag_key=world5_tags[stage - 1],
-            preview_theme=world5_previews[stage - 1],
-            boss=stage == 10,
-            preplaced_supports=tuple(
-                ("flower_pot", row, col)
-                for row in range(5)
-                for col in range(5)
-            ) if stage == 1 else (),
-        )
-
-    if total <= 0:
-        return []
     return levels[: min(total, len(levels))]
 
 
@@ -6180,7 +5747,7 @@ class BattleState:
                             self.support.pop(pos, None)
                 self.bump_anim_event(zombie, "lob")
                 zombie.state["catapult_state"] = "recover"
-                recover_t = rng.uniform(1.04, 1.30)
+                recover_t = 1.17 if self.is_adventure_mainline() else rng.uniform(1.04, 1.30)
                 zombie.state["catapult_phase_t"] = recover_t
                 zombie.state["catapult_phase_total"] = recover_t
             return True
@@ -6207,7 +5774,7 @@ class BattleState:
                             self.main.pop(pos, None)
                             self.support.pop(pos, None)
                 zombie.state["catapult_state"] = "walk"
-                walk_t = rng.uniform(1.72, 2.46)
+                walk_t = 2.09 if self.is_adventure_mainline() else rng.uniform(1.72, 2.46)
                 zombie.state["catapult_phase_t"] = walk_t
                 zombie.state["catapult_phase_total"] = walk_t
             return True
@@ -6605,11 +6172,6 @@ class BattleState:
     def gameplay_rng(self):
         return self.combat_rng if self.is_adventure_mainline() else random
 
-    def adventure_wave_plan(self) -> Dict[str, object]:
-        if not self.level:
-            return {}
-        return ADVENTURE_WAVE_PLANS.get(self.level.display_code, {})
-
     def zombie_point_cost(self, kind: str) -> int:
         if kind in ADVENTURE_ZOMBIE_POINT_COSTS:
             return ADVENTURE_ZOMBIE_POINT_COSTS[kind]
@@ -6717,6 +6279,14 @@ class BattleState:
     def build_adventure_wave_queue(self, wave_idx: int) -> List[str]:
         if not self.level:
             return []
+        if self.level.fixed_waves:
+            fixed_idx = max(0, min(len(self.level.fixed_waves) - 1, wave_idx - 1))
+            return [
+                kind
+                for kind in self.level.fixed_waves[fixed_idx]
+                if kind in self.zombie_types
+                and not (kind == "zomboss" and self.is_zomboss_boss_mode())
+            ]
         pool = [kind for kind in self.level.adventure_zombie_pool if kind in self.zombie_types]
         if not pool:
             pool = [kind for kind in self.level.z_weights.keys() if kind in self.zombie_types]
@@ -6763,21 +6333,17 @@ class BattleState:
                 break
             if heavy_added >= 1 and wave_idx not in self.large_wave_indices and wave_idx != self.final_wave_index:
                 affordable = [kind for kind in affordable if self.zombie_point_cost(kind) < 6] or affordable
-            weights: List[float] = []
-            for kind in affordable:
-                cost = self.zombie_point_cost(kind)
-                base = max(0.08, float(weight_map.get(kind, 1.0)))
-                if cost <= 2:
-                    base *= 1.20
-                elif cost >= 6:
-                    base *= 0.72
-                weights.append(base / max(1.0, cost * 0.55))
-            pick = self.wave_rng.choices(affordable, weights=weights, k=1)[0]
+            affordable.sort(
+                key=lambda kind: (
+                    -max(0.08, float(weight_map.get(kind, 1.0))) / max(1.0, self.zombie_point_cost(kind) * 0.55),
+                    kind,
+                )
+            )
+            pick = affordable[(wave_idx + len(tail) - 1) % len(affordable)]
             tail.append(pick)
             remaining -= self.zombie_point_cost(pick)
             if self.zombie_point_cost(pick) >= 6:
                 heavy_added += 1
-        self.wave_rng.shuffle(tail)
         queue.extend(tail)
         if not queue and not reserved_boss_identity:
             cheapest = min(pool, key=lambda kind: self.zombie_point_cost(kind))
@@ -6899,9 +6465,9 @@ class BattleState:
         wave_prog = 0.0 if self.total_waves <= 1 else (wave_idx - 1) / max(1, self.total_waves - 1)
         rng = self.gameplay_rng()
         if self.is_adventure_mainline():
-            hp = rng.uniform(zcfg.hp * 0.96, zcfg.hp * 1.04) * (1.0 + wave_prog * 0.04)
-            spd = rng.uniform(zcfg.speed[0], zcfg.speed[1]) * (1.0 + wave_prog * 0.018)
-            dps = rng.uniform(zcfg.dps[0], zcfg.dps[1]) * (1.0 + wave_prog * 0.03)
+            hp = float(zcfg.hp) * (1.0 + wave_prog * 0.04)
+            spd = ((zcfg.speed[0] + zcfg.speed[1]) * 0.5) * (1.0 + wave_prog * 0.018)
+            dps = ((zcfg.dps[0] + zcfg.dps[1]) * 0.5) * (1.0 + wave_prog * 0.03)
             if wave_idx in self.large_wave_indices:
                 hp *= 1.03
                 dps *= 1.02
@@ -6936,7 +6502,8 @@ class BattleState:
             post_lo, post_hi = profile.post_vault_speed
             z.state["dolphin_state"] = "riding"
             z.state["dolphin_riding_speed"] = spd
-            z.state["dolphin_post_vault_speed"] = rng.uniform(post_lo, post_hi) * self.mode_float("zombie_speed_scale", 1.0) * speed_scale
+            post_speed = (post_lo + post_hi) * 0.5 if self.is_adventure_mainline() else rng.uniform(post_lo, post_hi)
+            z.state["dolphin_post_vault_speed"] = post_speed * self.mode_float("zombie_speed_scale", 1.0) * speed_scale
         if kind == "football" and profile is not None:
             z.state["football_charge_t"] = profile.charge_duration
             z.state["football_base_speed"] = spd
@@ -6952,10 +6519,11 @@ class BattleState:
             z.speed *= 1.08 if kind == "bobsled_team" else 1.12
             self.ice_rows[row] = max(float(self.ice_rows.get(row, 0.0)), 9999.0)
         if kind == "digger":
-            emerge_col = rng.randint(1, 3 if not self.field.is_roof else 2)
+            emerge_rng = self.row_rng if self.is_adventure_mainline() else rng
+            emerge_col = emerge_rng.randint(1, 3 if not self.field.is_roof else 2)
             z.state["digger_target_x"] = LAWN_X + emerge_col * CELL_W + CELL_W * 0.48
         if kind == "catapult":
-            z.state["catapult_phase_t"] = rng.uniform(1.7, 2.8)
+            z.state["catapult_phase_t"] = 2.25 if self.is_adventure_mainline() else rng.uniform(1.7, 2.8)
         return z
 
     def start_next_wave(self) -> None:
@@ -8781,7 +8349,7 @@ class BattleState:
         elif zombie.kind == "catapult":
             zombie.state.setdefault("catapult_state", "walk")
             if "catapult_phase_t" not in zombie.state:
-                zombie.state["catapult_phase_t"] = self.gameplay_rng().uniform(1.7, 2.8)
+                zombie.state["catapult_phase_t"] = 2.25 if self.is_adventure_mainline() else self.gameplay_rng().uniform(1.7, 2.8)
             zombie.state.setdefault("catapult_phase_total", float(zombie.state.get("catapult_phase_t", 2.0)))
             zombie.state.setdefault("catapult_target_col", -1.0)
         elif zombie.kind == "pogo":
