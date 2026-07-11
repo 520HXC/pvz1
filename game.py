@@ -14,7 +14,7 @@ from urllib.request import Request, urlopen
 
 import pygame
 
-from adventure_levels import ADVENTURE_LEVELS
+from adventure_levels import ADVENTURE_LEVELS, SHOP_UPGRADE_PLANT_KEYS
 from progression import migrate_save_data, record_adventure_clear
 from zombie_behaviors import ZOMBIE_COMBAT_PROFILES, movement_multiplier, state_name
 from wave_director import (
@@ -49,7 +49,7 @@ CARD_W = 210
 CARD_H = 54
 CARD_GAP = 8
 SPEED_CHOICES = (0.5, 1.0, 1.5, 2.0, 3.0, 5.0)
-UPGRADE_PLANT_KEYS = {"twin_sunflower", "gloom_shroom", "winter_melon", "spikerock", "cob_cannon", "gatling"}
+UPGRADE_PLANT_KEYS = set(SHOP_UPGRADE_PLANT_KEYS)
 
 UI_PALETTE = {
     "bg_sky_top": (130, 210, 255),

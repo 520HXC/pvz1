@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Mapping, Protocol, Sequence
 
+from adventure_levels import SHOP_UPGRADE_PLANT_KEYS
 from wave_director import ADVENTURE_ZOMBIE_POINT_COSTS, validate_guarantees_fit_budgets
 
 
@@ -213,9 +214,17 @@ def validate_adventure_catalog(
     plant_types: Mapping[str, AdventurePlantLike],
 ) -> list[AdventureValidationIssue]:
     issues: list[AdventureValidationIssue] = []
+
+    def sort_key(level: AdventureCatalogLevelLike) -> tuple[int, int, str]:
+        try:
+            world, stage = (int(part) for part in level.code.split("-", 1))
+            return world, stage, level.code
+        except (AttributeError, TypeError, ValueError):
+            return 999, 999, str(getattr(level, "code", ""))
+
     ordered = sorted(
         levels,
-        key=lambda level: tuple(int(part) for part in level.code.split("-", 1)),
+        key=sort_key,
     )
     codes = [level.code for level in ordered]
     if len(codes) != len(set(codes)):
@@ -234,7 +243,7 @@ def validate_adventure_catalog(
         waves = tuple(tuple(wave) for wave in level.fixed_waves)
         try:
             world, stage = (int(part) for part in code.split("-", 1))
-        except (TypeError, ValueError):
+        except (AttributeError, TypeError, ValueError):
             issues.append(AdventureValidationIssue(code, "level identity", "code must use world-stage numeric form"))
             continue
 
@@ -291,6 +300,8 @@ def validate_adventure_catalog(
 
         if level.reward_plant and level.reward_plant in cards:
             issues.append(AdventureValidationIssue(code, "reward order", f"{level.reward_plant} must not be selectable before it is rewarded"))
+        if level.reward_plant in SHOP_UPGRADE_PLANT_KEYS:
+            issues.append(AdventureValidationIssue(code, "reward ownership", f"{level.reward_plant} is a shop upgrade and cannot be an adventure reward"))
         next_level = ordered[position + 1] if position + 1 < len(ordered) else None
         if level.reward_plant and next_level is not None and level.reward_plant not in set(next_level.available_cards):
             issues.append(AdventureValidationIssue(code, "reward order", f"{level.reward_plant} must be available in the next level"))

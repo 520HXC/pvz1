@@ -116,6 +116,8 @@ class AdventureCatalogTests(unittest.TestCase):
         self.assertTrue(balloon_levels)
         first_balloon = balloon_levels[0]
         self.assertIn("cactus", first_balloon.available_cards)
+        self.assertNotIn("blover", first_balloon.available_cards)
+        self.assertEqual("blover", first_balloon.reward_plant)
         for spec in balloon_levels[1:]:
             self.assertTrue({"cactus", "blover"} <= set(spec.available_cards))
 
@@ -147,6 +149,31 @@ class AdventureCatalogTests(unittest.TestCase):
             if spec.reward_plant and spec.stage < 10:
                 self.assertIn(spec.reward_plant, self.by_code[f"{spec.world}-{spec.stage + 1}"].available_cards)
 
+    def test_every_reward_is_in_the_next_runtime_card_pool_without_shop_ownership(self):
+        battle = game.BattleState(game.build_plants(), game.build_zombies(), game.build_battlefields(), {"upgrades": {}})
+        for position, spec in enumerate(self.specs[:-1]):
+            if not spec.reward_plant:
+                continue
+            next_level = self.levels[position + 1]
+            with self.subTest(code=spec.code, reward=spec.reward_plant):
+                self.assertNotIn(spec.reward_plant, game.UPGRADE_PLANT_KEYS)
+                self.assertIn(spec.reward_plant, battle.level_available_cards(next_level))
+
+    def test_shop_upgrades_remain_catalog_candidates_but_require_ownership(self):
+        level = self.runtime_by_code["5-9"]
+        self.assertTrue(game.UPGRADE_PLANT_KEYS <= set(level.cards))
+        locked_battle = game.BattleState(game.build_plants(), game.build_zombies(), game.build_battlefields(), {"upgrades": {}})
+        self.assertFalse(game.UPGRADE_PLANT_KEYS & set(locked_battle.level_available_cards(level)))
+
+        owned_battle = game.BattleState(
+            game.build_plants(),
+            game.build_zombies(),
+            game.build_battlefields(),
+            {"upgrades": {"winter_melon": True}},
+        )
+        self.assertIn("winter_melon", owned_battle.level_available_cards(level))
+        self.assertNotIn("cob_cannon", owned_battle.level_available_cards(level))
+
     def test_point_costs_reflect_special_profiles(self):
         costs = game.ADVENTURE_ZOMBIE_POINT_COSTS
         self.assertGreaterEqual(costs["screen_door"], costs["buckethead"] + 2)
@@ -163,6 +190,10 @@ class AdventureCatalogTests(unittest.TestCase):
             "level identity",
             self.catalog_issue_capabilities(self.specs[:-1]),
         )
+
+    def test_validator_returns_an_identity_issue_for_malformed_codes(self):
+        malformed = replace(self.by_code["1-1"], code="bad-code")
+        self.assertIn("level identity", self.catalog_issue_capabilities([malformed]))
 
     def catalog_issue_capabilities(self, specs):
         return {issue.capability for issue in validate_adventure_catalog(specs, game.build_plants())}
@@ -197,6 +228,11 @@ class AdventureCatalogTests(unittest.TestCase):
         self.assertIn(
             "reward order",
             self.catalog_issue_capabilities([repeated_reward, self.by_code["1-3"]]),
+        )
+        shop_reward = replace(self.by_code["5-2"], reward_plant="winter_melon")
+        self.assertIn(
+            "reward ownership",
+            self.catalog_issue_capabilities([shop_reward, self.by_code["5-3"]]),
         )
         missing_chapter_reward = replace(
             self.by_code["2-1"],
