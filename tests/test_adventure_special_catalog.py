@@ -1,5 +1,6 @@
 import os
 import unittest
+from collections import Counter
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
@@ -31,6 +32,9 @@ class AdventureSpecialCatalogTests(unittest.TestCase):
         rules["adventure_level_launch"] = True
         rules["random_seed"] = seed
         return rules
+
+    def click_whack_target(self, battle, target):
+        return battle.hit_whack_target(int(target.x), battle.row_y(target.row) - 8)
 
     def test_adventure_special_reset_preserves_catalog_wave_metadata_without_wave_system(self):
         for code in ("2-5", "4-5"):
@@ -81,6 +85,64 @@ class AdventureSpecialCatalogTests(unittest.TestCase):
         battle.zombies.clear()
         battle.update_whack_mode(0.1)
         self.assertEqual("lose", battle.result)
+
+    def test_newspaper_whack_target_scores_once_and_immediately_deactivates(self):
+        battle = self.make_battle()
+        battle.reset(self.levels["2-5"], mode_rules=self.adventure_rules("2-5", 25))
+        while battle.whack_target_queue[0] != "newspaper":
+            self.assertTrue(battle.spawn_whack_target())
+            target = battle.zombies[-1]
+            self.assertTrue(self.click_whack_target(battle, target))
+        self.assertTrue(battle.spawn_whack_target())
+        newspaper = battle.zombies[-1]
+        before = battle.mode_score
+        self.assertTrue(self.click_whack_target(battle, newspaper))
+        self.assertEqual(game.ADVENTURE_ZOMBIE_POINT_COSTS["newspaper"], battle.mode_score - before)
+        self.assertEqual(1.0, newspaper.state.get("whack_scored"))
+        self.assertEqual(0.0, newspaper.state.get("whack_popup"))
+        for _ in range(3):
+            self.assertFalse(self.click_whack_target(battle, newspaper))
+        self.assertEqual(before + game.ADVENTURE_ZOMBIE_POINT_COSTS["newspaper"], battle.mode_score)
+        battle.update(1.0 / 60.0)
+        self.assertIsNone(battle.result)
+
+    def test_adventure_whack_cannot_win_before_queue_and_active_targets_are_empty(self):
+        battle = self.make_battle()
+        battle.reset(self.levels["2-5"], mode_rules=self.adventure_rules("2-5", 25))
+        battle.mode_score = battle.mode_goal
+        self.assertTrue(battle.whack_target_queue)
+        battle.update(1.0 / 60.0)
+        self.assertIsNone(battle.result)
+
+    def test_full_fixed_whack_queue_scores_each_target_once_and_wins(self):
+        battle = self.make_battle()
+        battle.reset(self.levels["2-5"], mode_rules=self.adventure_rules("2-5", 25))
+        expected_kinds = [kind for wave in self.levels["2-5"].fixed_waves for kind in wave]
+        scored_kinds = []
+        while battle.whack_target_queue:
+            self.assertTrue(battle.spawn_whack_target())
+            target = battle.zombies[-1]
+            before = battle.mode_score
+            self.assertTrue(self.click_whack_target(battle, target))
+            self.assertFalse(self.click_whack_target(battle, target))
+            self.assertEqual(game.ADVENTURE_ZOMBIE_POINT_COSTS[target.kind], battle.mode_score - before)
+            scored_kinds.append(target.kind)
+            battle.update(1.0 / 60.0)
+        battle.update(1.0 / 60.0)
+        self.assertEqual(Counter(expected_kinds), Counter(scored_kinds))
+        self.assertEqual(battle.mode_goal, battle.mode_score)
+        self.assertEqual("win", battle.result)
+
+    def test_standalone_whack_target_also_counts_only_once(self):
+        battle = self.make_battle()
+        rules = self.adventure_rules("2-5")
+        rules.pop("adventure_level_launch")
+        battle.reset(self.levels["2-5"], mode_rules=rules)
+        self.assertTrue(battle.spawn_whack_target())
+        target = battle.zombies[-1]
+        self.assertTrue(self.click_whack_target(battle, target))
+        self.assertFalse(self.click_whack_target(battle, target))
+        self.assertEqual(1, battle.mode_score)
 
     def test_standalone_whack_keeps_count_goal_and_random_pool(self):
         battle = self.make_battle()

@@ -7912,8 +7912,12 @@ class BattleState:
                 continue
             if z.state.get("whack_popup", 0.0) <= 0.0:
                 continue
+            if z.state.get("whack_scored", 0.0) > 0.0:
+                continue
             zy = self.row_y(z.row) - 8
             if abs(px - z.x) <= 36 and abs(py - zy) <= 42:
+                z.state["whack_scored"] = 1.0
+                z.state["whack_popup"] = 0.0
                 self.slay_zombie(z, source="whack")
                 self.mode_score += self.zombie_point_cost(z.kind) if self.is_adventure_mainline() else 1
                 self.hit_sparks.append({"x": z.x, "y": zy, "t": 0.22, "ttl": 0.22})
@@ -7944,10 +7948,13 @@ class BattleState:
             for z in self.zombies
         )
         adventure_exhausted = self.is_adventure_mainline() and not self.whack_target_queue and not active_remaining
-        if self.mode_score >= self.mode_goal:
+        if self.is_adventure_mainline():
+            if adventure_exhausted:
+                self.result = "win" if self.mode_score >= self.mode_goal else "lose"
+            elif self.mode_misses >= miss_limit:
+                self.result = "lose"
+        elif self.mode_score >= self.mode_goal:
             self.result = "win"
-        elif adventure_exhausted:
-            self.result = "lose"
         elif self.mode_misses >= miss_limit:
             self.result = "lose"
 
