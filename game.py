@@ -6175,6 +6175,54 @@ class BattleState:
     def gameplay_rng(self):
         return self.combat_rng if self.is_adventure_mainline() else random
 
+    def initial_plant_delay(self, kind: str) -> float:
+        if self.is_adventure_mainline():
+            return {"sunflower": 5.75, "sun_shroom": 5.0, "marigold": 10.5}.get(kind, 0.5)
+        if kind == "sunflower":
+            return random.uniform(4.5, 7.0)
+        if kind == "sun_shroom":
+            return random.uniform(4.0, 6.0)
+        if kind == "marigold":
+            return random.uniform(9.0, 12.0)
+        return random.uniform(0.2, 0.8)
+
+    def next_sun_production_delay(self, kind: str, interval: float) -> float:
+        if self.is_adventure_mainline():
+            return 9.5 if kind == "sun_shroom" else float(interval)
+        if kind == "sun_shroom":
+            return random.uniform(8.0, 11.0)
+        return random.uniform(max(1.0, interval - 1.0), interval + 1.0)
+
+    def adventure_grave_limit(self) -> int:
+        if not self.is_adventure_mainline() or not self.level:
+            return 999
+        if self.level.world == 2 and self.level.stage <= 3:
+            return 2
+        if self.level.world == 2:
+            return 4
+        return 6
+
+    def adventure_grave_interval(self) -> float:
+        if not self.is_adventure_mainline() or not self.level:
+            return 18.0
+        if self.level.world == 2 and self.level.stage <= 3:
+            return 38.0 - self.level.stage * 4.0
+        return 24.0
+
+    def try_spawn_night_grave(self) -> bool:
+        if len(self.graves) >= self.adventure_grave_limit():
+            return False
+        rng = self.row_rng if self.is_adventure_mainline() else random
+        for _ in range(8):
+            row = rng.randrange(self.rows())
+            col = rng.randint(2, COLS - 2)
+            pos = (row, col)
+            if pos not in self.main and pos not in self.support and pos not in self.graves:
+                self.graves[pos] = 300.0
+                self.queue_audio_key("grave_spawn")
+                return True
+        return False
+
     def zombie_point_cost(self, kind: str) -> int:
         if kind in ADVENTURE_ZOMBIE_POINT_COSTS:
             return ADVENTURE_ZOMBIE_POINT_COSTS[kind]
@@ -6248,8 +6296,11 @@ class BattleState:
     def spawn_rows_for_kind(self, kind: str) -> List[int]:
         if self.is_bobsled_bonanza_mode() and kind in ("bobsled_team", "zomboni"):
             return [row for row in range(self.rows()) if not self.is_water(row)]
-        if kind in ("ducky_tube", "snorkel", "dolphin_rider", "bobsled_team") and self.field.water_rows:
-            return list(self.field.water_rows)
+        if self.field.water_rows:
+            if kind in ("ducky_tube", "snorkel", "dolphin_rider", "bobsled_team"):
+                return list(self.field.water_rows)
+            if kind not in ("balloon", "bungee"):
+                return [row for row in range(self.rows()) if not self.is_water(row)]
         return list(range(self.rows()))
 
     def choose_spawn_row(self, kind: str) -> int:
@@ -6276,7 +6327,12 @@ class BattleState:
                 score += 4.0
             scored.append((score, rng.random(), row))
         scored.sort(key=lambda item: (item[0], item[1]))
-        top_rows = [row for _, _, row in scored[: max(1, min(2, len(scored)))]]
+        minimum_score = scored[0][0]
+        top_rows = [
+            row
+            for score, _, row in scored
+            if abs(score - minimum_score) <= 1e-9
+        ]
         return rng.choice(top_rows)
 
     def build_adventure_wave_queue(self, wave_idx: int) -> List[str]:
@@ -6430,7 +6486,7 @@ class BattleState:
             self.armor.pop(pos, None)
             self.graves.pop(pos, None)
         plant_hp = float(cfg.hp) * self.plant_hp_scale()
-        plant = Plant(kind=kind, row=row, col=col, hp=plant_hp, slot=slot, cd=random.uniform(0.2, 0.8))
+        plant = Plant(kind=kind, row=row, col=col, hp=plant_hp, slot=slot, cd=self.initial_plant_delay(kind))
         plant.state["hp_max"] = float(plant.hp)
         self.ensure_plant_anim_state(plant)
         if kind == "potato_mine":
@@ -6441,11 +6497,11 @@ class BattleState:
         if kind in ("cherrybomb", "jalapeno", "doom_shroom", "ice_shroom", "blover"):
             plant.cd = 0.8
         if kind == "sunflower":
-            plant.cd = random.uniform(4.5, 7.0)
+            plant.cd = self.initial_plant_delay(kind)
         if kind == "sun_shroom":
-            plant.cd = random.uniform(4.0, 6.0)
+            plant.cd = self.initial_plant_delay(kind)
         if kind == "marigold":
-            plant.cd = random.uniform(9.0, 12.0)
+            plant.cd = self.initial_plant_delay(kind)
         if slot == "main":
             self.main[pos] = plant
         elif slot == "support":
@@ -8793,8 +8849,9 @@ class BattleState:
         if self.consume_anim_marker(plant, "sun"):
             pending_amount = int(st.get("sun_pending_amount", 0))
             if pending_amount > 0:
-                self.tokens.append(Token(cx + random.randint(-12, 12), cy - 16, pending_amount, 9.0, "sun"))
-                plant.cd = random.uniform(max(1.0, cfg.interval - 1.0), cfg.interval + 1.0)
+                rng = self.gameplay_rng()
+                self.tokens.append(Token(cx + rng.randint(-12, 12), cy - 16, pending_amount, 9.0, "sun"))
+                plant.cd = self.next_sun_production_delay(plant.kind, cfg.interval)
                 self.queue_audio_key("sun_spawn")
                 st["sun_pending_amount"] = 0
         if self.consume_anim_marker(plant, "shoot"):
@@ -9139,7 +9196,16 @@ class BattleState:
         self.wave_spawn_queue = []
         self.wave_spawn_total = 0
         self.wave_spawn_remaining = 0
-        self.wave_pause_t = 1.2
+        if self.is_adventure_mainline() and level.stage_style == "normal_select":
+            self.wave_pause_t = {1: 16.0, 2: 20.0, 3: 30.0, 4: 32.0, 5: 42.0}.get(
+                max(1, int(level.world)), 20.0
+            )
+            if int(level.world) == 4 and int(level.stage) == 3:
+                self.wave_pause_t = 42.0
+            elif int(level.world) == 4 and int(level.stage) >= 8:
+                self.wave_pause_t = 50.0
+        else:
+            self.wave_pause_t = 1.2
         self._sim_accumulator = 0.0
         self.result = None
         self.almanac_open = False
@@ -9477,12 +9543,14 @@ class BattleState:
         if place_kind not in self.plant_types:
             return False
         vasebreaker_mode = self.is_vasebreaker_mode()
+        conveyor_mode = self.mode_bool("conveyor", False)
+        if (not conveyor_mode) and (not vasebreaker_mode) and kind not in self.cards:
+            return False
         if vasebreaker_mode and kind not in self.cards:
             return False
         cfg = self.plant_types[place_kind]
         if not self.can_place(place_kind, row, col):
             return False
-        conveyor_mode = self.mode_bool("conveyor", False)
         free_planting = self.mode_bool("no_sun_cost", False) or self.mode_bool("infinite_sun", False) or conveyor_mode or vasebreaker_mode
         if conveyor_mode and kind not in self.cards:
             return False
@@ -9525,7 +9593,7 @@ class BattleState:
             return True
         slot = "armor" if cfg.is_overlay else ("support" if cfg.is_support else "main")
         plant_hp = float(cfg.hp) * self.plant_hp_scale()
-        p = Plant(kind=place_kind, row=row, col=col, hp=plant_hp, slot=slot, cd=random.uniform(0.2, 0.8))
+        p = Plant(kind=place_kind, row=row, col=col, hp=plant_hp, slot=slot, cd=self.initial_plant_delay(place_kind))
         p.state["hp_max"] = float(p.hp)
         self.ensure_plant_anim_state(p)
         if place_kind == "potato_mine":
@@ -9536,11 +9604,11 @@ class BattleState:
         if place_kind in ("cherrybomb", "jalapeno", "doom_shroom", "ice_shroom", "blover"):
             p.cd = 0.8
         if place_kind == "sunflower":
-            p.cd = random.uniform(4.5, 7.0)
+            p.cd = self.initial_plant_delay(place_kind)
         if place_kind == "sun_shroom":
-            p.cd = random.uniform(4.0, 6.0)
+            p.cd = self.initial_plant_delay(place_kind)
         if place_kind == "marigold":
-            p.cd = random.uniform(9.0, 12.0)
+            p.cd = self.initial_plant_delay(place_kind)
         if kind == "imitater":
             p.state["from_imitater"] = 1.0
             p.state["imitater_target"] = place_kind
@@ -9588,6 +9656,23 @@ class BattleState:
             return
         if pos in self.support:
             del self.support[pos]
+
+    def collect_token_at(self, point: Tuple[int, int]) -> Optional[str]:
+        for token in list(self.tokens):
+            if not token.hit(point, 21 if token.kind == "sun" else 16):
+                continue
+            if self.is_i_zombie_mode() and token.kind == "sun":
+                self.tokens.remove(token)
+                return token.kind
+            if token.kind == "sun":
+                self.sun += token.value
+                self.queue_audio_key("collect_sun")
+            else:
+                self.save_data["coins"] = int(self.save_data.get("coins", 0)) + token.value
+                self.queue_audio_key("collect_coin")
+            self.tokens.remove(token)
+            return token.kind
+        return None
 
     def update(self, dt: float) -> None:
         if not self.level or self.result or self.paused or self.almanac_open:
@@ -9763,17 +9848,11 @@ class BattleState:
         sun_interval = 7.2 * self.mode_float("sky_sun_interval_scale", 1.0)
         if self.field.sky_sun and not self.mode_bool("no_sky_sun", False) and self.sky_t >= sun_interval:
             self.sky_t = 0.0
-            self.tokens.append(Token(random.randint(LAWN_X + 36, self.lawn_right() - 36), random.randint(LAWN_Y + 36, self.lawn_bottom() - 36), 25, 9.0, "sun"))
-        if self.field.is_night and self.uses_wave_system() and self.grave_t >= 18.0:
+            rng = self.gameplay_rng()
+            self.tokens.append(Token(rng.randint(LAWN_X + 36, self.lawn_right() - 36), rng.randint(LAWN_Y + 36, self.lawn_bottom() - 36), 25, 9.0, "sun"))
+        if self.field.is_night and self.uses_wave_system() and self.grave_t >= self.adventure_grave_interval():
             self.grave_t = 0.0
-            for _ in range(8):
-                row = random.randrange(self.rows())
-                col = random.randint(2, COLS - 2)
-                pos = (row, col)
-                if pos not in self.main and pos not in self.support and pos not in self.graves:
-                    self.graves[pos] = 300.0
-                    self.queue_audio_key("grave_spawn")
-                    break
+            self.try_spawn_night_grave()
         self.update_plants(dt)
         self.update_projectiles(dt)
         self.update_rolling_nuts(dt)
@@ -9955,14 +10034,16 @@ class BattleState:
                         plant.state["sun_pending_amount"] = int(cfg.sun_amount)
                         self.bump_anim_event(plant, "sun")
                 else:
-                    self.tokens.append(Token(cx + random.randint(-12, 12), cy - 16, cfg.sun_amount, 9.0, "sun"))
-                    plant.cd = random.uniform(max(1.0, cfg.interval - 1.0), cfg.interval + 1.0)
+                    rng = self.gameplay_rng()
+                    self.tokens.append(Token(cx + rng.randint(-12, 12), cy - 16, cfg.sun_amount, 9.0, "sun"))
+                    plant.cd = self.next_sun_production_delay(plant.kind, cfg.interval)
                     self.bump_anim_event(plant, "sun")
                     self.queue_audio_key("sun_spawn")
             elif b == "sun_shroom" and plant.cd <= 0:
                 amt = 25 if self.elapsed > 90 else 15
-                self.tokens.append(Token(cx + random.randint(-12, 12), cy - 16, amt, 9.0, "sun"))
-                plant.cd = random.uniform(8.0, 11.0)
+                rng = self.gameplay_rng()
+                self.tokens.append(Token(cx + rng.randint(-12, 12), cy - 16, amt, 9.0, "sun"))
+                plant.cd = self.next_sun_production_delay(plant.kind, cfg.interval)
                 self.queue_audio_key("sun_spawn")
             elif b in ("shoot", "shoot_slow", "shoot_balloon") and plant.cd <= 0 and self.z_ahead(plant.row, cx):
                 slow = 2.5 if b == "shoot_slow" else 0.0
@@ -10162,7 +10243,32 @@ class BattleState:
                 plant.hp = 0
             elif b == "magnet" and plant.cd <= 0:
                 for z in self.zombies:
-                    if z.kind in ("conehead", "buckethead", "screen_door", "football", "ladder", "catapult") and abs(z.x - cx) <= CELL_W * 4:
+                    if (
+                        z.kind in ("conehead", "buckethead", "screen_door", "football", "ladder", "catapult", "digger")
+                        and abs(z.row - plant.row) <= 1
+                        and abs(z.x - cx) <= CELL_W * 4
+                        and not (z.kind == "ladder" and self.ladder_state(z) != "carrying")
+                        and not (
+                            z.kind == "digger"
+                            and self.digger_state(z) not in {"burrow_enter", "underground_travel"}
+                        )
+                    ):
+                        if z.kind == "ladder" and self.ladder_state(z) == "carrying":
+                            z.state["ladder_state"] = "disarmed"
+                        if z.kind == "digger" and self.digger_state(z) in {"burrow_enter", "underground_travel"}:
+                            z.state["digger_state"] = "emerge"
+                            z.state["digger_phase_t"] = 0.35
+                            z.state["digger_phase_total"] = 0.35
+                        if z.kind == "screen_door":
+                            z.state["shield_hp"] = 0.0
+                            z.state["shield_broken"] = 1.0
+                        if z.kind == "football":
+                            normal_hp = 280.0 * (z.hp_max / max(1.0, float(ZOMBIE_COMBAT_PROFILES["football"].hp)))
+                            z.hp = min(z.hp, normal_hp)
+                            z.speed = min(z.speed, 20.0)
+                            z.dps = min(z.dps, 26.0)
+                            z.state["football_charge_t"] = 0.0
+                            z.state["football_helmet_removed"] = 1.0
                         self.damage_zombie(z, 140, source="magnet")
                         plant.cd = 8.0
                         break
@@ -10197,7 +10303,17 @@ class BattleState:
                 self.boom(cx, cy, 105, dmg)
                 plant.cd = 1.7
             elif b == "cattail" and plant.cd <= 0 and self.zombies:
-                target = min(self.zombies, key=lambda z: abs(z.x - cx))
+                airborne = [
+                    z
+                    for z in self.zombies
+                    if z.kind == "balloon"
+                    and self.balloon_state(z) == "airborne"
+                    and z.hp > 0
+                ]
+                candidates = airborne or [z for z in self.zombies if self.zombie_targetable(z)]
+                if not candidates:
+                    continue
+                target = min(candidates, key=lambda z: abs(z.x - cx))
                 self.add_projectile(target.row, cx + 18, cy - 4, dmg, slow=0.4, color=(250, 210, 116), outline=(120, 80, 20), anti_air=True)
                 plant.cd = self.scaled_plant_interval(cfg.interval)
                 plant.state["recoil_t"] = 0.13
@@ -10408,8 +10524,13 @@ class BattleState:
                     continue
             if self.is_zombotany_mode():
                 self.update_zombotany_zombie(z, dt)
-            if z.kind == "dancing" and z.state.get("spawn_t", 0.0) <= 0:
+            if (
+                z.kind == "dancing"
+                and z.state.get("spawn_t", 0.0) <= 0
+                and float(z.state.get("backup_squad_summoned", 0.0)) <= 0.0
+            ):
                 z.state["spawn_t"] = 9.0
+                z.state["backup_squad_summoned"] = 1.0
                 for rr in (z.row - 1, z.row, z.row + 1):
                     if 0 <= rr < self.rows():
                         nz = self.spawn_zombie_instance(
@@ -10442,10 +10563,14 @@ class BattleState:
                 target = None
             if main_target and self.zombie_should_ignore_target(z, main_target):
                 main_target = None
+            if z.kind == "zomboni" and main_target is not None and main_target.kind in ("spikeweed", "spikerock"):
+                target = main_target
             if z.kind == "zomboni" and target is not None:
                 if target.kind in ("spikeweed", "spikerock"):
-                    self.damage_zombie(z, 220 if target.kind == "spikeweed" else 420, source="spike_crush")
-                target.hp -= 9999
+                    self.slay_zombie(z, source="spike_crush")
+                    target.hp -= 9999 if target.kind == "spikeweed" else 100
+                else:
+                    target.hp -= 9999
                 target.state["hit_flash"] = 0.18
                 z.state["zomboni_state"] = "crush"
                 z.state["zomboni_crush_t"] = 0.42
@@ -19591,20 +19716,9 @@ class Game:
                 elif event == "jackpot":
                     self.show_battle_notice(self.tr("slot_jackpot").format(value=value), color=(194, 92, 24))
                 return
-            for t in list(self.battle.tokens):
-                if t.hit(p, 21 if t.kind == "sun" else 16):
-                    if self.battle.is_i_zombie_mode() and t.kind == "sun":
-                        # I, Zombie sunlight should come from sunflower bites only.
-                        self.battle.tokens.remove(t)
-                        return
-                    if t.kind == "sun":
-                        self.battle.sun += t.value
-                        self.play_sfx("collect_sun")
-                    else:
-                        self.save_data["coins"] = int(self.save_data.get("coins", 0)) + t.value
-                        self.play_sfx("collect_coin")
-                    self.battle.tokens.remove(t)
-                    return
+            collected_kind = self.battle.collect_token_at(p)
+            if collected_kind:
+                return
             if self.battle.is_zombiquarium_mode() and self.battle.feed_zombiquarium_fish(p[0], p[1]):
                 return
             for kind, rect in self.battle_card_buttons():

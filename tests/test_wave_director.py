@@ -146,6 +146,17 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
             outputs.append((list(battle.wave_spawn_queue), [battle.choose_spawn_row("normal") for _ in range(8)]))
         self.assertEqual(outputs[0], outputs[1])
 
+    def test_spawn_row_uses_only_minimum_pressure_lanes(self):
+        level = self.by_code["4-8"]
+        battle = self.make_battle()
+        battle.reset(level, mode_rules=self.adventure_rules("4-8", random_seed=779))
+        for row in (0, 1, 4):
+            occupied = battle.spawn_zombie_instance("normal", row, battle.lawn_right())
+            battle.zombies.append(occupied)
+
+        for _ in range(20):
+            self.assertEqual(5, battle.choose_spawn_row("normal"))
+
     def test_spawn_row_calls_do_not_change_future_wave_composition(self):
         level = self.by_code["4-10"]
         control = self.make_battle()

@@ -322,6 +322,10 @@ def validate_adventure_catalog(
                 issues.append(AdventureValidationIssue(code, "water-lane deployment", "all pool and fog levels require lily_pad"))
         if "balloon" in roster and not _has_deployable_balloon_counter(level.battlefield, cards, preplaced):
             issues.append(AdventureValidationIssue(code, "balloon counter", "balloon must follow a deployable cactus, blover, or cattail counter"))
+        if "bungee" in roster and "umbrella_leaf" not in cards:
+            issues.append(AdventureValidationIssue(code, "bungee counter", "bungee must follow an available umbrella_leaf counter"))
+        if "pogo" in roster and "tall_nut" not in cards:
+            issues.append(AdventureValidationIssue(code, "pogo counter", "pogo must follow an available tall_nut counter"))
         unsupported = sorted({kind for kind, _row, _col in preplaced if kind not in {"lily_pad", "flower_pot"}})
         if unsupported:
             issues.append(AdventureValidationIssue(code, "support classification", f"invalid support kinds {unsupported}"))

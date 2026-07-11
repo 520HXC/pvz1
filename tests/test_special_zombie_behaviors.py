@@ -201,6 +201,74 @@ class SpecialZombieBattleTests(unittest.TestCase):
         battle.slay_zombie(zombie, source="cleaner")
         self.assertLessEqual(zombie.hp, 0.0)
 
+    def test_dancing_zombie_summons_one_backup_squad_without_unbounded_growth(self):
+        battle = self.make_battle("2-6")
+        zombie = self.spawn(battle, "dancing", row=2)
+        zombie.state["spawn_t"] = 0.0
+
+        battle.update_zombies(0.1)
+        first_squad = [z for z in battle.zombies if z.kind == "backup_dancer"]
+        self.assertEqual(3, len(first_squad))
+
+        zombie.state["spawn_t"] = 0.0
+        battle.update_zombies(0.1)
+        second_squad = [z for z in battle.zombies if z.kind == "backup_dancer"]
+        self.assertEqual(3, len(second_squad))
+
+    def test_spikeweed_is_a_hard_counter_that_stops_zomboni_on_contact(self):
+        battle = self.make_battle("3-7")
+        row = 0
+        col = 5
+        self.assertTrue(battle.spawn_plant_direct("spikeweed", row, col))
+        zombie = self.spawn(battle, "zomboni", row=row, col=col)
+
+        battle.update_zombies(0.1)
+
+        self.assertLessEqual(zombie.hp, 0.0)
+        self.assertNotIn((row, col), battle.main)
+
+    def test_magnet_disarms_ladder_and_forces_digger_to_surface(self):
+        battle = self.make_battle("4-8")
+        self.assertTrue(battle.spawn_plant_direct("magnet_shroom", 1, 3))
+        magnet = battle.main[(1, 3)]
+        magnet.cd = 0.0
+        ladder = self.spawn(battle, "ladder", row=1, col=5)
+
+        battle.update_plants(0.1)
+
+        self.assertEqual("disarmed", battle.ladder_state(ladder))
+
+        magnet.cd = 0.0
+        digger = self.spawn(battle, "digger", row=1, col=5)
+        digger.state["digger_state"] = "underground_travel"
+        battle.update_plants(0.1)
+
+        self.assertIn(battle.digger_state(digger), {"emerge", "surface_attack"})
+
+        magnet.cd = 0.0
+        football = self.spawn(battle, "football", row=1, col=5)
+        football.state["football_charge_t"] = 2.0
+        battle.update_plants(0.1)
+
+        self.assertLess(football.hp, football.hp_max * 0.5)
+        self.assertEqual(0.0, football.state["football_charge_t"])
+
+    def test_cattail_prioritizes_airborne_balloon_over_ground_targets(self):
+        battle = self.make_battle("4-3")
+        row = battle.field.water_rows[0]
+        self.assertTrue(battle.spawn_plant_direct("lily_pad", row, 3))
+        self.assertTrue(battle.spawn_plant_direct("cattail", row, 3))
+        cattail = battle.main[(row, 3)]
+        cattail.cd = 0.0
+        self.spawn(battle, "normal", row=0, col=4)
+        balloon = self.spawn(battle, "balloon", row=4, col=7)
+
+        battle.update_plants(0.1)
+
+        self.assertTrue(battle.projs)
+        self.assertEqual(balloon.row, battle.projs[-1].row)
+        self.assertTrue(battle.projs[-1].anti_air)
+
     def test_snorkel_surfaces_before_attacking_a_water_lane_plant(self):
         battle = self.make_battle("3-1")
         row = battle.field.water_rows[0]

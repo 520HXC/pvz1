@@ -140,6 +140,16 @@ class AdventureCatalogTests(unittest.TestCase):
         invalid_boss = replace(boss, fixed_waves=invalid_waves)
         self.assertIn("boss identity", self.catalog_issue_capabilities([invalid_boss]))
 
+    def test_first_wave_teaches_only_one_copy_of_a_new_hard_threat(self):
+        for spec in self.specs:
+            if spec.stage_style != "normal_select" or not spec.fixed_waves:
+                continue
+            wave = list(spec.fixed_waves[0])
+            if spec.first_threat != "normal":
+                self.assertEqual(1, wave.count(spec.first_threat), spec.code)
+                wave.remove(spec.first_threat)
+            self.assertLessEqual(set(wave), {"normal", "conehead"}, spec.code)
+
     def test_rewards_feed_later_explicit_card_pools_without_large_jumps(self):
         previous = set()
         for spec in self.specs:
@@ -270,6 +280,20 @@ class AdventureCatalogTests(unittest.TestCase):
             ),
         )
         self.assertIn("balloon counter", self.catalog_issue_capabilities([no_balloon_counter]))
+        no_bungee_counter = replace(
+            self.by_code["4-7"],
+            available_cards=tuple(
+                card for card in self.by_code["4-7"].available_cards if card != "umbrella_leaf"
+            ),
+        )
+        self.assertIn("bungee counter", self.catalog_issue_capabilities([no_bungee_counter]))
+        no_pogo_counter = replace(
+            self.by_code["4-7"],
+            available_cards=tuple(
+                card for card in self.by_code["4-7"].available_cards if card != "tall_nut"
+            ),
+        )
+        self.assertIn("pogo counter", self.catalog_issue_capabilities([no_pogo_counter]))
 
 
 if __name__ == "__main__":
