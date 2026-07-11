@@ -33,7 +33,9 @@ except Exception:
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 FPS = 60
-MAX_SIM_STEP = 1.0 / 16.0
+SIM_QUANTUM = 1.0 / FPS
+MAX_SIM_CATCHUP_STEPS = FPS * 120
+TIME_EPSILON = 1e-9
 
 SIDE_W = 250
 COLS = 9
@@ -4456,6 +4458,7 @@ class BattleState:
         self.wave_spawn_total = 0
         self.wave_spawn_remaining = 0
         self.wave_pause_t = 0.0
+        self._sim_accumulator = 0.0
         self.wave_rng = random.Random(1)
         self.row_rng = random.Random(2)
         self.combat_rng = random.Random(2)
@@ -5293,7 +5296,7 @@ class BattleState:
                 spawn_interval = max(2.4, float(spawn_cycle.get("interval", 6.0)))
             if not started_custom_wave:
                 self.zomboss_spawn_t += dt
-            if not started_custom_wave and self.zomboss_spawn_t >= spawn_interval:
+            if not started_custom_wave and self.zomboss_spawn_t + TIME_EPSILON >= spawn_interval:
                 self.zomboss_spawn_t -= spawn_interval
                 active_ground = sum(
                     1
@@ -8023,7 +8026,7 @@ class BattleState:
                 self.level.spawn_acc,
                 self.elapsed,
             )
-            while self.spawn_t >= ground_interval and len(active_alive) < ground_cap:
+            while self.spawn_t + TIME_EPSILON >= ground_interval and len(active_alive) < ground_cap:
                 kind = self.consume_custom_adventure_wave_kind()
                 if kind is None:
                     break
@@ -9304,6 +9307,7 @@ class BattleState:
         self.wave_spawn_total = 0
         self.wave_spawn_remaining = 0
         self.wave_pause_t = 1.2
+        self._sim_accumulator = 0.0
         self.result = None
         self.almanac_open = False
         self.main.clear()
@@ -9739,14 +9743,28 @@ class BattleState:
             del self.support[pos]
 
     def update(self, dt: float) -> None:
-        remaining = max(0.0, float(dt))
-        if remaining <= 0.0:
+        if not self.level or self.result or self.paused or self.almanac_open:
+            return
+        try:
+            frame_dt = float(dt)
+        except (TypeError, ValueError):
+            return
+        if not math.isfinite(frame_dt) or frame_dt < 0.0:
+            return
+        if frame_dt == 0.0:
             self._update_step(0.0)
             return
-        while remaining > 1e-9:
-            step = min(MAX_SIM_STEP, remaining)
-            self._update_step(step)
-            remaining -= step
+        self._sim_accumulator += frame_dt
+        steps = 0
+        while self._sim_accumulator + TIME_EPSILON >= SIM_QUANTUM and steps < MAX_SIM_CATCHUP_STEPS:
+            self._sim_accumulator = max(0.0, self._sim_accumulator - SIM_QUANTUM)
+            self._update_step(SIM_QUANTUM)
+            steps += 1
+            if self.result or self.paused or self.almanac_open:
+                self._sim_accumulator = 0.0
+                return
+        if steps >= MAX_SIM_CATCHUP_STEPS and self._sim_accumulator >= SIM_QUANTUM:
+            self._sim_accumulator = math.fmod(self._sim_accumulator, SIM_QUANTUM)
 
     def _update_step(self, dt: float) -> None:
         if not self.level or self.result or self.paused or self.almanac_open:
@@ -9806,14 +9824,14 @@ class BattleState:
                     elif phase > 0.82:
                         spawn_cd *= 0.84
             if self.is_adventure_mainline():
-                while self.wave_spawn_queue and self.spawn_t >= spawn_cd:
-                    self.spawn_t -= spawn_cd
+                while self.wave_spawn_queue and self.spawn_t + TIME_EPSILON >= spawn_cd:
+                    self.spawn_t = max(0.0, self.spawn_t - spawn_cd)
                     next_kind = self.wave_spawn_queue.pop(0)
                     self.spawn_zombie(self.current_wave, forced_kind=next_kind)
                     self.wave_spawn_remaining = len(self.wave_spawn_queue)
             else:
                 special_cap = self.special_active_cap() if self.is_special_hud_mode() else 0
-                while self.wave_spawn_remaining > 0 and self.spawn_t >= spawn_cd:
+                while self.wave_spawn_remaining > 0 and self.spawn_t + TIME_EPSILON >= spawn_cd:
                     if special_cap > 0:
                         active_special = sum(
                             1
@@ -9822,7 +9840,7 @@ class BattleState:
                         )
                         if active_special >= special_cap:
                             break
-                    self.spawn_t -= spawn_cd
+                    self.spawn_t = max(0.0, self.spawn_t - spawn_cd)
                     self.spawn_zombie(self.current_wave)
                     self.wave_spawn_remaining -= 1
             if self.wave_spawn_remaining <= 0 and 0 < self.current_wave < self.total_waves:
@@ -10442,7 +10460,7 @@ class BattleState:
             dying_t = z.state.get("dying_t", 0.0)
             if dying_t > 0:
                 dying_t -= dt
-                if dying_t <= 0:
+                if dying_t <= TIME_EPSILON:
                     self.zombies.remove(z)
                 else:
                     z.state["dying_t"] = dying_t

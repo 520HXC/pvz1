@@ -2,6 +2,7 @@ import os
 import random
 import unittest
 from dataclasses import replace
+from unittest.mock import patch
 
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
@@ -227,10 +228,10 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
 
         battle.update(0.5)
         self.assertEqual(2.0, battle.next_wave)
-        self.assertEqual(5.5, battle.wave_pause_t)
+        self.assertAlmostEqual(5.5, battle.wave_pause_t)
 
         battle.update(1.0)
-        self.assertEqual(4.5, battle.wave_pause_t)
+        self.assertAlmostEqual(4.5, battle.wave_pause_t)
 
         battle.zombies.append(battle.spawn_zombie_instance("normal", 0, x))
         battle.update(0.5)
@@ -720,7 +721,7 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
         battle.zombies[0].hp = 0.0
         battle.update(0.0)
         self.assertIsNone(battle.result)
-        battle.update(0.34)
+        battle.update(0.34 + game.SIM_QUANTUM)
         self.assertIsNone(battle.result)
         battle.update(0.0)
         self.assertEqual("win", battle.result)
@@ -761,6 +762,68 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
             battle.result,
         )
 
+    def make_jack_timing_battle(self, seed=116):
+        battle = self.make_battle()
+        battle.reset(
+            self.by_code["1-1"],
+            mode_rules={"adventure_level_launch": True, "random_seed": seed},
+        )
+        battle.current_wave = battle.total_waves
+        battle.wave_spawn_queue = []
+        battle.wave_spawn_remaining = 0
+        jack = battle.spawn_zombie_instance("jack_in_the_box", 2, battle.lawn_right())
+        battle.zombies.append(jack)
+        return battle
+
+    def jack_timing_snapshot(self, battle):
+        zombies = []
+        for zombie in battle.zombies:
+            state = tuple(
+                sorted(
+                    (key, round(value, 8) if isinstance(value, float) else value)
+                    for key, value in zombie.state.items()
+                    if isinstance(value, (bool, int, float, str))
+                    and key not in {"anim_phase", "hit_flash", "walk_t"}
+                )
+            )
+            zombies.append(
+                (
+                    zombie.kind,
+                    zombie.row,
+                    round(zombie.x, 8),
+                    round(zombie.hp, 8),
+                    state,
+                )
+            )
+        return (
+            round(battle.elapsed, 8),
+            tuple(zombies),
+            battle.combat_rng.getstate(),
+            battle.result,
+        )
+
+    def test_one_second_update_matches_sixty_real_time_frames_for_jack_state(self):
+        single = self.make_jack_timing_battle()
+        framed = self.make_jack_timing_battle()
+
+        single.update(1.0)
+        for _ in range(60):
+            framed.update(1.0 / 60.0)
+
+        self.assertEqual(self.jack_timing_snapshot(framed), self.jack_timing_snapshot(single))
+
+    def test_144_fps_and_irregular_frames_match_at_same_simulated_time(self):
+        high_fps = self.make_jack_timing_battle(seed=117)
+        irregular = self.make_jack_timing_battle(seed=117)
+
+        for _ in range(288):
+            high_fps.update(1.0 / 144.0)
+        for _ in range(40):
+            for dt in (0.007, 0.013, 0.021, 0.009):
+                irregular.update(dt)
+
+        self.assertEqual(self.jack_timing_snapshot(high_fps), self.jack_timing_snapshot(irregular))
+
     def test_large_dt_matches_partitioned_updates_for_normal_adventure(self):
         level = replace(
             self.one_zombie_wave_level(total_waves=3),
@@ -778,8 +841,8 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
         single = make_runtime_battle()
         partitioned = make_runtime_battle()
         single.update(18.0)
-        for _ in range(18):
-            partitioned.update(1.0)
+        for _ in range(1080):
+            partitioned.update(1.0 / 60.0)
 
         self.assertEqual(self.runtime_wave_snapshot(partitioned), self.runtime_wave_snapshot(single))
 
@@ -798,10 +861,71 @@ class WaveDirectorBattleIntegrationTests(unittest.TestCase):
         single = make_boss()
         partitioned = make_boss()
         single.update(18.0)
-        for _ in range(18):
-            partitioned.update(1.0)
+        for _ in range(1080):
+            partitioned.update(1.0 / 60.0)
 
         self.assertEqual(self.runtime_wave_snapshot(partitioned), self.runtime_wave_snapshot(single))
+
+    def test_invalid_dt_values_do_not_advance_or_enter_simulation_loop(self):
+        battle = self.make_jack_timing_battle(seed=118)
+        before = self.jack_timing_snapshot(battle)
+
+        with patch.object(battle, "_update_step", wraps=battle._update_step) as update_step:
+            for invalid_dt in (float("inf"), float("nan"), -1.0):
+                battle.update(invalid_dt)
+
+        self.assertEqual(0, update_step.call_count)
+        self.assertEqual(before, self.jack_timing_snapshot(battle))
+
+    def test_suspended_battles_do_not_accumulate_large_dt_or_catch_up(self):
+        for state_name, state_value in (
+            ("paused", True),
+            ("result", "win"),
+            ("almanac_open", True),
+        ):
+            with self.subTest(state_name=state_name):
+                battle = self.make_jack_timing_battle(seed=119)
+                setattr(battle, state_name, state_value)
+                with patch.object(battle, "_update_step", wraps=battle._update_step) as update_step:
+                    battle.update(1000.0)
+                self.assertEqual(0, update_step.call_count)
+                self.assertEqual(0.0, getattr(battle, "_sim_accumulator", 0.0))
+
+                setattr(battle, state_name, False if state_name != "result" else None)
+                battle.update(1.0 / 60.0)
+                self.assertAlmostEqual(1.0 / 60.0, battle.elapsed)
+
+    def test_reset_clears_partial_simulation_accumulator(self):
+        battle = self.make_jack_timing_battle(seed=121)
+        battle.update(game.SIM_QUANTUM * 0.5)
+        self.assertGreater(battle._sim_accumulator, 0.0)
+
+        battle.reset(
+            self.by_code["1-1"],
+            mode_rules={"adventure_level_launch": True, "random_seed": 121},
+        )
+
+        self.assertEqual(0.0, battle._sim_accumulator)
+
+    def test_simulation_catchup_is_bounded_and_drops_excess_backlog(self):
+        battle = self.make_jack_timing_battle(seed=122)
+        with patch.object(battle, "_update_step") as update_step:
+            battle.update(121.0)
+
+        self.assertEqual(game.MAX_SIM_CATCHUP_STEPS, update_step.call_count)
+        self.assertGreaterEqual(battle._sim_accumulator, 0.0)
+        self.assertLess(battle._sim_accumulator, game.SIM_QUANTUM)
+
+    def test_zero_dt_still_runs_immediate_battle_settlement(self):
+        battle = self.make_battle()
+        battle.reset(self.by_code["5-5"], mode_rules=self.adventure_rules("5-5", random_seed=120))
+        battle.current_wave = battle.total_waves
+        battle.wave_spawn_queue = []
+        battle.wave_spawn_remaining = 0
+
+        battle.update(0.0)
+
+        self.assertEqual("win", battle.result)
 
     def dancing_backup_records(self, disturb_global_random):
         random.seed(8877)
