@@ -46,6 +46,23 @@ class CoreBattleFixTests(unittest.TestCase):
         battle.zombies.clear()
         return battle
 
+    def make_live_revenge_boss(self):
+        instance = game.Game.__new__(game.Game)
+        rules = game.Game.zomboss_boss_mode_rules(
+            instance,
+            "mini_dr_zomboss_revenge",
+            "minigames_select",
+        )
+        rules["random_seed"] = 510
+        battle = self.make_battle()
+        battle.reset(self.by_code["5-10"], mode_rules=rules)
+        battle.enter_battle_intro_phase("combat_live")
+        battle.zomboss_intro_index = len(
+            tuple(battle.zomboss_ruleset().get("boss_intro_phase", ()))
+        )
+        battle.zombies.clear()
+        return battle
+
     def legally_place_roof_plant(self, battle, kind, row=0, col=0):
         battle.cards = ["flower_pot"]
         battle.selected = "flower_pot"
@@ -57,19 +74,57 @@ class CoreBattleFixTests(unittest.TestCase):
         plant.cd = 0.0
         return plant
 
-    def test_exposed_boss_is_a_real_target_for_each_standard_lobber(self):
-        for kind in ("cabbage_pult", "kernel_pult", "melon_pult", "winter_melon"):
-            with self.subTest(kind=kind):
+    def freeze_boss_cycles(self, battle):
+        battle.zomboss_spawn_t = -999.0
+        battle.zomboss_attack_t = -999.0
+        battle.zomboss_stomp_t = -999.0
+
+    def test_formal_adventure_exposure_lets_legal_roof_columns_hit_boss(self):
+        for col in (0, 4, 8):
+            with self.subTest(col=col):
                 battle = self.make_live_boss()
-                self.legally_place_roof_plant(battle, kind)
-                battle.zomboss_exposed_t = 5.0
+                self.legally_place_roof_plant(battle, "cabbage_pult", col=col)
+                self.freeze_boss_cycles(battle)
+                battle.zomboss_exposed_t = battle.zomboss_exposed_window()
                 starting_hp = battle.zomboss_hp
 
-                battle.update_plants(0.05)
+                for _ in range(180):
+                    battle.update(1.0 / 60.0)
+                    if battle.zomboss_hp < starting_hp:
+                        break
 
-                self.assertTrue(any(projectile.lobbed for projectile in battle.projs))
-                battle.update_projectiles(4.0)
                 self.assertLess(battle.zomboss_hp, starting_hp)
+
+    def test_lobbed_projectile_does_not_hurt_boss_after_exposure_closes(self):
+        battle = self.make_live_boss()
+        self.legally_place_roof_plant(battle, "cabbage_pult", col=0)
+        self.freeze_boss_cycles(battle)
+        battle.zomboss_exposed_t = battle.zomboss_exposed_window()
+        starting_hp = battle.zomboss_hp
+
+        battle.update(1.0 / 60.0)
+        self.assertTrue(any(projectile.lobbed for projectile in battle.projs))
+        battle.zomboss_exposed_t = 0.0
+        for _ in range(180):
+            battle.update(1.0 / 60.0)
+            if not battle.projs:
+                break
+
+        self.assertEqual(starting_hp, battle.zomboss_hp)
+
+    def test_formal_revenge_exposure_lets_mid_roof_lobber_hit_boss(self):
+        battle = self.make_live_revenge_boss()
+        self.legally_place_roof_plant(battle, "cabbage_pult", col=4)
+        self.freeze_boss_cycles(battle)
+        battle.zomboss_exposed_t = battle.zomboss_exposed_window()
+        starting_hp = battle.zomboss_hp
+
+        for _ in range(150):
+            battle.update(1.0 / 60.0)
+            if battle.zomboss_hp < starting_hp:
+                break
+
+        self.assertLess(battle.zomboss_hp, starting_hp)
 
     def test_exposed_boss_is_a_real_cob_cannon_target_without_ground_zombies(self):
         battle = self.make_live_boss()
@@ -173,6 +228,46 @@ class CoreBattleFixTests(unittest.TestCase):
                 self.assertEqual(battle.conveyor_cap, len(battle.cards))
                 self.assertNotIn("flower_pot", battle.cards)
 
+    def test_roof_conveyor_replaces_all_pots_after_roof_is_fully_supported(self):
+        for code in ("5-5", "5-10"):
+            with self.subTest(code=code):
+                battle = self.make_battle()
+                battle.reset(
+                    self.by_code[code],
+                    mode_rules=self.adventure_rules(code),
+                )
+                battle.support.clear()
+                battle.main.clear()
+                battle.armor.clear()
+                for row in range(battle.rows()):
+                    for col in range(game.COLS):
+                        self.assertTrue(
+                            battle.spawn_plant_direct(
+                                "flower_pot", row, col, force_place=False
+                            )
+                        )
+                battle.conveyor_opening_queue.clear()
+                battle.cards = ["flower_pot"] * battle.conveyor_cap
+                battle.selected = "flower_pot"
+                battle.conveyor_t = battle.mode_float("conveyor_interval", 1.9)
+
+                battle.update_conveyor()
+
+                self.assertEqual(battle.conveyor_cap, len(battle.cards))
+                self.assertEqual(
+                    1,
+                    sum(kind != "flower_pot" for kind in battle.cards),
+                )
+                self.assertIn(battle.selected, battle.cards)
+                self.assertNotEqual("flower_pot", battle.selected)
+                self.assertTrue(
+                    any(
+                        battle.can_place(battle.selected, row, col)
+                        for row in range(battle.rows())
+                        for col in range(game.COLS)
+                    )
+                )
+
     def make_balloon_at_house(self, has_cleaner):
         battle = self.make_battle()
         battle.reset(self.by_code["4-1"])
@@ -216,6 +311,29 @@ class CoreBattleFixTests(unittest.TestCase):
 
         self.assertEqual(starting_hp, balloon.hp)
         self.assertEqual("airborne", battle.balloon_state(balloon))
+
+    def test_pool_cleaner_clears_a_water_lane_through_the_live_update_loop(self):
+        battle = self.make_battle()
+        battle.reset(self.by_code["3-1"])
+        battle.enter_battle_intro_phase("combat_live")
+        row = battle.field.water_rows[0]
+        battle.cleaners[row] = True
+        swimmer = battle.spawn_zombie_instance(
+            "ducky_tube",
+            row,
+            float(game.LAWN_X - 19),
+        )
+        battle.zombies.append(swimmer)
+
+        battle.update(1.0 / 60.0)
+
+        self.assertFalse(battle.cleaners[row])
+        self.assertNotEqual("lose", battle.result)
+        self.assertTrue(
+            swimmer not in battle.zombies
+            or swimmer.hp <= 0.0
+            or float(swimmer.state.get("dying_t", 0.0)) > 0.0
+        )
 
     def make_digger(self, state, x, hypnotized=False):
         battle = self.make_battle()
@@ -287,6 +405,29 @@ class CoreBattleFixTests(unittest.TestCase):
         battle.update_zombies(0.05)
 
         self.assertNotIn(digger, battle.zombies)
+
+    def test_digger_completes_underground_emerge_and_surface_attack_cycle(self):
+        target_x = float(game.LAWN_X + game.CELL_W * 2)
+        battle, digger = self.make_digger(
+            "underground_travel",
+            target_x + 4.0,
+        )
+        digger.state["digger_target_x"] = target_x
+
+        saw_emerge = False
+        for _ in range(90):
+            battle.update_zombies(1.0 / 60.0)
+            saw_emerge = saw_emerge or battle.digger_state(digger) == "emerge"
+            if battle.digger_state(digger) == "surface_attack":
+                break
+
+        self.assertTrue(saw_emerge)
+        self.assertEqual("surface_attack", battle.digger_state(digger))
+        surface_x = digger.x
+
+        battle.update_zombies(0.25)
+
+        self.assertGreater(digger.x, surface_x)
 
 
 if __name__ == "__main__":

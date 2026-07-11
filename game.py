@@ -1015,13 +1015,13 @@ ZOMBOSS_BOSS_RULESETS: Dict[str, Dict[str, object]] = {
         "boss_fire_warning": 0.74,
         "boss_ice_warning": 0.82,
         "boss_phase_windows": {
-            "fireball": {"row_select": 0.42, "windup": 0.74, "release": 0.16, "recover": 0.72},
-            "iceball": {"row_select": 0.48, "windup": 0.82, "release": 0.18, "recover": 0.76},
+            "fireball": {"row_select": 0.42, "windup": 0.74, "release": 0.16, "recover": 2.32},
+            "iceball": {"row_select": 0.48, "windup": 0.82, "release": 0.18, "recover": 2.32},
             "bungee_call": {"windup": 0.86, "release": 0.12, "recover": 0.18},
-            "stomp_smash": {"warning": 0.72, "impact_t": 0.22, "recover": 0.92},
+            "stomp_smash": {"warning": 0.72, "impact_t": 0.22, "recover": 2.32},
             "rv_call": {"windup": 0.92, "impact_t": 0.20, "recover": 0.28},
         },
-        "boss_exposed_window": 0.76,
+        "boss_exposed_window": 2.32,
         "boss_spawn_cycle": {
             "interval": 7.1,
             "early": (("normal", "normal"), ("normal", "conehead"), ("conehead",)),
@@ -1080,13 +1080,13 @@ ZOMBOSS_BOSS_RULESETS: Dict[str, Dict[str, object]] = {
         "boss_fire_warning": 0.62,
         "boss_ice_warning": 0.70,
         "boss_phase_windows": {
-            "fireball": {"row_select": 0.34, "windup": 0.62, "release": 0.14, "recover": 0.60},
-            "iceball": {"row_select": 0.38, "windup": 0.70, "release": 0.16, "recover": 0.64},
+            "fireball": {"row_select": 0.34, "windup": 0.62, "release": 0.14, "recover": 1.45},
+            "iceball": {"row_select": 0.38, "windup": 0.70, "release": 0.16, "recover": 1.45},
             "bungee_call": {"windup": 0.72, "release": 0.10, "recover": 0.12},
-            "stomp_smash": {"warning": 0.58, "impact_t": 0.18, "recover": 0.74},
+            "stomp_smash": {"warning": 0.58, "impact_t": 0.18, "recover": 1.45},
             "rv_call": {"windup": 0.76, "impact_t": 0.16, "recover": 0.20},
         },
-        "boss_exposed_window": 0.64,
+        "boss_exposed_window": 1.45,
         "boss_spawn_cycle": {
             "interval": 6.0,
             "early": (("normal", "conehead"), ("conehead", "conehead"), ("buckethead",)),
@@ -9986,31 +9986,41 @@ class BattleState:
                 self.mode_rules["vasebreaker_tier"] = float(max(tier_now + 1, next_round - 1))
                 self.setup_vasebreaker_board()
 
+    def conveyor_card_placeable(self, kind: str) -> bool:
+        if kind not in self.plant_types:
+            return False
+        return any(
+            self.can_place(kind, row, col)
+            for row in range(self.rows())
+            for col in range(COLS)
+        )
+
     def any_conveyor_card_placeable(self) -> bool:
-        for kind in set(self.cards):
-            if kind not in self.plant_types:
-                continue
-            for row in range(self.rows()):
-                for col in range(COLS):
-                    if self.can_place(kind, row, col):
-                        return True
-        return False
+        return any(self.conveyor_card_placeable(kind) for kind in set(self.cards))
 
     def recover_roof_conveyor_softlock(self) -> bool:
         if (
             not self.field.is_roof
             or len(self.cards) < self.conveyor_cap
-            or "flower_pot" in self.cards
             or self.any_conveyor_card_placeable()
         ):
             return False
-        if not any(
-            self.can_place("flower_pot", row, col)
-            for row in range(self.rows())
-            for col in range(COLS)
-        ):
+        replacement = next(
+            (
+                kind
+                for kind in self.conveyor_pool
+                if self.conveyor_card_placeable(kind)
+            ),
+            "",
+        )
+        if not replacement:
             return False
-        self.cards[-1] = "flower_pot"
+        self.cards[-1] = replacement
+        if (
+            self.selected not in self.cards
+            or not self.conveyor_card_placeable(self.selected)
+        ):
+            self.selected = replacement
         return True
 
     def update_conveyor(self) -> None:
