@@ -47,6 +47,7 @@ class AdventureCatalogLevelLike(Protocol):
     large_wave_indices: Sequence[int]
     preplaced_supports: Sequence[tuple[str, int, int]]
     guaranteed_zombies: Sequence[tuple[int, str, int]]
+    special_board: Sequence[tuple[int, int, str, object]]
     start_sun: int
     wave_interval: float
 
@@ -281,6 +282,40 @@ def validate_adventure_catalog(
                 issues.append(AdventureValidationIssue(code, "fixed waves", f"guarantee wave {wave_idx} is out of range"))
             elif waves[int(wave_idx) - 1].count(kind) < int(count):
                 issues.append(AdventureValidationIssue(code, "fixed waves", f"wave {wave_idx} is missing guaranteed {kind}"))
+
+        board = tuple(level.special_board)
+        if code == "4-5":
+            board_valid = bool(board)
+            positions: set[tuple[int, int]] = set()
+            zombie_payload: list[str] = []
+            for entry in board:
+                if not isinstance(entry, (list, tuple)) or len(entry) != 4:
+                    board_valid = False
+                    continue
+                row, col, payload_kind, value = entry
+                if not isinstance(row, int) or not isinstance(col, int) or not 0 <= row < 6 or not 0 <= col < 9:
+                    board_valid = False
+                    continue
+                if (row, col) in positions:
+                    board_valid = False
+                positions.add((row, col))
+                if payload_kind == "plant":
+                    board_valid = board_valid and isinstance(value, str) and value in plant_types
+                elif payload_kind == "zombie":
+                    board_valid = board_valid and isinstance(value, str) and value in ADVENTURE_ZOMBIE_POINT_COSTS
+                    if isinstance(value, str):
+                        zombie_payload.append(value)
+                elif payload_kind == "sun":
+                    board_valid = board_valid and isinstance(value, int) and 15 <= value <= 125
+                else:
+                    board_valid = False
+            fixed_payload = [kind for wave in waves for kind in wave]
+            board_cost = sum(ADVENTURE_ZOMBIE_POINT_COSTS.get(kind, 0) for kind in zombie_payload)
+            fixed_cost = sum(ADVENTURE_ZOMBIE_POINT_COSTS.get(kind, 0) for kind in fixed_payload)
+            if not board_valid or zombie_payload != fixed_payload or board_cost != fixed_cost:
+                issues.append(AdventureValidationIssue(code, "special board", "4-5 board payload must exactly match fixed zombie waves and points"))
+        elif board:
+            issues.append(AdventureValidationIssue(code, "special board", "only catalog-backed special stages may define a board"))
 
         if level.battlefield in {"pool", "fog"}:
             if "lily_pad" not in cards:

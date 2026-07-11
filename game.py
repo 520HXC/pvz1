@@ -2674,6 +2674,7 @@ class LevelConfig:
     reward_plant: str = ""
     special_rules: Tuple[str, ...] = ()
     fixed_waves: Tuple[Tuple[str, ...], ...] = ()
+    special_board: Tuple[Tuple[int, int, str, object], ...] = ()
 
 
 @dataclass
@@ -3783,6 +3784,7 @@ def build_levels(total: int = 50) -> List[LevelConfig]:
                 reward_plant=spec.reward_plant,
                 special_rules=spec.special_rules,
                 fixed_waves=spec.fixed_waves,
+                special_board=spec.special_board,
             )
         )
     return levels[: min(total, len(levels))]
@@ -4055,6 +4057,7 @@ class BattleState:
         self.mode_score = 0
         self.mode_goal = 0
         self.mode_misses = 0
+        self.whack_target_queue: List[str] = []
         self.beghouled_cells: Dict[Tuple[int, int], str] = {}
         self.beghouled_selected: Optional[Tuple[int, int]] = None
         self.seeing_stars_targets: List[Tuple[int, int]] = []
@@ -6709,13 +6712,6 @@ class BattleState:
                 (r0, 7, "zombie", "conehead"), (r1, 7, "zombie", "football"), (r2, 7, "sun", 50), (r3, 7, "zombie", "screen_door"), (r4, 7, "zombie", "ladder"),
                 (r0, 8, "plant", "repeater"), (r1, 8, "sun", 25), (r2, 8, "zombie", "pogo"), (r3, 8, "plant", "threepeater"), (r4, 8, "zombie", "digger"),
             ],
-            "adventure_vasebreaker": [
-                (r0, 4, "plant", "sun_shroom"), (r1, 4, "plant", "puff_shroom"), (r2, 4, "plant", "wallnut"), (r3, 4, "plant", "puff_shroom"), (r4, 4, "plant", "potato_mine"),
-                (r0, 5, "zombie", "normal"), (r1, 5, "plant", "fume_shroom"), (r2, 5, "sun", 25), (r3, 5, "plant", "sun_shroom"), (r4, 5, "zombie", "conehead"),
-                (r0, 6, "plant", "puff_shroom"), (r1, 6, "zombie", "normal"), (r2, 6, "plant", "fume_shroom"), (r3, 6, "sun", 25), (r4, 6, "plant", "wallnut"),
-                (r0, 7, "zombie", "conehead"), (r1, 7, "plant", "potato_mine"), (r2, 7, "zombie", "buckethead"), (r3, 7, "plant", "puff_shroom"), (r4, 7, "sun", 50),
-                (r0, 8, "plant", "sun_shroom"), (r1, 8, "zombie", "normal"), (r2, 8, "plant", "wallnut"), (r3, 8, "zombie", "conehead"), (r4, 8, "plant", "fume_shroom"),
-            ],
         }
 
     def vasebreaker_stage_balance(self) -> Dict[str, Dict[str, float]]:
@@ -6745,7 +6741,8 @@ class BattleState:
         specs = self.vasebreaker_stage_specs()
         spec = specs.get(mode_name, specs.get("puzzle_vasebreaker", {}))
         tier = int(max(0.0, self.mode_float("vasebreaker_tier", 0.0)))
-        stage_layouts = self.vasebreaker_stage_layouts()
+        catalog_layout = tuple(self.level.special_board) if self.is_adventure_mainline() and self.level else ()
+        stage_layouts = {} if catalog_layout else self.vasebreaker_stage_layouts()
 
         if endless:
             unlocked = int(self.save_data.get("unlocked", 1))
@@ -6784,7 +6781,7 @@ class BattleState:
                 ],
             }
         else:
-            layout = stage_layouts.get(mode_name, [])
+            layout = list(catalog_layout) if catalog_layout else stage_layouts.get(mode_name, [])
             if layout:
                 for row, col, kind, value in layout:
                     rr = int(clamp(float(row), 0.0, float(self.rows() - 1)))
@@ -7853,27 +7850,59 @@ class BattleState:
         self.cleaners = [False for _ in range(self.rows())]
         self.mode_spawn_t = 0.0
         self.mode_score = 0
-        self.mode_goal = max(10, int(self.mode_float("whack_goal", 24.0)))
         self.mode_misses = 0
+        if self.is_adventure_mainline() and self.level:
+            self.whack_target_queue = [
+                kind
+                for wave in self.level.fixed_waves
+                for kind in wave
+                if kind in self.zombie_types
+            ]
+            self.mode_goal = sum(self.zombie_point_cost(kind) for kind in self.whack_target_queue)
+        else:
+            self.whack_target_queue = []
+            self.mode_goal = max(10, int(self.mode_float("whack_goal", 24.0)))
 
-    def spawn_whack_target(self) -> None:
-        kinds = [k for k in self.mode_list("whack_zombies") if k in self.zombie_types]
-        if not kinds:
-            kinds = ["normal", "conehead", "buckethead", "newspaper"]
-        row = random.randrange(self.rows())
-        col = random.randint(2, COLS - 1)
-        target_x = float(self.cell_center(row, col)[0])
-        crowded = any(z.state.get("whack_popup", 0.0) > 0.0 and z.row == row and abs(z.x - target_x) < 36 for z in self.zombies)
-        if crowded:
-            return
-        kind = random.choice(kinds)
+    def spawn_whack_target(self) -> bool:
+        adventure = self.is_adventure_mainline()
+        if adventure:
+            if not self.whack_target_queue:
+                return False
+            rng = self.row_rng
+        else:
+            kinds = [k for k in self.mode_list("whack_zombies") if k in self.zombie_types]
+            if not kinds:
+                kinds = ["normal", "conehead", "buckethead", "newspaper"]
+            rng = random
+        if adventure:
+            row = 0
+            col = 2
+            target_x = float(self.cell_center(row, col)[0])
+            for _attempt in range(12):
+                row = rng.randrange(self.rows())
+                col = rng.randint(2, COLS - 1)
+                target_x = float(self.cell_center(row, col)[0])
+                crowded = any(z.state.get("whack_popup", 0.0) > 0.0 and z.row == row and abs(z.x - target_x) < 36 for z in self.zombies)
+                if not crowded:
+                    break
+            else:
+                return False
+        else:
+            row = rng.randrange(self.rows())
+            col = rng.randint(2, COLS - 1)
+            target_x = float(self.cell_center(row, col)[0])
+            crowded = any(z.state.get("whack_popup", 0.0) > 0.0 and z.row == row and abs(z.x - target_x) < 36 for z in self.zombies)
+            if crowded:
+                return False
+        kind = self.whack_target_queue.pop(0) if adventure else random.choice(kinds)
         z = self.spawn_zombie_instance(kind, row, target_x, wave_idx=1, hp_scale=0.42, speed_scale=0.0, dps_scale=0.0)
         z.speed = 0.0
         z.dps = 0.0
         z.state["whack_popup"] = 1.0
-        z.state["whack_t"] = random.uniform(0.95, 1.45)
+        z.state["whack_t"] = rng.uniform(0.95, 1.45)
         z.state["whack_col"] = float(col)
         self.zombies.append(z)
+        return True
 
     def hit_whack_target(self, px: int, py: int) -> bool:
         if not self.is_whack_mode():
@@ -7886,7 +7915,7 @@ class BattleState:
             zy = self.row_y(z.row) - 8
             if abs(px - z.x) <= 36 and abs(py - zy) <= 42:
                 self.slay_zombie(z, source="whack")
-                self.mode_score += 1
+                self.mode_score += self.zombie_point_cost(z.kind) if self.is_adventure_mainline() else 1
                 self.hit_sparks.append({"x": z.x, "y": zy, "t": 0.22, "ttl": 0.22})
                 return True
         return False
@@ -7910,8 +7939,15 @@ class BattleState:
                 self.mode_misses += 1
                 self.zombies.remove(z)
         miss_limit = max(1, int(self.mode_float("whack_miss_limit", 8.0)))
+        active_remaining = any(
+            z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0 and z.state.get("whack_popup", 0.0) > 0.0
+            for z in self.zombies
+        )
+        adventure_exhausted = self.is_adventure_mainline() and not self.whack_target_queue and not active_remaining
         if self.mode_score >= self.mode_goal:
             self.result = "win"
+        elif adventure_exhausted:
+            self.result = "lose"
         elif self.mode_misses >= miss_limit:
             self.result = "lose"
 
@@ -9119,6 +9155,7 @@ class BattleState:
         self.mode_score = 0
         self.mode_goal = 0
         self.mode_misses = 0
+        self.whack_target_queue.clear()
         self.beghouled_cells.clear()
         self.beghouled_selected = None
         self.seeing_stars_targets.clear()
@@ -9187,10 +9224,11 @@ class BattleState:
                     self.spawn_plant_direct(kind, row, col, force_place=False)
         if self.is_vasebreaker_mode():
             self.cleaners = [False for _ in range(self.rows())]
-            self.total_waves = 0
-            self.large_wave_indices = ()
-            self.final_wave_index = 0
-            self.wave_budgets = []
+            if not self.is_adventure_mainline():
+                self.total_waves = 0
+                self.large_wave_indices = ()
+                self.final_wave_index = 0
+                self.wave_budgets = []
             self.wave_spawn_queue = []
             self.wave_spawn_total = 0
             if self.field.has_fog:
@@ -9213,10 +9251,11 @@ class BattleState:
             self.wave_spawn_total = 0
             self.setup_beghouled_mode()
         elif self.is_whack_mode():
-            self.total_waves = 0
-            self.large_wave_indices = ()
-            self.final_wave_index = 0
-            self.wave_budgets = []
+            if not self.is_adventure_mainline():
+                self.total_waves = 0
+                self.large_wave_indices = ()
+                self.final_wave_index = 0
+                self.wave_budgets = []
             self.wave_spawn_queue = []
             self.wave_spawn_total = 0
             self.setup_whack_mode()

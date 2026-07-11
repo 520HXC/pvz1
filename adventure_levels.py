@@ -7,6 +7,7 @@ from wave_director import ADVENTURE_ZOMBIE_POINT_COSTS
 Wave = Tuple[str, ...]
 Support = Tuple[str, int, int]
 Guarantee = Tuple[int, str, int]
+SpecialBoardEntry = Tuple[int, int, str, object]
 
 SHOP_UPGRADE_PLANT_KEYS = frozenset(
     {"twin_sunflower", "gloom_shroom", "winter_melon", "spikerock", "cob_cannon", "gatling"}
@@ -32,6 +33,7 @@ class AdventureLevelSpec:
     fixed_waves: Tuple[Wave, ...]
     large_wave_indices: Tuple[int, ...]
     preplaced_supports: Tuple[Support, ...]
+    special_board: Tuple[SpecialBoardEntry, ...]
     guaranteed_zombies: Tuple[Guarantee, ...]
     danger: int
     tag_key: str
@@ -159,6 +161,13 @@ _FLAGLESS = frozenset({"1-1", "1-5", "2-5", "4-5", "5-10"})
 _ROOF_INTRO_POTS = tuple(
     ("flower_pot", row, col) for row in range(5) for col in range(5)
 )
+_ADVENTURE_VASEBREAKER_BOARD: Tuple[SpecialBoardEntry, ...] = (
+    (0, 4, "plant", "sun_shroom"), (1, 4, "plant", "puff_shroom"), (2, 4, "plant", "wallnut"), (3, 4, "plant", "puff_shroom"), (4, 4, "plant", "potato_mine"),
+    (0, 5, "zombie", "normal"), (1, 5, "plant", "fume_shroom"), (2, 5, "sun", 25), (3, 5, "plant", "sun_shroom"), (4, 5, "zombie", "conehead"),
+    (0, 6, "plant", "puff_shroom"), (1, 6, "zombie", "normal"), (2, 6, "plant", "fume_shroom"), (3, 6, "sun", 25), (4, 6, "plant", "wallnut"),
+    (0, 7, "zombie", "conehead"), (1, 7, "plant", "potato_mine"), (2, 7, "zombie", "buckethead"), (3, 7, "plant", "puff_shroom"), (4, 7, "sun", 50),
+    (0, 8, "plant", "sun_shroom"), (1, 8, "zombie", "normal"), (2, 8, "plant", "wallnut"), (3, 8, "zombie", "conehead"), (4, 8, "plant", "fume_shroom"),
+)
 
 
 def _level(
@@ -174,6 +183,7 @@ def _level(
     *,
     special_rules: Tuple[str, ...] = (),
     preplaced: Tuple[Support, ...] = (),
+    special_board: Tuple[SpecialBoardEntry, ...] = (),
 ) -> AdventureLevelSpec:
     world, stage = (int(value) for value in code.split("-", 1))
     wave_count = _WAVE_COUNTS.get(code, 12 if world == 5 else 8)
@@ -198,6 +208,12 @@ def _level(
         large_waves,
         tuple(guarantees),
     )
+    if special_board:
+        fixed_waves = (
+            tuple(str(value) for _row, _col, kind, value in special_board if kind == "zombie"),
+        )
+        large_waves = (1,)
+        guarantees = []
     return AdventureLevelSpec(
         code=code,
         battlefield=battlefield,
@@ -216,6 +232,7 @@ def _level(
         fixed_waves=fixed_waves,
         large_wave_indices=large_waves,
         preplaced_supports=preplaced,
+        special_board=special_board,
         guaranteed_zombies=tuple(guarantees),
         danger=min(6, world + (stage - 1) // 3),
         tag_key=("tag_tutorial" if code == "1-1" else f"tag_{battlefield}_pressure"),
@@ -268,7 +285,7 @@ ADVENTURE_LEVELS: Tuple[AdventureLevelSpec, ...] = (
     _level("4-2", "fog", "peashooter sunflower wallnut potato_mine snowpea cherrybomb repeater chomper squash jalapeno puff_shroom sun_shroom fume_shroom grave_buster hypno_shroom scaredy_shroom ice_shroom doom_shroom tall_nut torchwood lily_pad tangle_kelp threepeater sea_shroom spikeweed split_pea cattail pumpkin magnet_shroom starfruit cactus plantern", "normal conehead buckethead ducky_tube snorkel bungee", "bungee", "", 135, 230, T4),
     _level("4-3", "fog", "peashooter sunflower wallnut potato_mine snowpea cherrybomb repeater chomper squash jalapeno puff_shroom sun_shroom fume_shroom grave_buster hypno_shroom scaredy_shroom ice_shroom doom_shroom tall_nut torchwood lily_pad tangle_kelp threepeater sea_shroom spikeweed split_pea cattail pumpkin magnet_shroom starfruit cactus plantern", "normal conehead buckethead ducky_tube snorkel balloon", "balloon", "blover", 146, 225, T4),
     _level("4-4", "fog", "peashooter sunflower wallnut potato_mine snowpea cherrybomb repeater chomper squash jalapeno puff_shroom sun_shroom fume_shroom grave_buster hypno_shroom scaredy_shroom ice_shroom doom_shroom tall_nut torchwood lily_pad tangle_kelp threepeater sea_shroom spikeweed split_pea cattail pumpkin magnet_shroom starfruit cactus plantern blover", "normal conehead buckethead ducky_tube snorkel balloon bungee ladder", "ladder", "garlic", 158, 220, T4),
-    _level("4-5", "fog", "peashooter sunflower wallnut potato_mine snowpea cherrybomb repeater chomper squash jalapeno puff_shroom sun_shroom fume_shroom grave_buster hypno_shroom scaredy_shroom ice_shroom doom_shroom tall_nut torchwood lily_pad tangle_kelp threepeater sea_shroom spikeweed split_pea cattail pumpkin magnet_shroom starfruit cactus plantern blover garlic", "normal conehead buckethead", "normal", "coffee_bean", 125, 235, T4, special_rules=("vasebreaker",)),
+    _level("4-5", "fog", "peashooter sunflower wallnut potato_mine snowpea cherrybomb repeater chomper squash jalapeno puff_shroom sun_shroom fume_shroom grave_buster hypno_shroom scaredy_shroom ice_shroom doom_shroom tall_nut torchwood lily_pad tangle_kelp threepeater sea_shroom spikeweed split_pea cattail pumpkin magnet_shroom starfruit cactus plantern blover garlic", "normal conehead buckethead", "normal", "coffee_bean", 13, 235, T4, special_rules=("vasebreaker",), special_board=_ADVENTURE_VASEBREAKER_BOARD),
     _level("4-6", "fog", "peashooter sunflower wallnut potato_mine snowpea cherrybomb repeater chomper squash jalapeno puff_shroom sun_shroom fume_shroom grave_buster hypno_shroom scaredy_shroom ice_shroom doom_shroom tall_nut torchwood lily_pad tangle_kelp threepeater sea_shroom spikeweed split_pea cattail pumpkin magnet_shroom starfruit cactus plantern blover garlic coffee_bean", "normal conehead buckethead screen_door balloon bungee ladder digger", "digger", "umbrella_leaf", 171, 215, T4),
     _level("4-7", "fog", "peashooter sunflower wallnut potato_mine snowpea cherrybomb repeater chomper squash jalapeno puff_shroom sun_shroom fume_shroom grave_buster hypno_shroom scaredy_shroom ice_shroom doom_shroom tall_nut torchwood lily_pad tangle_kelp threepeater sea_shroom spikeweed split_pea cattail pumpkin magnet_shroom starfruit cactus plantern blover garlic coffee_bean umbrella_leaf", "normal conehead buckethead screen_door balloon bungee ladder digger pogo", "pogo", "marigold", 185, 240, T4),
     _level("4-8", "fog", "peashooter sunflower wallnut potato_mine snowpea cherrybomb repeater chomper squash jalapeno puff_shroom sun_shroom fume_shroom grave_buster hypno_shroom scaredy_shroom ice_shroom doom_shroom tall_nut torchwood lily_pad tangle_kelp threepeater sea_shroom spikeweed split_pea cattail pumpkin magnet_shroom starfruit cactus plantern blover garlic coffee_bean umbrella_leaf marigold", "normal conehead buckethead screen_door football balloon bungee ladder digger pogo", "football", "melon_pult", 200, 205, T4),
