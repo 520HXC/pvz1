@@ -15,6 +15,7 @@ from urllib.request import Request, urlopen
 import pygame
 
 from progression import migrate_save_data, record_adventure_clear
+from zombie_behaviors import ZOMBIE_COMBAT_PROFILES, movement_multiplier, state_name
 from wave_director import (
     ADVENTURE_ZOMBIE_POINT_COSTS,
     advance_recovery_countdown,
@@ -3948,12 +3949,8 @@ def build_zombies() -> Dict[str, ZombieType]:
         ("catapult", "Catapult Zombie"), ("gargantuar", "Gargantuar"), ("imp", "Imp"), ("zomboss", "Dr. Zomboss"),
     ]
     for key, name in req:
-        hp = 380
-        if key in ("football", "gargantuar", "catapult", "zomboni", "zomboss"):
-            hp = 1300 if key != "zomboss" else 9000
-        if key == "imp":
-            hp = 260
-        _add_z(base, ZombieType(key, name, hp, (14, 24), (22, 32), key))
+        profile = ZOMBIE_COMBAT_PROFILES[key]
+        _add_z(base, ZombieType(key, name, profile.hp, profile.speed, profile.dps, key))
     return base
 
 
@@ -5732,12 +5729,76 @@ class BattleState:
     def pogo_state(self, zombie: Zombie) -> str:
         return str(zombie.state.get("pogo_state", "hop_loop"))
 
+    def snorkel_state(self, zombie: Zombie) -> str:
+        return state_name(zombie.state, "snorkel_state", "submerged")
+
+    def dolphin_state(self, zombie: Zombie) -> str:
+        return state_name(zombie.state, "dolphin_state", "riding")
+
+    def football_state(self, zombie: Zombie) -> str:
+        return "charge" if float(zombie.state.get("football_charge_t", 0.0)) > 0.0 else "walk"
+
+    def gargantuar_state(self, zombie: Zombie) -> str:
+        return state_name(zombie.state, "gargantuar_state", "ready")
+
+    def gargantuar_should_throw(self, zombie: Zombie) -> bool:
+        return (
+            zombie.kind == "gargantuar"
+            and zombie.hp > 0.0
+            and zombie.hp <= zombie.hp_max * 0.5
+            and float(zombie.state.get("garg_imp_thrown", 0.0)) <= 0.0
+        )
+
+    def throw_gargantuar_imp(self, zombie: Zombie) -> Zombie:
+        zombie.state["garg_imp_thrown"] = 1.0
+        imp = self.spawn_zombie_instance(
+            "imp",
+            zombie.row,
+            max(LAWN_X - 8.0, zombie.x - CELL_W * 1.15),
+            wave_idx=max(1, self.current_wave),
+        )
+        imp.state["spawned_by_garg"] = 1.0
+        imp.state["counts_for_kill"] = 0.0
+        self.zombies.append(imp)
+        self.bump_anim_event(zombie, "throw")
+        return imp
+
+    def smash_plant_at_zombie(self, zombie: Zombie, amount: float) -> bool:
+        pos, target, _main_target = self.zombie_cell_targets(zombie)
+        if target is None:
+            return False
+        target.hp -= amount
+        target.state["hit_flash"] = 0.18
+        if target.hp <= 0.0:
+            self.armor.pop(pos, None)
+            self.main.pop(pos, None)
+            self.support.pop(pos, None)
+        return True
+
+    def zombie_cell_targets(
+        self,
+        zombie: Zombie,
+    ) -> Tuple[Tuple[int, int], Optional[Plant], Optional[Plant]]:
+        col = int(clamp((zombie.x - LAWN_X) // CELL_W, 0, COLS - 1))
+        pos = (zombie.row, col)
+        target = self.armor.get(pos)
+        main_target = self.main.get(pos)
+        if target is None and self.is_plant_edible(main_target):
+            target = main_target
+        if target is None and main_target is None:
+            support_target = self.support.get(pos)
+            if self.is_plant_edible(support_target):
+                target = support_target
+        return pos, target, main_target
+
     def zombie_targetable(self, zombie: Zombie) -> bool:
         if zombie.hp <= 0 or float(zombie.state.get("dying_t", 0.0)) > 0.0:
             return False
         if zombie.kind == "digger" and self.digger_state(zombie) in {"burrow_enter", "underground_travel"}:
             return False
         if zombie.kind == "bungee" and self.bungee_state(zombie) == "exit":
+            return False
+        if zombie.kind == "snorkel" and self.snorkel_state(zombie) in {"submerged", "surfacing"}:
             return False
         return True
 
@@ -5756,6 +5817,8 @@ class BattleState:
             return False
         if zombie.kind == "zomboni":
             return False
+        if zombie.kind == "snorkel":
+            return self.snorkel_state(zombie) == "surfaced"
         return True
 
     def zombie_movement_direction(self, zombie: Zombie) -> int:
@@ -5813,11 +5876,23 @@ class BattleState:
         return False
 
     def zombie_total_hp(self, zombie: Zombie) -> float:
+        if zombie.kind == "screen_door":
+            return max(0.0, zombie.hp + float(zombie.state.get("shield_hp", 0.0)))
         if zombie.kind == "newspaper":
             paper_hp = float(zombie.state.get("paper_hp", 0.0))
             if zombie.state.get("paper_state", "paper_intact") == "paper_intact":
                 return max(0.0, zombie.hp + paper_hp)
         return max(0.0, zombie.hp)
+
+    def zombie_total_hp_max(self, zombie: Zombie) -> float:
+        if zombie.kind == "screen_door":
+            return max(1.0, zombie.hp_max + float(zombie.state.get("shield_hp_max", 0.0)))
+        return max(1.0, zombie.hp_max)
+
+    def zombie_hp_ratio(self, zombie: Zombie) -> float:
+        if zombie.kind == "screen_door":
+            return clamp(self.zombie_total_hp(zombie) / self.zombie_total_hp_max(zombie), 0.0, 1.0)
+        return clamp(zombie.hp / self.zombie_total_hp_max(zombie), 0.0, 1.0)
 
     def newspaper_paper_max_hp(self, zombie: Zombie) -> float:
         return max(130.0, float(zombie.hp_max) * 0.42)
@@ -6139,6 +6214,93 @@ class BattleState:
         return False
 
     def update_special_zombie_state(self, zombie: Zombie, dt: float) -> bool:
+        if zombie.kind == "gargantuar":
+            profile = ZOMBIE_COMBAT_PROFILES["gargantuar"]
+            if self.gargantuar_should_throw(zombie):
+                self.throw_gargantuar_imp(zombie)
+            state = self.gargantuar_state(zombie)
+            if state == "ready":
+                _pos, target, _main_target = self.zombie_cell_targets(zombie)
+                if target is None:
+                    return False
+                zombie.state["gargantuar_state"] = "windup"
+                zombie.state["gargantuar_smash_t"] = 0.55
+                zombie.state["bite_t"] = 0.0
+                self.bump_anim_event(zombie, "smash_windup")
+                return True
+            if state == "windup":
+                smash_t = max(0.0, float(zombie.state.get("gargantuar_smash_t", 0.0)) - dt)
+                zombie.state["gargantuar_smash_t"] = smash_t
+                zombie.state["bite_t"] = 0.0
+                if smash_t <= 0.0:
+                    self.smash_plant_at_zombie(zombie, profile.smash_damage)
+                    zombie.state["gargantuar_state"] = "recover"
+                    zombie.state["gargantuar_smash_t"] = max(0.0, profile.smash_interval - 0.55)
+                    self.bump_anim_event(zombie, "smash")
+                return True
+            if state == "recover":
+                smash_t = max(0.0, float(zombie.state.get("gargantuar_smash_t", 0.0)) - dt)
+                zombie.state["gargantuar_smash_t"] = smash_t
+                zombie.state["bite_t"] = 0.0
+                if smash_t <= 0.0:
+                    zombie.state["gargantuar_state"] = "ready"
+                return True
+            return False
+        if zombie.kind == "football":
+            zombie.state["football_charge_t"] = max(
+                0.0,
+                float(zombie.state.get("football_charge_t", 0.0)) - dt,
+            )
+            return False
+        if zombie.kind == "dolphin_rider" and not zombie.hypnotized:
+            state = self.dolphin_state(zombie)
+            if state == "riding":
+                _pos, target, main_target = self.zombie_cell_targets(zombie)
+                if target is None:
+                    return False
+                if main_target is not None and main_target.kind == "tall_nut":
+                    zombie.state["dolphin_state"] = "blocked"
+                    return False
+                zombie.state["dolphin_state"] = "vault"
+                zombie.state["dolphin_vault_t"] = 0.38
+                zombie.state["dolphin_vault_total"] = 0.38
+                zombie.state["dolphin_vault_start_x"] = zombie.x
+                zombie.state["dolphin_vault_end_x"] = max(LAWN_X - 8.0, zombie.x - CELL_W * 0.96)
+                zombie.state["bite_t"] = 0.0
+                self.bump_anim_event(zombie, "vault")
+                return True
+            if state == "vault":
+                vault_t = max(0.0, float(zombie.state.get("dolphin_vault_t", 0.0)) - dt)
+                zombie.state["dolphin_vault_t"] = vault_t
+                total = max(0.01, float(zombie.state.get("dolphin_vault_total", 0.38)))
+                start_x = float(zombie.state.get("dolphin_vault_start_x", zombie.x))
+                end_x = float(zombie.state.get("dolphin_vault_end_x", zombie.x - CELL_W))
+                progress = clamp(1.0 - vault_t / total, 0.0, 1.0)
+                zombie.x = start_x + (end_x - start_x) * progress
+                zombie.state["bite_t"] = 0.0
+                if vault_t <= 0.0:
+                    zombie.state["dolphin_state"] = "post_vault"
+                    zombie.speed = float(zombie.state.get("dolphin_post_vault_speed", zombie.speed))
+                return True
+            return False
+        if zombie.kind == "snorkel":
+            state = self.snorkel_state(zombie)
+            if state == "submerged":
+                _pos, target, _main_target = self.zombie_cell_targets(zombie)
+                if target is not None:
+                    zombie.state["snorkel_state"] = "surfacing"
+                    zombie.state["snorkel_surface_t"] = 0.42
+                    zombie.state["bite_t"] = 0.0
+                    return True
+                return False
+            if state == "surfacing":
+                surface_t = max(0.0, float(zombie.state.get("snorkel_surface_t", 0.0)) - dt)
+                zombie.state["snorkel_surface_t"] = surface_t
+                zombie.state["bite_t"] = 0.0
+                if surface_t <= 0.0:
+                    zombie.state["snorkel_state"] = "surfaced"
+                return True
+            return False
         if zombie.kind == "balloon":
             state = self.balloon_state(zombie)
             if state == "popped_fall":
@@ -6264,6 +6426,9 @@ class BattleState:
             return 0.0
         if zombie.kind == "digger" and self.digger_state(zombie) in {"burrow_enter", "underground_travel"}:
             return 0.0
+        if zombie.kind == "snorkel" and self.snorkel_state(zombie) in {"submerged", "surfacing"}:
+            if source in {"projectile", "anti_air_projectile", "splash"}:
+                return 0.0
         if zombie.kind == "balloon":
             state = self.balloon_state(zombie)
             if state == "airborne" and source in {"blover", "cleaner"}:
@@ -6282,6 +6447,20 @@ class BattleState:
             if state == "airborne":
                 return 0.0
         dealt = 0.0
+        if zombie.kind == "screen_door" and source != "fume":
+            shield_hp = max(0.0, float(zombie.state.get("shield_hp", 0.0)))
+            if shield_hp > 0.0:
+                absorbed = min(shield_hp, amount)
+                shield_hp -= absorbed
+                amount -= absorbed
+                dealt += absorbed
+                zombie.state["shield_hp"] = shield_hp
+                zombie.state["hit_flash"] = max(zombie.state.get("hit_flash", 0.0), 0.13)
+                if shield_hp <= 0.0 and float(zombie.state.get("shield_broken", 0.0)) <= 0.0:
+                    zombie.state["shield_broken"] = 1.0
+                    self.bump_anim_event(zombie, "shield_break")
+                if amount <= 0.0:
+                    return dealt
         if zombie.kind == "newspaper":
             self.ensure_newspaper_state(zombie)
             st = zombie.state
@@ -6729,6 +6908,27 @@ class BattleState:
         dps *= self.mode_float("zombie_dps_scale", 1.0) * dps_scale
         z = Zombie(kind=kind, row=row, x=x, hp=hp, hp_max=hp, speed=spd, dps=dps)
         self.ensure_zombie_anim_state(z)
+        profile = ZOMBIE_COMBAT_PROFILES.get(kind)
+        if profile is not None and profile.shield_hp > 0:
+            shield_hp = float(profile.shield_hp) * (hp / max(1.0, float(profile.hp)))
+            z.state["shield_hp"] = shield_hp
+            z.state["shield_hp_max"] = shield_hp
+            z.state["shield_broken"] = 0.0
+        if kind == "snorkel":
+            z.state["snorkel_state"] = "submerged"
+            z.state["snorkel_surface_t"] = 0.0
+        if kind == "dolphin_rider" and profile is not None:
+            post_lo, post_hi = profile.post_vault_speed
+            z.state["dolphin_state"] = "riding"
+            z.state["dolphin_riding_speed"] = spd
+            z.state["dolphin_post_vault_speed"] = rng.uniform(post_lo, post_hi) * self.mode_float("zombie_speed_scale", 1.0) * speed_scale
+        if kind == "football" and profile is not None:
+            z.state["football_charge_t"] = profile.charge_duration
+            z.state["football_base_speed"] = spd
+        if kind == "gargantuar":
+            z.state["gargantuar_state"] = "ready"
+            z.state["gargantuar_smash_t"] = 0.0
+            z.state["garg_imp_thrown"] = 0.0
         if kind == "newspaper":
             self.ensure_newspaper_state(z)
         if self.is_zombotany_mode():
@@ -10563,7 +10763,8 @@ class BattleState:
                 continue
             if z.hp <= 0:
                 z.state["dying_t"] = 0.34
-                self.kills += 1
+                if float(z.state.get("counts_for_kill", 1.0)) > 0.0:
+                    self.kills += 1
                 if random.random() < 0.45:
                     self.tokens.append(Token(z.x, self.row_y(z.row), random.choice([10, 15, 20]), 10.0, "coin"))
                 continue
@@ -10702,7 +10903,7 @@ class BattleState:
             else:
                 z.state["sun_bite_t"] = 0.0
                 direction = self.zombie_movement_direction(z)
-                mul = 0.55 if z.slow_t > 0 else 1.0
+                mul = (0.55 if z.slow_t > 0 else 1.0) * movement_multiplier(z.kind, z.state)
                 z.x += direction * z.speed * mul * dt
                 if self.is_portal_combat_mode():
                     portal_cd = float(z.state.get("portal_cd", 0.0))
@@ -11869,7 +12070,7 @@ class BattleState:
                     continue
                 if self.is_invisi_ghoul_mode() and (not z.hypnotized) and invis_alpha < 0.48:
                     continue
-                hp_ratio = clamp(z.hp / z.hp_max, 0.0, 1.0)
+                hp_ratio = self.zombie_hp_ratio(z)
                 bar_w = int(clamp(zombie_render_w * 0.62, 34.0, 84.0))
                 bar_h = 10
                 bar_x = draw_x - bar_w // 2
