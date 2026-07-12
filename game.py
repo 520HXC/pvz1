@@ -16,6 +16,7 @@ import pygame
 
 from adventure_levels import ADVENTURE_LEVELS, SHOP_UPGRADE_PLANT_KEYS
 from progression import migrate_save_data, record_adventure_clear
+from ui_text import FontRole, UIFontManager, wrap_text
 from zombie_behaviors import ZOMBIE_COMBAT_PROFILES, movement_multiplier, state_name
 from wave_director import (
     ADVENTURE_ZOMBIE_POINT_COSTS,
@@ -4087,6 +4088,8 @@ class BattleState:
         self.row_rng = random.Random(2)
         self.combat_rng = random.Random(2)
         self.conveyor_rng = random.Random(3)
+        self.mode_rng = random.Random(4)
+        self.visual_rng = random.Random(5)
         self.result: Optional[str] = None
         self.almanac_open = False
         self.main: Dict[Tuple[int, int], Plant] = {}
@@ -4988,7 +4991,7 @@ class BattleState:
                         self.queue_zomboss_attack(next_attack)
         self.update_zomboss_animation(dt)
 
-    def draw_zomboss_boss_overlay(self, screen: pygame.Surface, zombie_sprite_fn=None, tr_fn=None, entity_anim_frame_fn=None) -> None:
+    def draw_zomboss_boss_overlay(self, screen: pygame.Surface, zombie_sprite_fn=None, tr_fn=None, entity_anim_frame_fn=None, fonts: Optional[Dict[str, pygame.font.Font]] = None) -> None:
         if not self.is_zomboss_boss_mode():
             return
         if self.is_battle_intro_active() and self.battle_intro_phase not in {"boss_reveal", "combat_live"}:
@@ -5085,34 +5088,30 @@ class BattleState:
             fill_rect = pygame.Rect(hp_fill.x, hp_fill.y, fill_w, hp_fill.h)
             pygame.draw.rect(screen, (192, 52, 42), fill_rect, border_radius=3)
         if pending_kind:
-            cue = pygame.Rect(boss_rect.x - 4, boss_rect.bottom + 4, boss_rect.w + 8, 16)
+            cue = pygame.Rect(boss_rect.x - 8, boss_rect.bottom + 4, boss_rect.w + 16, 22)
             fill = (170, 64, 52) if pending_kind in {"fireball", "stomp_smash", "rv_call"} else (72, 108, 172)
             pygame.draw.rect(screen, fill, cue, border_radius=8)
             pygame.draw.rect(screen, (244, 228, 198), cue, 2, border_radius=8)
             label_key = self.zomboss_notice_key(pending_kind) or "zomboss_fireball_notice"
             label_text = tr_fn(label_key) if callable(tr_fn) else label_key
-            label = pygame.font.Font(None, 16).render(label_text, True, (248, 240, 222))
+            if not fonts:
+                return
+            fitted = label_text
+            label_font = fonts["badge"]
+            while fitted and label_font.size(fitted)[0] > cue.w - 8:
+                fitted = fitted[:-1]
+            if fitted != label_text and fitted:
+                fitted = fitted[:-1] + "…"
+            label = label_font.render(fitted, True, (248, 240, 222))
             screen.blit(label, label.get_rect(center=cue.center))
 
     def wrap_battle_intro_text(self, font: pygame.font.Font, text: str, width: int) -> List[str]:
-        words = str(text).split()
-        if not words:
-            return []
-        lines: List[str] = []
-        current = words[0]
-        for word in words[1:]:
-            candidate = f"{current} {word}"
-            if font.size(candidate)[0] <= width:
-                current = candidate
-            else:
-                lines.append(current)
-                current = word
-        if current:
-            lines.append(current)
-        return lines
+        return wrap_text(str(text), font, width)
 
-    def draw_battle_intro_overlay(self, screen: pygame.Surface, tr_fn=None) -> None:
+    def draw_battle_intro_overlay(self, screen: pygame.Surface, tr_fn=None, fonts: Optional[Dict[str, pygame.font.Font]] = None) -> None:
         if not self.is_battle_intro_active():
+            return
+        if not fonts:
             return
         def draw_intro_panel(rect: pygame.Rect, fill: Tuple[int, int, int], border: Tuple[int, int, int], *, radius: int = 16, inner: Optional[Tuple[int, int, int]] = None) -> None:
             pygame.draw.rect(screen, border, rect, border_radius=radius)
@@ -5147,7 +5146,7 @@ class BattleState:
         overlay.fill((16, 12, 10, 88))
         screen.blit(overlay, (0, 0))
         phase = self.battle_intro_phase
-        panel_rect = pygame.Rect(54, LAWN_Y + 8, SCREEN_WIDTH - 108, 90)
+        panel_rect = pygame.Rect(54, LAWN_Y + 8, SCREEN_WIDTH - 108, 132)
         draw_intro_panel(panel_rect, fill=(242, 229, 194), border=(120, 84, 40), radius=18, inner=(252, 243, 216))
         bubble = pygame.Rect(184, panel_rect.y + 8, panel_rect.w - 232, panel_rect.h - 16)
         draw_intro_panel(bubble, fill=(252, 247, 228), border=(142, 108, 56), radius=16, inner=(255, 252, 238))
@@ -5171,22 +5170,22 @@ class BattleState:
             hook = [(rope_x - 8, dave_rect.y + 8), (rope_x + 7, dave_rect.y + 8), (rope_x + 2, dave_rect.y + 24), (rope_x - 4, dave_rect.y + 24)]
             pygame.draw.polygon(screen, (214, 198, 168), hook)
             pygame.draw.polygon(screen, (96, 82, 64), hook, 2)
-        label_font = pygame.font.Font(None, 28)
-        name_font = pygame.font.Font(None, 32)
+        label_font = fonts["tiny"]
+        name_font = fonts["small"]
         draw_intro_label(name_font, "Crazy Dave", (bubble.x + 84, bubble.y + 18), outline_width=2)
         dialog_key = self.battle_intro_dialog_key()
         dialog_text = tr_local(dialog_key) if dialog_key else ""
         if not dialog_text and phase == "bungee_snatch":
             dialog_text = tr_local("zomboss_intro_dave_3")
-        lines = self.wrap_battle_intro_text(label_font, dialog_text, bubble.w - 34) if dialog_text else []
-        text_y = bubble.y + 34
+        lines = wrap_text(dialog_text, label_font, bubble.w - 34, max_lines=3) if dialog_text else []
+        text_y = bubble.y + 38
         for line in lines[:3]:
             surf = label_font.render(line, True, (58, 40, 24))
             screen.blit(surf, (bubble.x + 18, text_y))
-            text_y += 24
+            text_y += label_font.get_linesize()
         if self.battle_intro_can_skip():
             hint = tr_local("press_space_skip_intro")
-            hint_font = pygame.font.Font(None, 22)
+            hint_font = fonts["badge"]
             hint_surf = hint_font.render(hint, True, (122, 90, 50))
             screen.blit(hint_surf, (bubble.right - hint_surf.get_width() - 16, bubble.bottom - hint_surf.get_height() - 8))
         if phase == "boss_reveal":
@@ -5196,7 +5195,7 @@ class BattleState:
             plate.fill((72, 24, 18, alpha))
             screen.blit(plate, reveal.topleft)
             pygame.draw.rect(screen, (224, 188, 120), reveal, 3, border_radius=16)
-            draw_intro_label(pygame.font.Font(None, 34), tr_local("zomboss_intro_reveal_short"), reveal.center, fill=(255, 236, 192), outline=(44, 20, 10), outline_width=2, center=True)
+            draw_intro_label(fonts["ui"], tr_local("zomboss_intro_reveal_short"), reveal.center, fill=(255, 236, 192), outline=(44, 20, 10), outline_width=2, center=True)
 
     def special_active_cap(self) -> int:
         cap = max(0, int(self.mode_float("active_cap", 0.0)))
@@ -5546,7 +5545,7 @@ class BattleState:
         if "paper_drop_rot" not in st:
             st["paper_drop_rot"] = 0.0
         if "paper_spin" not in st:
-            st["paper_spin"] = random.choice([-1.0, 1.0]) * random.uniform(100.0, 170.0)
+            st["paper_spin"] = self.visual_rng.choice([-1.0, 1.0]) * self.visual_rng.uniform(100.0, 170.0)
         if "rage_applied" not in st:
             st["rage_applied"] = 0.0
         if "pending_death" not in st:
@@ -5567,9 +5566,9 @@ class BattleState:
         st["paper_hp"] = 0.0
         st["paper_drop_t"] = 0.46
         st["rage_stun_t"] = 0.34
-        st["paper_drop_x"] = random.uniform(-6.0, 6.0)
+        st["paper_drop_x"] = self.visual_rng.uniform(-6.0, 6.0)
         st["paper_drop_y"] = -8.0
-        st["paper_drop_rot"] = random.uniform(-8.0, 8.0)
+        st["paper_drop_rot"] = self.visual_rng.uniform(-8.0, 8.0)
         zombie.state["hit_flash"] = max(zombie.state.get("hit_flash", 0.0), 0.16)
 
     def update_newspaper_state(self, zombie: Zombie, dt: float) -> None:
@@ -6184,7 +6183,7 @@ class BattleState:
             radius=radius,
             splash=splash,
             ttl=6.6 if kind == "wallnut" else 5.8,
-            spin=random.uniform(0.0, math.tau),
+            spin=self.visual_rng.uniform(0.0, math.tau),
         )
         self.rolling_nuts.append(nut)
         return True
@@ -6229,25 +6228,25 @@ class BattleState:
         return 1 <= int(getattr(self.level, "world", 0)) <= 5
 
     def gameplay_rng(self):
-        return self.combat_rng if self.is_adventure_mainline() else random
+        return self.combat_rng if self.is_adventure_mainline() else self.mode_rng
 
     def initial_plant_delay(self, kind: str) -> float:
         if self.is_adventure_mainline():
             return {"sunflower": 5.75, "sun_shroom": 5.0, "marigold": 10.5}.get(kind, 0.5)
         if kind == "sunflower":
-            return random.uniform(4.5, 7.0)
+            return self.gameplay_rng().uniform(4.5, 7.0)
         if kind == "sun_shroom":
-            return random.uniform(4.0, 6.0)
+            return self.gameplay_rng().uniform(4.0, 6.0)
         if kind == "marigold":
-            return random.uniform(9.0, 12.0)
-        return random.uniform(0.2, 0.8)
+            return self.gameplay_rng().uniform(9.0, 12.0)
+        return self.gameplay_rng().uniform(0.2, 0.8)
 
     def next_sun_production_delay(self, kind: str, interval: float) -> float:
         if self.is_adventure_mainline():
             return 9.5 if kind == "sun_shroom" else float(interval)
         if kind == "sun_shroom":
-            return random.uniform(8.0, 11.0)
-        return random.uniform(max(1.0, interval - 1.0), interval + 1.0)
+            return self.gameplay_rng().uniform(8.0, 11.0)
+        return self.gameplay_rng().uniform(max(1.0, interval - 1.0), interval + 1.0)
 
     def adventure_grave_limit(self) -> int:
         if not self.is_adventure_mainline() or not self.level:
@@ -7221,7 +7220,7 @@ class BattleState:
         start_sun = max(120, int(base.get("start_sun", 170)) - max(0, tier - 2) * 3)
         plants = list(base.get("plants", []))
         # Endless should not feel identical each run.
-        rng = random.Random(random.randint(1, 10**9))
+        rng = random.Random(self.mode_rng.randint(1, 10**9))
         extra_pool = ["wallnut", "tall_nut", "pumpkin", "repeater", "snowpea", "melon_pult", "spikeweed", "chomper"]
         for _ in range(min(4 + tier // 5, 8)):
             kind = rng.choice(extra_pool)
@@ -7417,14 +7416,14 @@ class BattleState:
             if cfg is None:
                 continue
             plant_hp = float(cfg.hp) * self.plant_hp_scale()
-            p = Plant(kind=kind, row=row, col=col, hp=plant_hp, slot="main", cd=random.uniform(0.12, 0.55))
+            p = Plant(kind=kind, row=row, col=col, hp=plant_hp, slot="main", cd=self.mode_rng.uniform(0.12, 0.55))
             p.state["hp_max"] = float(p.hp)
             p.state["beghouled_tile"] = 1.0
             self.ensure_plant_anim_state(p)
             if kind == "sunflower":
-                p.cd = random.uniform(2.6, 4.2)
+                p.cd = self.mode_rng.uniform(2.6, 4.2)
             elif kind in ("repeater", "gatling", "starfruit"):
-                p.cd = random.uniform(0.15, 0.35)
+                p.cd = self.mode_rng.uniform(0.15, 0.35)
             self.main[(row, col)] = p
 
     def collect_beghouled_match_groups(self) -> List[List[Tuple[int, int]]]:
@@ -7508,13 +7507,13 @@ class BattleState:
         for r in range(self.rows()):
             for c in cols:
                 tries = 0
-                pick = random.choice(pool)
+                pick = self.mode_rng.choice(pool)
                 while tries < 10:
                     left_match = c >= cols[0] + 2 and self.beghouled_cells.get((r, c - 1)) == pick and self.beghouled_cells.get((r, c - 2)) == pick
                     up_match = r >= 2 and self.beghouled_cells.get((r - 1, c)) == pick and self.beghouled_cells.get((r - 2, c)) == pick
                     if not left_match and not up_match:
                         break
-                    pick = random.choice(pool)
+                    pick = self.mode_rng.choice(pool)
                     tries += 1
                 self.beghouled_cells[(r, c)] = pick
         self.sync_beghouled_board()
@@ -7556,7 +7555,7 @@ class BattleState:
                     if pos != anchor:
                         refill_positions.append(pos)
             for pos in refill_positions:
-                self.beghouled_cells[pos] = random.choice(refill_pool)
+                self.beghouled_cells[pos] = self.mode_rng.choice(refill_pool)
             cascade_mult = cascade_mults[min(len(cascade_mults) - 1, cascades - 1)] if cascade_mults else 1.0
             wave_gain = int(round(gained * cascade_mult))
             total += wave_gain
@@ -7753,9 +7752,9 @@ class BattleState:
                 )
                 for row in range(self.rows())
             }
-            row = min(row_loads, key=lambda rr: (row_loads[rr], random.random()))
-            kind = random.choice(pool)
-            spawn_x = self.lawn_right() + random.randint(28, 72)
+            row = min(row_loads, key=lambda rr: (row_loads[rr], self.mode_rng.random()))
+            kind = self.mode_rng.choice(pool)
+            spawn_x = self.lawn_right() + self.mode_rng.randint(28, 72)
             hp_scale = 0.76 if self.is_beghouled_twist_mode() else 0.70
             speed_scale = 0.94 if self.is_beghouled_twist_mode() else 0.86
             dps_scale = 0.90 if self.is_beghouled_twist_mode() else 0.84
@@ -7779,14 +7778,14 @@ class BattleState:
         if row is None or row not in water_rows:
             used_rows = [int(f.get("row", 0.0)) for f in self.zombiquarium_fish]
             free_rows = [rr for rr in water_rows if rr not in used_rows]
-            row = random.choice(free_rows or water_rows)
+            row = self.mode_rng.choice(free_rows or water_rows)
         self.zombiquarium_fish.append(
             {
                 "row": float(row),
-                "x": float(random.randint(LAWN_X + 90, self.lawn_right() - 90)),
-                "dir": float(random.choice([-1, 1])),
-                "sun_t": random.uniform(3.2, 4.4),
-                "hunger_t": random.uniform(16.0, 20.0),
+                "x": float(self.mode_rng.randint(LAWN_X + 90, self.lawn_right() - 90)),
+                "dir": float(self.mode_rng.choice([-1, 1])),
+                "sun_t": self.mode_rng.uniform(3.2, 4.4),
+                "hunger_t": self.mode_rng.uniform(16.0, 20.0),
                 "hungry": 0.0,
                 "starve_t": 7.5,
             }
@@ -7854,7 +7853,7 @@ class BattleState:
             if not self.mode_bool("infinite_sun", False):
                 self.sun -= feed_cost
             fish["hungry"] = 0.0
-            fish["hunger_t"] = random.uniform(16.0, 22.0)
+            fish["hunger_t"] = self.mode_rng.uniform(16.0, 22.0)
             fish["starve_t"] = 7.0
             fish["sun_t"] = min(float(fish.get("sun_t", 0.0)), 2.0)
             return True
@@ -7889,7 +7888,7 @@ class BattleState:
             if fish["sun_t"] <= 0.0 and fish.get("hungry", 0.0) <= 0.0:
                 row = int(fish.get("row", 0.0))
                 self.tokens.append(Token(x, self.row_y(row) - 14, 25, 9.0, "sun"))
-                fish["sun_t"] = random.uniform(4.6, 6.2)
+                fish["sun_t"] = self.mode_rng.uniform(4.6, 6.2)
         if not self.zombiquarium_fish:
             self.result = "lose"
 
@@ -7960,9 +7959,9 @@ class BattleState:
                 ground_pool = [kind for kind in self.mode_list("bungee_blitz_ground_pool") if kind in self.zombie_types]
                 if not ground_pool:
                     ground_pool = ["normal", "conehead", "buckethead"]
-                kind = random.choice(ground_pool)
+                kind = self.mode_rng.choice(ground_pool)
                 row = self.choose_spawn_row(kind)
-                spawn_x = self.lawn_right() + random.randint(38, 96)
+                spawn_x = self.lawn_right() + self.mode_rng.randint(38, 96)
                 self.zombies.append(self.spawn_zombie_instance(kind, row, float(spawn_x), wave_idx=1, hp_scale=0.90, speed_scale=0.96, dps_scale=0.92))
                 active_alive = [z for z in self.zombies if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0]
 
@@ -8022,7 +8021,7 @@ class BattleState:
             crowded = any(z.state.get("whack_popup", 0.0) > 0.0 and z.row == row and abs(z.x - target_x) < 36 for z in self.zombies)
             if crowded:
                 return False
-        kind = self.whack_target_queue.pop(0) if adventure else random.choice(kinds)
+        kind = self.whack_target_queue.pop(0) if adventure else self.mode_rng.choice(kinds)
         z = self.spawn_zombie_instance(kind, row, target_x, wave_idx=1, hp_scale=0.42, speed_scale=0.0, dps_scale=0.0)
         z.speed = 0.0
         z.dps = 0.0
@@ -8226,22 +8225,25 @@ class BattleState:
                     self.spawn_zombie(self.current_wave or 1, forced_kind=kind)
                     active_specials += 1
 
-    def draw_special_minigame_overlay(self, screen: pygame.Surface, plant_sprite_fn, zombie_sprite_fn=None, tr_fn=None, entity_anim_frame_fn=None) -> None:
+    def draw_special_minigame_overlay(self, screen: pygame.Surface, plant_sprite_fn, zombie_sprite_fn=None, tr_fn=None, entity_anim_frame_fn=None, fonts: Optional[Dict[str, pygame.font.Font]] = None) -> None:
         if self.is_zomboss_boss_mode():
-            self.draw_zomboss_boss_overlay(screen, zombie_sprite_fn, tr_fn, entity_anim_frame_fn)
+            self.draw_zomboss_boss_overlay(screen, zombie_sprite_fn, tr_fn, entity_anim_frame_fn, fonts)
         if self.is_battle_intro_active():
-            self.draw_battle_intro_overlay(screen, tr_fn)
+            self.draw_battle_intro_overlay(screen, tr_fn, fonts)
         if self.is_portal_combat_mode():
             self.draw_portal_combat_overlay(screen)
             if self.portal_shift_notice_t > 0.0:
                 alpha = int(clamp(self.portal_shift_notice_t / 1.6, 0.0, 1.0) * 220)
-                note_rect = pygame.Rect(LAWN_X + 180, LAWN_Y + 8, 180, 14)
+                note_rect = pygame.Rect(LAWN_X + 180, LAWN_Y + 8, 220, 22)
                 plate = pygame.Surface(note_rect.size, pygame.SRCALPHA)
                 plate.fill((88, 42, 96, min(180, alpha)))
                 screen.blit(plate, note_rect.topleft)
                 pygame.draw.rect(screen, (216, 190, 250, min(210, alpha)), note_rect, 2, border_radius=9)
-                notice_font = pygame.font.Font(None, 16)
-                notice = notice_font.render(self.tr("portal_shifted"), True, (248, 238, 252))
+                if not fonts:
+                    return
+                notice_font = fonts["badge"]
+                notice_text = tr_fn("portal_shifted") if callable(tr_fn) else "Portals shifted"
+                notice = notice_font.render(str(notice_text), True, (248, 238, 252))
                 notice.set_alpha(min(255, alpha + 28))
                 screen.blit(notice, notice.get_rect(center=(note_rect.centerx, note_rect.centery + 1)))
         if self.is_seeing_stars_mode():
@@ -8310,9 +8312,9 @@ class BattleState:
         roster = self.zombotany_variant_roster()
         if not roster:
             return
-        variant = random.choice(roster)
+        variant = self.mode_rng.choice(roster)
         zombie.state["zombotany_variant"] = variant
-        zombie.state["zombotany_action_t"] = random.uniform(1.2, 2.0)
+        zombie.state["zombotany_action_t"] = self.mode_rng.uniform(1.2, 2.0)
         if variant == "wallnut":
             zombie.hp *= 1.45
             zombie.hp_max *= 1.45
@@ -8322,11 +8324,11 @@ class BattleState:
             zombie.hp_max *= 1.8
             zombie.speed *= 0.86
         elif variant == "sunflower":
-            zombie.state["zombotany_action_t"] = random.uniform(4.8, 6.6)
+            zombie.state["zombotany_action_t"] = self.mode_rng.uniform(4.8, 6.6)
         elif variant == "gatling":
-            zombie.state["zombotany_action_t"] = random.uniform(1.5, 2.0)
+            zombie.state["zombotany_action_t"] = self.mode_rng.uniform(1.5, 2.0)
         elif variant in ("squash", "jalapeno"):
-            zombie.state["zombotany_action_t"] = random.uniform(2.2, 3.0)
+            zombie.state["zombotany_action_t"] = self.mode_rng.uniform(2.2, 3.0)
 
     def update_zombotany_zombie(self, zombie: Zombie, dt: float) -> None:
         variant = str(zombie.state.get("zombotany_variant", ""))
@@ -8338,7 +8340,7 @@ class BattleState:
             return
         if variant == "sunflower":
             self.tokens.append(Token(zombie.x - 8, self.row_y(zombie.row) - 18, 25, 8.0, "sun"))
-            zombie.state["zombotany_action_t"] = random.uniform(5.4, 7.0)
+            zombie.state["zombotany_action_t"] = self.mode_rng.uniform(5.4, 7.0)
             return
         front_plants = [
             plant
@@ -8358,19 +8360,19 @@ class BattleState:
                         plant.state["hit_flash"] = 0.24
                     zombie.state["zombotany_used_special"] = 1.0
                     zombie.state["bite_t"] = max(float(zombie.state.get("bite_t", 0.0)), 0.18)
-                zombie.state["zombotany_action_t"] = random.uniform(5.0, 6.4)
+                zombie.state["zombotany_action_t"] = self.mode_rng.uniform(5.0, 6.4)
                 return
-            zombie.state["zombotany_action_t"] = random.uniform(3.0, 4.2)
+            zombie.state["zombotany_action_t"] = self.mode_rng.uniform(3.0, 4.2)
             return
         if variant == "squash":
             if front_target and (zombie.x - self.cell_center(front_target.row, front_target.col)[0]) <= CELL_W * 1.8:
                 front_target.hp -= 220.0
                 front_target.state["hit_flash"] = 0.24
                 zombie.state["bite_t"] = max(float(zombie.state.get("bite_t", 0.0)), 0.18)
-            zombie.state["zombotany_action_t"] = random.uniform(2.4, 3.2)
+            zombie.state["zombotany_action_t"] = self.mode_rng.uniform(2.4, 3.2)
             return
         if front_target is None:
-            zombie.state["zombotany_action_t"] = random.uniform(0.8, 1.4)
+            zombie.state["zombotany_action_t"] = self.mode_rng.uniform(0.8, 1.4)
             return
         damage = 16.0
         slow = 0.0
@@ -8388,12 +8390,12 @@ class BattleState:
             shots = 4
             damage = 17.0
         elif variant == "tall_nut":
-            zombie.state["zombotany_action_t"] = random.uniform(1.5, 2.2)
+            zombie.state["zombotany_action_t"] = self.mode_rng.uniform(1.5, 2.2)
             return
         elif variant == "peashooter":
             damage = 16.0
         else:
-            zombie.state["zombotany_action_t"] = random.uniform(1.4, 2.0)
+            zombie.state["zombotany_action_t"] = self.mode_rng.uniform(1.4, 2.0)
             return
         base_y = self.row_y(zombie.row) - 8
         for shot_idx in range(shots):
@@ -8409,7 +8411,7 @@ class BattleState:
                 enemy=True,
             )
         zombie.state["bite_t"] = max(float(zombie.state.get("bite_t", 0.0)), 0.08)
-        zombie.state["zombotany_action_t"] = random.uniform(1.45, 2.15) if shots == 1 else random.uniform(1.8, 2.4)
+        zombie.state["zombotany_action_t"] = self.mode_rng.uniform(1.45, 2.15) if shots == 1 else self.mode_rng.uniform(1.8, 2.4)
 
     def update_special_mode_logic(self, dt: float) -> None:
         if self.is_beghouled_mode() or self.is_beghouled_twist_mode():
@@ -8431,21 +8433,21 @@ class BattleState:
         if self.sun < cost:
             return ("no_sun", cost, None)
         self.sun -= cost
-        roll = random.random()
+        roll = self.mode_rng.random()
         if roll < 0.46:
-            gain = random.choice([50, 75])
+            gain = self.mode_rng.choice([50, 75])
             self.sun += gain
             return ("sun", gain, None)
         if roll < 0.62:
-            gain = random.choice([25, 40])
+            gain = self.mode_rng.choice([25, 40])
             self.sun += gain
             return ("sun", gain, None)
         if roll < 0.78:
-            gain = random.choice([15, 20, 25])
+            gain = self.mode_rng.choice([15, 20, 25])
             self.save_data["coins"] = int(self.save_data.get("coins", 0)) + gain
             return ("coin", gain, None)
         if roll < 0.93 and self.cards:
-            ready = random.choice(self.cards)
+            ready = self.mode_rng.choice(self.cards)
             self.card_timer[ready] = 0.0
             return ("ready", 0, ready)
         jackpot = max(120, int(self.mode_float("slot_jackpot_sun", 225.0)))
@@ -8466,7 +8468,7 @@ class BattleState:
 
     def ensure_plant_anim_state(self, plant: Plant) -> None:
         if "anim_phase" not in plant.state:
-            plant.state["anim_phase"] = random.uniform(0.0, math.tau)
+            plant.state["anim_phase"] = self.visual_rng.uniform(0.0, math.tau)
         if "last_hp" not in plant.state:
             plant.state["last_hp"] = plant.hp
         if not isinstance(plant.state.get("_anim"), AnimationState):
@@ -8477,7 +8479,7 @@ class BattleState:
 
     def ensure_zombie_anim_state(self, zombie: Zombie) -> None:
         if "anim_phase" not in zombie.state:
-            zombie.state["anim_phase"] = random.uniform(0.0, math.tau)
+            zombie.state["anim_phase"] = self.visual_rng.uniform(0.0, math.tau)
         if "last_hp" not in zombie.state:
             zombie.state["last_hp"] = zombie.hp
         if not isinstance(zombie.state.get("_anim"), AnimationState):
@@ -9251,6 +9253,8 @@ class BattleState:
         self.row_rng = random.Random(wave_seed * 1013 + 193)
         self.combat_rng = random.Random(wave_seed * 1009 + 97)
         self.conveyor_rng = random.Random(wave_seed * 1019 + 211)
+        self.mode_rng = random.Random(wave_seed * 1021 + 223)
+        self.visual_rng = random.Random(wave_seed * 1031 + 227)
         self.total_waves, self.large_wave_indices, self.final_wave_index, self.wave_budgets = self.mode_wave_budgets(level)
         self.elapsed = 0.0
         self.spawn_t = 0.0
@@ -10461,7 +10465,7 @@ class BattleState:
                 if plant.kind in ("winter_melon",):
                     slow = 2.6
                 if b == "kernel_pult":
-                    proj_kind = "kernel_butter" if random.random() < 0.26 else "kernel_corn"
+                    proj_kind = "kernel_butter" if self.gameplay_rng().random() < 0.26 else "kernel_corn"
                     color = (242, 212, 104) if proj_kind == "kernel_butter" else (240, 198, 94)
                     outline = (138, 100, 26) if proj_kind == "kernel_butter" else (126, 84, 24)
                 if b == "melon_pult" or plant.kind in ("melon_pult", "winter_melon"):
@@ -10476,8 +10480,8 @@ class BattleState:
                 self.graves.pop((plant.row, plant.col), None)
                 plant.hp = 0
             elif b == "marigold" and plant.cd <= 0:
-                self.tokens.append(Token(cx + random.randint(-10, 10), cy, random.choice([20, 25]), 10.0, "coin"))
-                plant.cd = random.uniform(9.0, 13.0)
+                self.tokens.append(Token(cx + self.gameplay_rng().randint(-10, 10), cy, self.gameplay_rng().choice([20, 25]), 10.0, "coin"))
+                plant.cd = self.gameplay_rng().uniform(9.0, 13.0)
                 self.queue_audio_key("collect_coin")
             elif b == "gloom" and plant.cd <= 0:
                 self.boom(cx, cy, 105, dmg)
@@ -10638,8 +10642,8 @@ class BattleState:
             else:
                 nut.pierce -= 1
 
-            if nut.kind == "wallnut" and random.random() < 0.32:
-                lane_shift = random.choice([-1, 1])
+            if nut.kind == "wallnut" and self.gameplay_rng().random() < 0.32:
+                lane_shift = self.gameplay_rng().choice([-1, 1])
                 next_row = int(clamp(float(nut.row + lane_shift), 0.0, float(self.rows() - 1)))
                 if next_row != nut.row:
                     nut.row = next_row
@@ -10688,8 +10692,8 @@ class BattleState:
                 z.state["dying_t"] = 0.34
                 if float(z.state.get("counts_for_kill", 1.0)) > 0.0:
                     self.kills += 1
-                if random.random() < 0.45:
-                    self.tokens.append(Token(z.x, self.row_y(z.row), random.choice([10, 15, 20]), 10.0, "coin"))
+                if self.gameplay_rng().random() < 0.45:
+                    self.tokens.append(Token(z.x, self.row_y(z.row), self.gameplay_rng().choice([10, 15, 20]), 10.0, "coin"))
                 continue
             if z.slow_t > 0:
                 z.slow_t -= dt
@@ -11243,7 +11247,7 @@ class BattleState:
                 screen.blit(ice, row_rect.topleft)
                 for yy in range(row_rect.y + 6, row_rect.bottom - 6, 8):
                     pygame.draw.line(screen, (214, 238, 252), (row_rect.x + 10, yy), (row_rect.right - 10, yy), 1)
-        self.draw_special_minigame_overlay(screen, plant_sprite_fn, zombie_sprite_fn, tr, entity_anim_frame_fn)
+        self.draw_special_minigame_overlay(screen, plant_sprite_fn, zombie_sprite_fn, tr, entity_anim_frame_fn, fonts)
         if self.is_whack_mode():
             for row in range(self.rows()):
                 for col in range(2, COLS):
@@ -12166,6 +12170,8 @@ class Game:
         pygame.display.set_caption("Python PvZ - Data Driven Clone")
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.clock = pygame.time.Clock()
+        self.run_seed_source = random.SystemRandom()
+        self.ui_rng = random.Random(self.run_seed_source.getrandbits(63))
         self.assets_root = Path(__file__).resolve().parent / "assets"
         for sub in ("plants", "zombies", "ui"):
             os.makedirs(self.assets_root / sub, exist_ok=True)
@@ -12187,19 +12193,10 @@ class Game:
         self.logged_missing_animation_sets = set()
         self.download_attempted_keys = set()
         self.asset_source_map = self.load_asset_source_map()
-        self.fonts = {
-            "display": self.make_font(56, bold=True),
-            "title": self.make_font(44, bold=True),
-            "ui": self.make_font(30, bold=True),
-            "sub_ui": self.make_font(28, bold=True),
-            "mid": self.make_font(24),
-            "hud_num": self.make_font(24, bold=True),
-            "label": self.make_font(20),
-            "small": self.make_font(17),
-            "tiny": self.make_font(15),
-            "badge": self.make_font(11),
-        }
-        self.lang = "zh"
+        self.font_manager = UIFontManager()
+        self.fonts = self.font_manager.roles
+        self.lang = "zh" if self.font_manager.cjk_available else "en"
+        self.font_warning = "" if self.font_manager.cjk_available else "Chinese UI unavailable because no CJK system font was found"
         self.fields = build_battlefields()
         self.plants = build_plants()
         self.zombies = build_zombies()
@@ -12242,6 +12239,7 @@ class Game:
         self.survival_endless = False
         self.survival_entry_id = ""
         self.survival_resume_sun = 0
+        self.survival_run_seed: Optional[int] = None
         self.plant_select_pool: List[str] = []
         self.plant_select_selected: List[str] = []
         self.plant_select_return_scene = "adventure_level_select"
@@ -12257,7 +12255,7 @@ class Game:
         self.encyclopedia_selected_key = {"plants": "", "zombies": ""}
         self.encyclopedia_scroll_y = 0
         self.encyclopedia_scroll_step = 40
-        self.tip_idx = random.randrange(len(START_TIPS)) if START_TIPS else 0
+        self.tip_idx = self.ui_rng.randrange(len(START_TIPS)) if START_TIPS else 0
         self.lang_zh_btn = pygame.Rect(SCREEN_WIDTH - 210, 20, 84, 38)
         self.lang_en_btn = pygame.Rect(SCREEN_WIDTH - 115, 20, 84, 38)
         self.pause_btn = pygame.Rect(960, 20, 44, 38)
@@ -12327,43 +12325,9 @@ class Game:
         self.update_scene_music(force=True)
 
     def make_font(self, size: int, bold: bool = False) -> pygame.font.Font:
-        if not hasattr(self, "_font_face_path"):
-            self._font_face_path = None
-            self._font_face_name = "default"
-            # Prefer explicit CJK-capable font files first to avoid mojibake-like tofu rendering.
-            direct_paths = [
-                r"C:\Windows\Fonts\msyh.ttc",
-                r"C:\Windows\Fonts\msyhbd.ttc",
-                r"C:\Windows\Fonts\simhei.ttf",
-                r"C:\Windows\Fonts\simsun.ttc",
-            ]
-            for path in direct_paths:
-                if os.path.exists(path):
-                    self._font_face_path = path
-                    self._font_face_name = Path(path).name
-                    break
-            font_candidates = [
-                "microsoftyahei",
-                "microsoftyaheiuibold",
-                "msyh",
-                "simhei",
-                "simsun",
-                "notosanscjk",
-                "notosanssc",
-                "sourcehansanssc",
-                "pingfangsc",
-                "wenquanyizenhei",
-            ]
-            if self._font_face_path is None:
-                for candidate in font_candidates:
-                    face = pygame.font.match_font(candidate)
-                    if face:
-                        self._font_face_path = face
-                        self._font_face_name = candidate
-                        break
-        font = pygame.font.Font(self._font_face_path, size) if self._font_face_path else pygame.font.Font(None, size)
-        font.set_bold(bold)
-        return font
+        if not hasattr(self, "font_manager"):
+            self.font_manager = UIFontManager()
+        return self.font_manager.font(size, bold=bold)
 
     def ensure_battle_settings_defaults(self) -> None:
         defaults = self.config_mgr.default().get("battle_settings", {})
@@ -16109,8 +16073,8 @@ class Game:
             return
         fill, border, inner, text_col = self.stage_style_badge_palette(style)
         self.draw_framed_panel(rect, fill=fill, border=border, radius=8, inner=inner)
-        label = self.fit_label(self.tr(label_key), self.fonts["tiny"], rect.w - 8)
-        text = self.fonts["tiny"].render(label, True, text_col)
+        fitted = self.font_manager.fit_label(self.tr(label_key), FontRole.BADGE, rect.w - 8, max(8, rect.h - 6), min_size=8, color=text_col)
+        text = fitted.surface
         self.screen.blit(text, text.get_rect(center=rect.center))
 
     def adventure_conveyor_pool(self, level: LevelConfig) -> List[str]:
@@ -16311,6 +16275,33 @@ class Game:
             )
         return True
 
+    @staticmethod
+    def derive_survival_round_seed(base_seed: int, round_index: int) -> int:
+        base = int(base_seed) & ((1 << 63) - 1)
+        round_no = max(1, int(round_index))
+        return (base * 1_000_003 + round_no * 97_409 + 0x5A17) & ((1 << 63) - 1)
+
+    def prepare_mode_rules_for_run(self, mode_rules: Optional[Dict[str, object]]) -> Dict[str, object]:
+        rules = dict(mode_rules or {})
+        if bool(rules.get("adventure_level_launch", False)):
+            return rules
+        mode_name = str(rules.get("mode_name", ""))
+        if not mode_name:
+            return rules
+        family = str(rules.get("mode_family", ""))
+        if "random_seed" in rules:
+            if family == "survival" and "survival_base_seed" not in rules:
+                rules["survival_base_seed"] = int(rules["random_seed"])
+            return rules
+        seed = int(self.run_seed_source.getrandbits(63))
+        if family == "survival":
+            round_index = int(float(rules.get("survival_round_index", 1.0)))
+            rules["survival_base_seed"] = seed
+            rules["random_seed"] = self.derive_survival_round_seed(seed, round_index)
+        else:
+            rules["random_seed"] = seed
+        return rules
+
     def open_plant_select(
         self,
         idx: int,
@@ -16330,7 +16321,7 @@ class Game:
             available = self.battle.level_available_cards(level)
         self.plant_select_pool = list(dict.fromkeys(available))
         self.plant_select_pick_limit = int(pick_limit if pick_limit is not None else self.default_plant_select_pick_limit)
-        rules = dict(mode_rules or {})
+        rules = self.prepare_mode_rules_for_run(mode_rules)
         if forced_pool:
             rules["force_pool"] = list(self.plant_select_pool)
         self.pending_mode_rules = rules
@@ -16349,7 +16340,7 @@ class Game:
         mode_rules: Optional[Dict[str, object]] = None,
     ) -> None:
         self.level_idx = idx
-        base_rules = dict(mode_rules if mode_rules is not None else (self.pending_mode_rules or {}))
+        base_rules = self.prepare_mode_rules_for_run(mode_rules if mode_rules is not None else (self.pending_mode_rules or {}))
         base_rules.setdefault("return_scene", self.plant_select_return_scene or "adventure_level_select")
         self.current_mode_base_rules = dict(base_rules)
         active_rules = self.apply_runtime_battle_rules(base_rules)
@@ -16919,6 +16910,8 @@ class Game:
             or self.battle.is_pogo_party_mode()
         )
         if generic_special_text_mode:
+            if compact_bank:
+                return
             primary_hint, secondary_hint = self.battle_special_hint_lines()
             progress_text = self.battle_special_progress_text()
             line1_txt = self.fit_label(self.battle_mode_display_label(mode_name), title_font, bank.w - 24)
@@ -16933,6 +16926,8 @@ class Game:
                 self.screen.blit(line3, (bank.x + 12, stat_y))
             return
         if conveyor_mode:
+            if compact_bank:
+                return
             label_text = CLASSIC_MODE_TITLE_BY_ID.get(mode_name, self.tr("mini_slot_machine"))
             if self.lang == "zh" and mode_name in CLASSIC_MODE_SUBTITLE_BY_ID:
                 label_text = CLASSIC_MODE_SUBTITLE_BY_ID[mode_name]
@@ -16964,24 +16959,28 @@ class Game:
             self.screen.blit(line, (bank.x + 12, bank.y + 8))
     def plant_select_layout(self) -> Dict[str, pygame.Rect]:
         frame = pygame.Rect(16, 12, SCREEN_WIDTH - 32, SCREEN_HEIGHT - 24)
-        title_sign = pygame.Rect(frame.x + 414, frame.y + 10, frame.w - 828, 32)
+        title_sign = pygame.Rect(frame.x + 314, frame.y + 10, frame.w - 628, 64)
         content_gap = 14
         side_w = 200
         main_w = frame.w - 62 - side_w - content_gap
-        tray_panel = pygame.Rect(frame.x + 30, title_sign.bottom + 6, main_w, 68)
-        zombie_panel = pygame.Rect(tray_panel.right + content_gap, title_sign.bottom + 4, side_w, frame.h - 116)
-        available_panel = pygame.Rect(frame.x + 30, tray_panel.bottom + 6, main_w, frame.bottom - tray_panel.bottom - 54)
-        available_viewport = pygame.Rect(available_panel.x + 12, available_panel.y + 30, available_panel.w - 24, available_panel.h - 40)
-        action_panel = pygame.Rect(frame.x + 30, frame.bottom - 38, frame.w - 60, 28)
-        back_btn = pygame.Rect(action_panel.x + 2, action_panel.y - 1, 108, 30)
-        start_btn = pygame.Rect(action_panel.right - 160, action_panel.y - 2, 160, 32)
+        action_panel = pygame.Rect(frame.x + 30, frame.bottom - 54, frame.w - 60, 44)
+        tray_panel = pygame.Rect(frame.x + 30, title_sign.bottom + 6, main_w, 84)
+        zombie_panel = pygame.Rect(tray_panel.right + content_gap, title_sign.bottom + 6, side_w, action_panel.y - title_sign.bottom - 12)
+        available_panel = pygame.Rect(frame.x + 30, tray_panel.bottom + 6, main_w, action_panel.y - tray_panel.bottom - 12)
+        available_header = pygame.Rect(available_panel.x + 12, available_panel.y + 7, available_panel.w - 24, 24)
+        available_viewport = pygame.Rect(available_panel.x + 12, available_header.bottom + 6, available_panel.w - 24, available_panel.bottom - available_header.bottom - 16)
+        zombie_header = pygame.Rect(zombie_panel.x + 10, zombie_panel.y + 10, zombie_panel.w - 20, 26)
+        back_btn = pygame.Rect(action_panel.x + 8, action_panel.y + 2, 144, 40)
+        start_btn = pygame.Rect(action_panel.right - 208, action_panel.y + 2, 200, 40)
         return {
             "frame": frame,
             "title_sign": title_sign,
             "tray_panel": tray_panel,
             "available_panel": available_panel,
             "available_viewport": available_viewport,
+            "available_header": available_header,
             "zombie_panel": zombie_panel,
+            "zombie_header": zombie_header,
             "action_panel": action_panel,
             "back_btn": back_btn,
             "start_btn": start_btn,
@@ -17081,7 +17080,7 @@ class Game:
         gap = 4
         total_w = self.plant_select_pick_limit * slot_w + max(0, self.plant_select_pick_limit - 1) * gap
         x0 = tray.x + max(10, (tray.w - total_w) // 2)
-        y0 = tray.y + 12
+        y0 = tray.y + 31
         for i in range(self.plant_select_pick_limit):
             slots.append(pygame.Rect(x0 + i * (slot_w + gap), y0, slot_w, slot_h))
         return slots
@@ -17323,13 +17322,25 @@ class Game:
         self.screen.blit(label, label_pos)
         zh_sel = self.lang == "zh"
         en_sel = self.lang == "en"
-        self.draw_framed_panel(self.lang_zh_btn, fill=(232, 196, 112) if zh_sel else (218, 208, 182), border=(120, 78, 24), radius=8, inner=(242, 218, 154) if zh_sel else (230, 220, 198))
+        zh_enabled = self.font_manager.cjk_available
+        zh_fill = (232, 196, 112) if zh_sel else ((218, 208, 182) if zh_enabled else (166, 160, 148))
+        zh_inner = (242, 218, 154) if zh_sel else ((230, 220, 198) if zh_enabled else (184, 178, 166))
+        self.draw_framed_panel(self.lang_zh_btn, fill=zh_fill, border=(120, 78, 24), radius=8, inner=zh_inner)
         self.draw_framed_panel(self.lang_en_btn, fill=(232, 196, 112) if en_sel else (218, 208, 182), border=(120, 78, 24), radius=8, inner=(242, 218, 154) if en_sel else (230, 220, 198))
-        self.screen.blit(self.fonts["small"].render("ZH", True, (30, 30, 30)), (self.lang_zh_btn.x + 28, self.lang_zh_btn.y + 9))
-        self.screen.blit(self.fonts["small"].render("EN", True, (30, 30, 30)), (self.lang_en_btn.x + 29, self.lang_en_btn.y + 9))
+        zh_text = self.fonts["small"].render("ZH", True, (30, 30, 30) if zh_enabled else (54, 52, 48))
+        en_text = self.fonts["small"].render("EN", True, (30, 30, 30))
+        self.screen.blit(zh_text, zh_text.get_rect(center=self.lang_zh_btn.center))
+        self.screen.blit(en_text, en_text.get_rect(center=self.lang_en_btn.center))
+        if self.font_warning and self.scene not in ("battle", "result"):
+            warning = self.font_manager.fit_label(self.font_warning, FontRole.BADGE, 420, 20, min_size=9, color=(252, 240, 214))
+            warning_rect = pygame.Rect(self.lang_zh_btn.x - 430, self.lang_zh_btn.y + 46, 420, 20)
+            pygame.draw.rect(self.screen, (112, 54, 42), warning_rect, border_radius=8)
+            self.screen.blit(warning.surface, warning.surface.get_rect(center=warning_rect.center))
 
     def handle_lang_click(self, p: Tuple[int, int]) -> bool:
         if self.lang_zh_btn.collidepoint(p):
+            if not self.font_manager.cjk_available:
+                return True
             self.lang = "zh"
             return True
         if self.lang_en_btn.collidepoint(p):
@@ -17500,23 +17511,28 @@ class Game:
         for nx in (rect.x + 20, rect.right - 20):
             pygame.draw.circle(self.screen, (78, 50, 24), (nx, rect.centery), 5)
             pygame.draw.circle(self.screen, (162, 126, 78), (nx - 1, rect.centery - 1), 2)
-        self.draw_text_center_shadow(
-            self.fonts["ui"],
-            title,
-            (54, 32, 12),
-            (rect.centerx, rect.y + 24),
-            shadow=(236, 208, 152),
-            offset=(1, 1),
-        )
-        if subtitle:
-            self.draw_text_center_shadow(
-                self.fonts["small"],
-                subtitle,
-                (70, 44, 18),
-                (rect.centerx, rect.bottom - 16),
-                shadow=(242, 222, 182),
-                offset=(1, 1),
-            )
+        show_subtitle = bool(subtitle) and rect.h >= 50
+        title_role = FontRole.MID if rect.h < 76 else FontRole.UI
+        if rect.h < 46:
+            title_role = FontRole.SMALL
+        subtitle_role = FontRole.BADGE if rect.h < 82 else FontRole.TINY
+        title_height = rect.h - 12
+        if show_subtitle:
+            title_height = max(16, rect.h - self.fonts[subtitle_role.value].get_linesize() - 20)
+        fitted_title = self.font_manager.fit_label(title, title_role, rect.w - 56, title_height, min_size=12)
+        if show_subtitle:
+            fitted_subtitle = self.font_manager.fit_label(subtitle, subtitle_role, rect.w - 48, self.fonts[subtitle_role.value].get_linesize(), min_size=10)
+            total_h = fitted_title.font.get_linesize() + 4 + fitted_subtitle.font.get_linesize()
+            top = rect.centery - total_h // 2
+            title_center = (rect.centerx, top + fitted_title.font.get_linesize() // 2)
+            subtitle_center = (rect.centerx, top + fitted_title.font.get_linesize() + 4 + fitted_subtitle.font.get_linesize() // 2)
+        else:
+            fitted_subtitle = None
+            title_center = rect.center
+            subtitle_center = rect.center
+        self.draw_text_center_shadow(fitted_title.font, fitted_title.text, (54, 32, 12), title_center, shadow=(236, 208, 152), offset=(1, 1))
+        if fitted_subtitle is not None:
+            self.draw_text_center_shadow(fitted_subtitle.font, fitted_subtitle.text, (62, 38, 16), subtitle_center, shadow=(248, 232, 198), offset=(1, 1))
 
     def draw_menu_section_strip(
         self,
@@ -17535,10 +17551,10 @@ class Game:
             return
         use_font = font or (self.fonts["small"] if rect.h >= 18 else self.fonts["tiny"])
         self.draw_framed_panel(rect, fill=fill, border=border, radius=min(10, rect.h // 2), inner=inner)
-        label = self.fit_label(text, use_font, rect.w - 14)
+        fitted = self.font_manager.fit_label(text, use_font, rect.w - 14, max(8, rect.h - 6), min_size=8)
         self.draw_pvz_hud_label(
-            use_font,
-            label,
+            fitted.font,
+            fitted.text,
             rect.center,
             fill=text_fill,
             outline=text_outline,
@@ -17610,9 +17626,10 @@ class Game:
             glow = pygame.Surface((draw_r.w + 8, draw_r.h + 8), pygame.SRCALPHA)
             pygame.draw.rect(glow, (255, 230, 140, 70), (0, 0, glow.get_width(), glow.get_height()), width=3, border_radius=18)
             self.screen.blit(glow, (draw_r.x - 4, draw_r.y - 4))
+        fitted = self.font_manager.fit_label(text, FontRole.UI, draw_r.w - 14, max(10, draw_r.h - 10), min_size=12)
         self.draw_pvz_hud_label(
-            self.fonts["ui"],
-            self.fit_label(text, self.fonts["ui"], draw_r.w - 14),
+            fitted.font,
+            fitted.text,
             draw_r.center,
             fill=txt_fill,
             outline=txt_outline,
@@ -17627,10 +17644,11 @@ class Game:
         gloss_surf = pygame.Surface((gloss.w, gloss.h), pygame.SRCALPHA)
         pygame.draw.rect(gloss_surf, (255, 246, 220, 50), (0, 0, gloss.w, gloss.h), border_radius=8)
         self.screen.blit(gloss_surf, gloss.topleft)
-        font = self.fonts["small"] if draw_r.h <= 42 or draw_r.w <= 90 else self.fonts["mid"]
+        role = FontRole.SMALL if draw_r.h <= 42 or draw_r.w <= 90 else FontRole.MID
+        fitted = self.font_manager.fit_label(text, role, draw_r.w - 12, max(8, draw_r.h - 10), min_size=10)
         self.draw_pvz_hud_label(
-            font,
-            self.fit_label(text, font, draw_r.w - 12),
+            fitted.font,
+            fitted.text,
             draw_r.center,
             fill=(248, 238, 204),
             outline=(74, 44, 20),
@@ -18058,9 +18076,9 @@ class Game:
         if selected:
             pygame.draw.rect(self.screen, (255, 216, 112), rect.inflate(4, 4), 2, border_radius=14)
         if disabled:
-            shade = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
+            shade = pygame.Surface(icon_box.size, pygame.SRCALPHA)
             shade.fill((24, 24, 24, 92))
-            self.screen.blit(shade, rect.topleft)
+            self.screen.blit(shade, icon_box.topleft)
 
     def draw_wave_flag_meter(self, rect: pygame.Rect) -> None:
         self.draw_framed_panel(rect, fill=(196, 138, 72), border=(96, 58, 24), radius=12, inner=(220, 162, 96))
@@ -18597,6 +18615,18 @@ class Game:
             self.draw_mode_thumb_plant(self.screen, area.right + 10, area.bottom - 2, kind="flower_pot", scale=1.12)
             self.draw_mode_thumb_zombie(self.screen, area.right + 14, area.y + 26, kind="buckethead", scale=0.74)
 
+    def mode_card_layout(self, rect: pygame.Rect) -> Dict[str, pygame.Rect]:
+        title_area = pygame.Rect(rect.x + 10, rect.y + 6, rect.w - 20, 46)
+        title_bar = pygame.Rect(title_area.x + 7, title_area.y, title_area.w - 14, 26)
+        badge_area = pygame.Rect(rect.x + 18, rect.bottom - 28, rect.w - 36, 22)
+        thumb_area = pygame.Rect(rect.x + 9, title_area.bottom + 4, rect.w - 18, badge_area.y - title_area.bottom - 8)
+        return {
+            "title_area": title_area,
+            "title_bar": title_bar,
+            "thumb_area": thumb_area,
+            "badge_area": badge_area,
+        }
+
     def draw_mode_card(self, mode_id: str, rect: pygame.Rect, title: str, zh_title: str, status: str, thumb_key: str, hover: bool, selected: bool) -> None:
         stage_style = self.mode_entry_stage_style(mode_id)
         fill = (232, 204, 152) if not hover else (242, 216, 164)
@@ -18608,12 +18638,11 @@ class Game:
         self.draw_mode_thumb_gradient(self.screen, inner_rect, self.shift_color(inner, 6), self.shift_color(inner, -6))
         pygame.draw.rect(self.screen, self.shift_color(border, 18), inner_rect, 1, border_radius=12)
 
-        title_h = max(22, int(rect.h * 0.135))
-        status_h = 11
-        title_area = pygame.Rect(rect.x + 10, rect.y + 5, rect.w - 20, title_h)
-        title_bar = pygame.Rect(title_area.x + 7, title_area.y + 1, title_area.w - 14, max(15, title_h - 9))
-        thumb_area = pygame.Rect(rect.x + 9, title_area.bottom + 4, rect.w - 18, rect.h - title_h - status_h - 20)
-        badge_area = pygame.Rect(rect.x + 18, rect.bottom - status_h - 6, rect.w - 36, status_h)
+        card_layout = self.mode_card_layout(rect)
+        title_area = card_layout["title_area"]
+        title_bar = card_layout["title_bar"]
+        thumb_area = card_layout["thumb_area"]
+        badge_area = card_layout["badge_area"]
 
         primary_title = zh_title if self.lang == "zh" and zh_title else title
         secondary_title = title if self.lang == "zh" else zh_title
@@ -18622,12 +18651,12 @@ class Game:
         pygame.draw.circle(self.screen, (92, 20, 20), (title_bar.x + 10, title_bar.centery), 3, 1)
         pygame.draw.circle(self.screen, (132, 26, 26), (title_bar.right - 10, title_bar.centery), 3)
         pygame.draw.circle(self.screen, (92, 20, 20), (title_bar.right - 10, title_bar.centery), 3, 1)
-        primary_title = self.fit_label(primary_title, self.fonts["small"], title_bar.w - 26)
-        title_main = self.fonts["small"].render(primary_title, True, (52, 34, 18))
+        primary_title = self.fit_label(primary_title, self.fonts["tiny"], title_bar.w - 26)
+        title_main = self.fonts["tiny"].render(primary_title, True, (252, 240, 214))
         self.screen.blit(title_main, title_main.get_rect(center=(title_area.centerx, title_bar.centery)))
-        if secondary_title and title_area.h >= 26:
-            title_sub = self.fonts["tiny"].render(self.fit_label(secondary_title, self.fonts["tiny"], title_area.w - 8), True, (96, 70, 42))
-            self.screen.blit(title_sub, title_sub.get_rect(center=(title_area.centerx, title_area.bottom - 2)))
+        if secondary_title:
+            title_sub = self.fonts["badge"].render(self.fit_label(secondary_title, self.fonts["badge"], title_area.w - 8), True, (76, 52, 28))
+            self.screen.blit(title_sub, title_sub.get_rect(center=(title_area.centerx, title_area.bottom - 8)))
 
         frame_col = (156, 108, 58) if not selected else (236, 156, 52)
         self.draw_panel_shadow(thumb_area, radius=10, alpha=34, offset=(0, 2))
@@ -18676,7 +18705,7 @@ class Game:
             pygame.draw.circle(self.screen, (148, 104, 36), medal, 4, 1)
             pygame.draw.circle(self.screen, (252, 238, 168), medal, 2)
         if stage_style != "normal_select":
-            style_badge = pygame.Rect(thumb_area.x + 6, thumb_area.y + 6, 46, 16)
+            style_badge = pygame.Rect(thumb_area.x + 6, thumb_area.y + 6, 50, 22)
             self.draw_stage_style_badge(style_badge, stage_style)
 
         if status == "playable":
@@ -18690,7 +18719,7 @@ class Game:
             txt_col = (48, 36, 22)
         self.draw_mode_thumb_gradient(self.screen, badge_area, self.shift_color(bfill, 12), self.shift_color(bfill, -8))
         pygame.draw.rect(self.screen, bborder, badge_area, 1, border_radius=5)
-        self.draw_text_center_shadow(self.fonts["tiny"], btxt, txt_col, badge_area.center, shadow=(236, 226, 206), offset=(1, 1))
+        self.draw_text_center_shadow(self.fonts["badge"], btxt, txt_col, badge_area.center, shadow=(236, 226, 206), offset=(1, 1))
 
     def show_mode_notice(self, text_key: str) -> None:
         self.mode_notice = self.tr(text_key)
@@ -18783,6 +18812,12 @@ class Game:
         self.survival_total_rounds = total_rounds
         self.survival_endless = mode_name == "survival_endless"
         self.survival_entry_id = mode_name
+        self.survival_run_seed = int(
+            self.current_mode_base_rules.get(
+                "survival_base_seed",
+                self.current_mode_base_rules.get("random_seed", 0),
+            )
+        )
         self.change_scene("survival_intermission")
         return True
 
@@ -18793,6 +18828,9 @@ class Game:
         round_idx = max(1, int(self.survival_round_index))
         total_rounds = max(round_idx, int(self.survival_total_rounds or 5))
         rules = self.build_survival_round_rules(self.survival_entry_id or "survival_day", round_idx, total_rounds, return_scene="survival_select")
+        if self.survival_run_seed is not None:
+            rules["survival_base_seed"] = int(self.survival_run_seed)
+            rules["random_seed"] = self.derive_survival_round_seed(self.survival_run_seed, round_idx)
         rules["survival_resume"] = True
         rules["survival_resume_state"] = self.survival_pending_state
         rules["survival_resume_sun"] = float(self.survival_resume_sun)
@@ -19549,9 +19587,9 @@ class Game:
             txt = self.fonts["tiny"].render(str(int(cost)), True, (56, 40, 24))
             self.screen.blit(txt, txt.get_rect(center=(badge.centerx + 8, badge.centery)))
         if disabled:
-            shade = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
+            shade = pygame.Surface(icon_box.size, pygame.SRCALPHA)
             shade.fill((24, 24, 24, 92))
-            self.screen.blit(shade, rect.topleft)
+            self.screen.blit(shade, icon_box.topleft)
 
     def draw_seed_chooser_card(self, rect: pygame.Rect, plant_key: str, selected: bool, hover: bool, disabled: bool) -> None:
         cfg = self.plants[plant_key]
@@ -19592,13 +19630,20 @@ class Game:
             pygame.draw.circle(self.screen, (86, 172, 96), icon_box.center, icon_sz // 2)
         name_y = icon_box.bottom + 2
         if name_y + 16 < draw_r.bottom - 2:
-            name_line = self.fit_label(self.plant_display_name(plant_key), self.fonts["tiny"], draw_r.w - 14)
-            ts = self.fonts["tiny"].render(name_line, True, (58, 42, 24) if not disabled else (90, 78, 64))
+            name_fit = self.font_manager.fit_label(
+                self.plant_display_name(plant_key),
+                FontRole.TINY,
+                draw_r.w - 14,
+                18,
+                min_size=10,
+                color=(58, 42, 24) if not disabled else (90, 78, 64),
+            )
+            ts = name_fit.surface
             self.screen.blit(ts, ts.get_rect(center=(draw_r.centerx, name_y + 8)))
         if disabled:
-            shade = pygame.Surface((draw_r.w, draw_r.h), pygame.SRCALPHA)
+            shade = pygame.Surface(icon_box.size, pygame.SRCALPHA)
             shade.fill((24, 24, 24, 84))
-            self.screen.blit(shade, draw_r.topleft)
+            self.screen.blit(shade, icon_box.topleft)
 
 
     def change_scene(self, target: str, duration: float = 0.35) -> None:
@@ -20315,20 +20360,20 @@ class Game:
             pygame.draw.rect(self.screen, (250, 244, 228), corner, border_radius=3)
             pygame.draw.rect(self.screen, (156, 124, 82), corner, 1, border_radius=3)
         pygame.draw.rect(self.screen, (92, 62, 34), preview_rect, 2, border_radius=10)
-        range_badge = pygame.Rect(card.x + 18, preview_rect.bottom + 8, 108, 20)
-        focus_badge = pygame.Rect(range_badge.right + 8, preview_rect.bottom + 8, card.right - range_badge.right - 26, 20)
+        range_badge = pygame.Rect(card.x + 18, preview_rect.bottom + 8, 108, 22)
+        focus_badge = pygame.Rect(range_badge.right + 8, preview_rect.bottom + 8, card.right - range_badge.right - 26, 22)
         self.draw_framed_panel(range_badge, fill=(226, 208, 162), border=(130, 96, 52), radius=8, inner=(240, 228, 188))
         self.draw_framed_panel(focus_badge, fill=(236, 220, 184), border=(134, 102, 58), radius=8, inner=(246, 236, 206))
-        range_txt = self.fonts["small"].render(self.adventure_chapter_code_range(world), True, (62, 42, 22))
+        range_txt = self.fonts["badge"].render(self.adventure_chapter_code_range(world), True, (62, 42, 22))
         self.screen.blit(range_txt, range_txt.get_rect(center=range_badge.center))
-        focus_txt = self.fit_label(self.adventure_chapter_focus(world), self.fonts["small"], focus_badge.w - 12)
-        focus_surf = self.fonts["small"].render(focus_txt, True, (70, 48, 24))
+        focus_txt = self.fit_label(self.adventure_chapter_focus(world), self.fonts["badge"], focus_badge.w - 12)
+        focus_surf = self.fonts["badge"].render(focus_txt, True, (70, 48, 24))
         self.screen.blit(focus_surf, focus_surf.get_rect(center=focus_badge.center))
         progress_badge = pygame.Rect(card.right - 90, card.y + 10, 72, 22)
         progress_fill = (236, 214, 148) if unlocked else (192, 184, 172)
         progress_inner = (248, 234, 176) if unlocked else (210, 204, 196)
         self.draw_framed_panel(progress_badge, fill=progress_fill, border=(132, 96, 46), radius=8, inner=progress_inner)
-        progress_text = self.fonts["small"].render(f"{cleared_count}/{max(1, total_count)}", True, (62, 44, 22))
+        progress_text = self.fonts["badge"].render(f"{cleared_count}/{max(1, total_count)}", True, (62, 44, 22))
         self.screen.blit(progress_text, progress_text.get_rect(center=progress_badge.center))
         if hover and unlocked:
             glow = pygame.Surface(preview_rect.size, pygame.SRCALPHA)
@@ -20340,10 +20385,12 @@ class Game:
         if selected and unlocked:
             pygame.draw.rect(self.screen, (255, 214, 108), outer.inflate(4, 4), 3, border_radius=26)
         title = self.adventure_chapter_title(world)
-        self.draw_outlined_text(self.fonts["ui"], title, (246, 244, 214), (card.centerx, card.y + 16), outline_color=(40, 24, 12), outline_width=2)
+        title_area = pygame.Rect(card.x + 48, card.y + 2, progress_badge.x - card.x - 56, 28)
+        title_fit = self.font_manager.fit_label(title, FontRole.SMALL, title_area.w, title_area.h, min_size=12)
+        self.draw_outlined_text(title_fit.font, title_fit.text, (246, 244, 214), title_area.center, outline_color=(40, 24, 12), outline_width=2)
         nameplate = pygame.Rect(card.x + 22, card.bottom - 34, card.w - 44, 24)
         self.draw_framed_panel(nameplate, fill=(132, 88, 44), border=(76, 44, 20), radius=10, inner=(166, 114, 60))
-        sub = self.fonts["small"].render(self.adventure_chapter_subtitle(world), True, (246, 232, 198))
+        sub = self.fonts["badge"].render(self.fit_label(self.adventure_chapter_subtitle(world), self.fonts["badge"], nameplate.w - 12), True, (246, 232, 198))
         self.screen.blit(sub, sub.get_rect(center=nameplate.center))
         medal = pygame.Rect(card.x - 18, card.y + 16, 68, 86)
         ribbon = [(medal.centerx - 12, medal.y + 14), (medal.centerx + 12, medal.y + 14), (medal.centerx + 6, medal.y + 44), (medal.centerx - 6, medal.y + 44)]
@@ -20360,10 +20407,10 @@ class Game:
         if chapter_done and unlocked:
             self.draw_adventure_completion_medal(pygame.Rect(card.right - 52, card.bottom - 70, 42, 56))
         if not unlocked:
-            shade = pygame.Surface(card.size, pygame.SRCALPHA)
+            shade = pygame.Surface(preview_rect.size, pygame.SRCALPHA)
             shade.fill((18, 18, 18, 118))
-            self.screen.blit(shade, card.topleft)
-            self.draw_adventure_lock_icon(card)
+            self.screen.blit(shade, preview_rect.topleft)
+            self.draw_adventure_lock_icon(preview_rect)
 
     def draw_adventure_level_card(self, level: LevelConfig, rect: pygame.Rect, hover: bool) -> None:
         unlocked = self.adventure_level_unlocked(level)
@@ -20403,55 +20450,48 @@ class Game:
             pygame.draw.rect(self.screen, (164, 132, 88), corner, 1, border_radius=3)
         pygame.draw.rect(self.screen, (246, 238, 218), preview_rect.inflate(2, 2), 1, border_radius=8)
         pygame.draw.rect(self.screen, (94, 66, 38), preview_rect, 2, border_radius=8)
-        flag_badge = pygame.Rect(preview_rect.x + 6, preview_rect.y + 6, 44, 18)
+        flag_badge = pygame.Rect(preview_rect.x + 6, preview_rect.y + 6, 48, 22)
         self.draw_framed_panel(flag_badge, fill=(198, 46, 38), border=(112, 28, 20), radius=8, inner=(226, 86, 72))
-        flag_text = self.fonts["tiny"].render(self.tr("flags_short").format(count=level.flags_first_clear), True, (248, 240, 216))
+        flag_text = self.fonts["badge"].render(self.tr("flags_short").format(count=level.flags_first_clear), True, (248, 240, 216))
         self.screen.blit(flag_text, flag_text.get_rect(center=flag_badge.center))
         if stage_style != "normal_select":
-            style_badge = pygame.Rect(flag_badge.right + 6, preview_rect.y + 6, 54, 18)
+            style_badge = pygame.Rect(flag_badge.right + 6, preview_rect.y + 6, 58, 22)
             badge_style = "conveyor" if stage_style == "boss_conveyor" else stage_style
             self.draw_stage_style_badge(style_badge, badge_style)
         if is_boss:
-            boss_badge = pygame.Rect(preview_rect.right - 50, preview_rect.y + 6, 44, 18)
+            boss_badge = pygame.Rect(preview_rect.right - 54, preview_rect.y + 6, 48, 22)
             self.draw_framed_panel(boss_badge, fill=(120, 52, 46), border=(72, 24, 22), radius=8, inner=(158, 76, 70))
-            boss_text = self.fonts["tiny"].render(self.tr("boss_short"), True, (248, 236, 214))
+            boss_text = self.fonts["badge"].render(self.tr("boss_short"), True, (248, 236, 214))
             self.screen.blit(boss_text, boss_text.get_rect(center=boss_badge.center))
         title = self.level_display_name(level)
-        title_shadow = self.fonts["mid"].render(title, True, (40, 28, 18))
-        title_surf = self.fonts["mid"].render(title, True, (82, 144, 54) if unlocked else (116, 110, 98))
-        title_rect = title_surf.get_rect(center=(paper.centerx, paper.y + 12))
+        status_rect = pygame.Rect(paper.right - 84, paper.y + 3, 72, 22)
+        title_area = pygame.Rect(paper.x + 10, paper.y + 1, status_rect.x - paper.x - 16, 24)
+        title_fit = self.font_manager.fit_label(title, FontRole.SMALL, title_area.w, title_area.h, min_size=11)
+        title_shadow = title_fit.font.render(title_fit.text, True, (40, 28, 18))
+        title_surf = title_fit.font.render(title_fit.text, True, (82, 144, 54) if unlocked else (92, 82, 70))
+        title_rect = title_surf.get_rect(center=title_area.center)
         self.screen.blit(title_shadow, title_rect.move(1, 1))
         self.screen.blit(title_surf, title_rect)
-        field_badge = pygame.Rect(paper.x + 12, preview_rect.bottom + 8, 92, 20)
+        field_badge = pygame.Rect(paper.x + 12, preview_rect.bottom + 6, 92, 22)
         self.draw_framed_panel(field_badge, fill=(224, 204, 158), border=(130, 96, 48), radius=8, inner=(240, 226, 188))
-        field_surf = self.fonts["small"].render(self.tr("field_" + level.battlefield), True, (62, 44, 24))
+        field_surf = self.fonts["badge"].render(self.tr("field_" + level.battlefield), True, (62, 44, 24))
         self.screen.blit(field_surf, field_surf.get_rect(center=field_badge.center))
         threat = sorted(level.z_weights.items(), key=lambda item: item[1], reverse=True)
         threat_name = self.zombie_display_name(threat[0][0]) if threat else self.tr("zombies")
-        info_badge = pygame.Rect(field_badge.right + 8, preview_rect.bottom + 8, paper.right - field_badge.right - 20, 20)
+        info_badge = pygame.Rect(field_badge.right + 8, preview_rect.bottom + 6, paper.right - field_badge.right - 20, 22)
         self.draw_framed_panel(info_badge, fill=(232, 220, 186), border=(136, 104, 58), radius=8, inner=(244, 236, 208))
-        fit_name = self.fit_label(threat_name, self.fonts["small"], info_badge.w - 12)
-        info = self.fonts["small"].render(fit_name, True, (62, 46, 26))
+        fit_name = self.fit_label(threat_name, self.fonts["badge"], info_badge.w - 12)
+        info = self.fonts["badge"].render(fit_name, True, (62, 46, 26))
         self.screen.blit(info, info.get_rect(center=info_badge.center))
-        status_rect = pygame.Rect(paper.right - 82, paper.bottom - 22, 70, 16)
         status_fill = (112, 156, 72) if unlocked else (118, 112, 104)
         status_inner = (150, 190, 94) if unlocked else (154, 148, 138)
         self.draw_framed_panel(status_rect, fill=status_fill, border=(76, 96, 50) if unlocked else (90, 86, 80), radius=7, inner=status_inner)
-        status_key = "playable_now" if unlocked else "locked"
-        status_txt = self.fonts["tiny"].render(self.tr(status_key), True, (244, 240, 214))
+        status_key = "completed" if cleared else ("playable_now" if unlocked else "locked")
+        status_txt = self.fonts["badge"].render(self.fit_label(self.tr(status_key), self.fonts["badge"], status_rect.w - 8), True, (244, 240, 214))
         self.screen.blit(status_txt, status_txt.get_rect(center=status_rect.center))
         if cleared:
             medal_rect = pygame.Rect(paper.right - 52, paper.y + 68, 40, 52)
             self.draw_adventure_completion_medal(medal_rect)
-            clear_chip = pygame.Rect(paper.x + 108, paper.bottom - 22, 82, 16)
-            self.draw_framed_panel(clear_chip, fill=(214, 190, 116), border=(132, 96, 42), radius=7, inner=(238, 220, 152))
-            clear_txt = self.fonts["tiny"].render(self.tr("completed"), True, (74, 48, 20))
-            self.screen.blit(clear_txt, clear_txt.get_rect(center=clear_chip.center))
-        elif current:
-            now_chip = pygame.Rect(paper.x + 108, paper.bottom - 22, 82, 16)
-            self.draw_framed_panel(now_chip, fill=(142, 190, 112), border=(76, 114, 54), radius=7, inner=(176, 216, 146))
-            now_txt = self.fonts["tiny"].render(self.tr("playable_now"), True, (54, 70, 30))
-            self.screen.blit(now_txt, now_txt.get_rect(center=now_chip.center))
         if current:
             pygame.draw.rect(self.screen, (255, 214, 108), outer, 3, border_radius=20)
         if hover and unlocked:
@@ -20461,10 +20501,10 @@ class Game:
         if is_boss and unlocked:
             pygame.draw.rect(self.screen, (232, 96, 82), outer.inflate(2, 2), 2, border_radius=22)
         if not unlocked:
-            shade = pygame.Surface(paper.size, pygame.SRCALPHA)
+            shade = pygame.Surface(preview_rect.size, pygame.SRCALPHA)
             shade.fill((24, 24, 24, 120))
-            self.screen.blit(shade, paper.topleft)
-            self.draw_adventure_lock_icon(paper)
+            self.screen.blit(shade, preview_rect.topleft)
+            self.draw_adventure_lock_icon(preview_rect)
 
     def draw_adventure_chapter_select(self) -> None:
         mouse = pygame.mouse.get_pos()
@@ -20540,20 +20580,21 @@ class Game:
         tray_panel = layout["tray_panel"]
         required_pick_count = self.plant_select_required_pick_count()
         self.draw_framed_panel(tray_panel, fill=(150, 96, 48), border=(84, 48, 22), radius=16, inner=(188, 132, 72))
-        tray_header = pygame.Rect(tray_panel.x + 12, tray_panel.y + 6, tray_panel.w - 24, 14)
-        self.draw_menu_section_strip(tray_header, self.tr("selected_tray"), font=self.fonts["tiny"])
+        tray_header = pygame.Rect(tray_panel.x + 12, tray_panel.y + 5, tray_panel.w - 190, 24)
+        self.draw_menu_section_strip(tray_header, self.tr("selected_tray"), font=self.fonts["badge"])
         count_text = f"{self.tr('pick_count')} ({len(self.plant_select_selected)}/{required_pick_count})"
-        self.draw_menu_label_text(self.fonts["tiny"], count_text, (tray_header.right - 150, tray_header.y + 2), max_width=140, fill=(250, 240, 214), outline=(70, 42, 20))
+        count_chip = pygame.Rect(tray_panel.right - 172, tray_panel.y + 5, 160, 24)
+        self.draw_menu_section_strip(count_chip, count_text, font=self.fonts["badge"])
 
         avail_panel = layout["available_panel"]
         self.draw_seed_chooser_board(avail_panel)
-        avail_head = pygame.Rect(avail_panel.x + 12, avail_panel.y + 7, avail_panel.w - 24, 14)
-        self.draw_menu_section_strip(avail_head, self.tr("available_plants"), font=self.fonts["tiny"])
+        avail_head = layout["available_header"]
+        self.draw_menu_section_strip(avail_head, self.tr("available_plants"), font=self.fonts["badge"])
 
         z_panel = layout["zombie_panel"]
         self.draw_framed_panel(z_panel, fill=(214, 182, 128), border=(104, 70, 32), radius=16, inner=(236, 210, 164))
-        z_head = pygame.Rect(z_panel.x + 10, z_panel.y + 10, z_panel.w - 20, 20)
-        self.draw_menu_section_strip(z_head, self.tr("zombie_preview"), font=self.fonts["small"])
+        z_head = layout["zombie_header"]
+        self.draw_menu_section_strip(z_head, self.tr("zombie_preview"), font=self.fonts["badge"])
         preview_hint_key = str((self.pending_mode_rules or {}).get("primary_hint_key", "") or (self.pending_mode_rules or {}).get("special_hint_key", ""))
         preview_hint = self.tr(preview_hint_key) if preview_hint_key else ""
         if not preview_hint and not pending_mode_name and 1 <= int(getattr(level, "world", 0)) <= 5 and self.stage_style_for_level(level) == "normal_select":
@@ -20571,9 +20612,9 @@ class Game:
                 self.screen.blit(icon, icon.get_rect(center=(rect.centerx, rect.centery - 6)))
             else:
                 pygame.draw.circle(self.screen, (84, 168, 98), (rect.centerx, rect.centery - 6), 16)
-            cost_chip = pygame.Rect(rect.x + 8, rect.bottom - 18, rect.w - 16, 14)
+            cost_chip = pygame.Rect(rect.x + 8, rect.bottom - 20, rect.w - 16, 18)
             self.draw_framed_panel(cost_chip, fill=(202, 144, 70), border=(118, 72, 28), radius=6, inner=(230, 176, 96))
-            self.draw_text_center_shadow(self.fonts["tiny"], str(self.plants[kind].cost), (250, 238, 212), cost_chip.center, shadow=(78, 48, 24), offset=(1, 1))
+            self.draw_text_center_shadow(self.fonts["badge"], str(self.plants[kind].cost), (250, 238, 212), cost_chip.center, shadow=(78, 48, 24), offset=(1, 1))
 
         viewport = layout["available_viewport"]
         self.draw_framed_panel(viewport.inflate(8, 8), fill=(132, 76, 38), border=(78, 44, 20), radius=10, inner=(170, 102, 56))
@@ -20599,12 +20640,12 @@ class Game:
             knob_rect = pygame.Rect(track.x - 1, knob_y, 10, knob_h)
             self.draw_framed_panel(knob_rect, fill=(242, 186, 88), border=(124, 76, 34), radius=5, inner=(252, 210, 120))
 
-        list_top = z_panel.y + 42
+        list_top = z_head.bottom + 6
         if preview_hint:
-            hint_rect = pygame.Rect(z_panel.x + 12, z_panel.y + 36, z_panel.w - 24, 28)
+            hint_rect = pygame.Rect(z_panel.x + 12, z_head.bottom + 6, z_panel.w - 24, 32)
             self.draw_framed_panel(hint_rect, fill=(224, 206, 162), border=(132, 96, 48), radius=8, inner=(240, 226, 188))
-            hint_text = self.fit_label(preview_hint, self.fonts["small"], hint_rect.w - 12)
-            self.draw_pvz_hud_label(self.fonts["small"], hint_text, hint_rect.center, fill=(248, 238, 212), outline=(86, 60, 28), outline_width=2)
+            hint_text = self.fit_label(preview_hint, self.fonts["badge"], hint_rect.w - 12)
+            self.draw_pvz_hud_label(self.fonts["badge"], hint_text, hint_rect.center, fill=(248, 238, 212), outline=(86, 60, 28), outline_width=2)
             list_top = hint_rect.bottom + 6
         list_view = pygame.Rect(z_panel.x + 10, list_top, z_panel.w - 20, z_panel.bottom - list_top - 10)
         zy = list_view.y
@@ -21154,18 +21195,29 @@ class Game:
                 utility_parts.append(f"{self.tr('survival_round')} {s_round}/{max(1, s_total)}")
         info_rect = layout["utility_info"]
         self.draw_framed_panel(info_rect, fill=(240, 226, 196), border=(118, 84, 42), radius=10, inner=(250, 240, 216))
-        info_font = self.fonts["small"] if info_rect.h >= 15 else self.fonts["tiny"]
-        utility_text = self.fit_label("  \u2022  ".join(utility_parts), info_font, info_rect.w - 14)
-        utility_surf = info_font.render(utility_text, True, UI_PALETTE["text_dark"])
+        utility_fit = self.font_manager.fit_label(
+            "  \u2022  ".join(utility_parts),
+            FontRole.BADGE if compact_special else FontRole.SMALL,
+            info_rect.w - 14,
+            max(8, info_rect.h - 6),
+            min_size=8,
+            color=UI_PALETTE["text_dark"],
+        )
+        utility_surf = utility_fit.surface
         self.screen.blit(utility_surf, utility_surf.get_rect(center=info_rect.center))
         if show_wave and self.battle.uses_wave_system() and self.battle.total_waves > 0 and not self.battle.last_stand_in_prep() and not self.battle.is_seeing_stars_mode() and not (compact_special and special_progress_text):
             self.draw_wave_progress_bar(layout["wave_meter"])
         else:
             meter = layout["wave_meter"]
             self.draw_framed_panel(meter, fill=(196, 138, 74), border=(96, 58, 26), radius=14, inner=(218, 162, 98))
-            meter_font = self.fonts["small"] if meter.h >= 26 else self.fonts["tiny"]
-            label = self.fit_label(meter_text if meter_text else mode_text, meter_font, meter.w - 16)
-            self.draw_pvz_hud_label(meter_font, label, meter.center, outline_width=2)
+            meter_fit = self.font_manager.fit_label(
+                meter_text if meter_text else mode_text,
+                FontRole.SMALL,
+                meter.w - 16,
+                max(8, meter.h - 6),
+                min_size=9,
+            )
+            self.draw_pvz_hud_label(meter_fit.font, meter_fit.text, meter.center, outline_width=2)
 
         coin_box = layout["coin_box"]
         self.draw_coin_plaque(coin_box, int(self.save_data.get("coins", 0)), compact=True)
@@ -21856,8 +21908,8 @@ class Game:
             if self._screen_shake_t > 0 and self._screen_shake_intensity > 0:
                 decay = self._screen_shake_t / 0.3
                 mag = self._screen_shake_intensity * decay
-                shake_dx = int(random.uniform(-mag, mag))
-                shake_dy = int(random.uniform(-mag, mag))
+                shake_dx = int(self.ui_rng.uniform(-mag, mag))
+                shake_dy = int(self.ui_rng.uniform(-mag, mag))
             if shake_dx != 0 or shake_dy != 0:
                 battle_surf = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
                 self.battle.draw(

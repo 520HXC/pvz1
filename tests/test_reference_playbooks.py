@@ -1,6 +1,5 @@
 import inspect
 import unittest
-from unittest import mock
 from types import SimpleNamespace
 
 import game
@@ -116,16 +115,20 @@ class ReferencePlaybookTests(unittest.TestCase):
         self.assertEqual(set(range(battle.rows())), set(battle.spawn_rows_for_kind("balloon")))
         self.assertEqual(set(range(battle.rows())), set(battle.spawn_rows_for_kind("bungee")))
 
-    def test_non_adventure_plant_timing_keeps_legacy_randomness(self):
+    def test_non_adventure_plant_timing_uses_mode_seed(self):
         level = self.by_code["1-2"]
-        battle = game.BattleState(
+        first = game.BattleState(
             game.build_plants(), game.build_zombies(), game.build_battlefields(), {"upgrades": {}}
         )
-        battle.reset(level, selected_cards=["sunflower"], mode_rules={"mode_name": "sandbox"})
-        with mock.patch("game.random.uniform", return_value=6.25) as uniform:
-            self.assertTrue(battle.place("sunflower", 0, 0))
-        self.assertEqual(6.25, battle.main[(0, 0)].cd)
-        self.assertTrue(uniform.called)
+        second = game.BattleState(
+            game.build_plants(), game.build_zombies(), game.build_battlefields(), {"upgrades": {}}
+        )
+        rules = {"mode_name": "sandbox", "random_seed": 625}
+        first.reset(level, selected_cards=["sunflower"], mode_rules=rules)
+        second.reset(level, selected_cards=["sunflower"], mode_rules=rules)
+        self.assertTrue(first.place("sunflower", 0, 0))
+        self.assertTrue(second.place("sunflower", 0, 0))
+        self.assertEqual(first.main[(0, 0)].cd, second.main[(0, 0)].cd)
 
     def test_runner_is_deterministic_for_the_same_seed(self):
         from reference_playbooks import run_reference_playbook

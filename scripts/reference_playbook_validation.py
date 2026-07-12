@@ -55,6 +55,8 @@ def main() -> int:
             except Exception as exc:
                 print(f"{code} seed {seed} crashed {exc}")
                 return 2
+            if len(results) % 50 == 0 or len(results) == len(jobs):
+                print(f"completed {len(results)}/{len(jobs)}", flush=True)
 
     summaries = summarize_reference_results(results)
     for code in codes:
