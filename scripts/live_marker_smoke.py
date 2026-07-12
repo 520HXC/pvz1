@@ -152,6 +152,47 @@ SCENARIOS: List[Dict[str, Any]] = [
         ],
     },
     {
+        "name": "3-8",
+        "type": "level",
+        "cards": ["lily_pad", "cattail", "threepeater", "sea_shroom", "wallnut"],
+        "duration": 12.0,
+        "screens": [2.0, 6.0, 10.0],
+        "force_place": False,
+        "placements": [
+            (0.15, "lily_pad", 2, 2),
+            (0.15, "cattail", 2, 2),
+            (0.20, "lily_pad", 3, 3),
+            (0.20, "sea_shroom", 3, 3),
+            (0.25, "threepeater", 1, 2),
+            (0.30, "wallnut", 4, 5),
+        ],
+        "enemy_spawns": [
+            (1.1, "snorkel", 2, 6.4),
+            (1.4, "dolphin_rider", 3, 6.7),
+            (1.7, "normal", 1, 6.5),
+        ],
+    },
+    {
+        "name": "5-1",
+        "type": "level",
+        "cards": ["sunflower", "cabbage_pult", "kernel_pult", "melon_pult", "wallnut"],
+        "duration": 12.0,
+        "screens": [2.0, 6.0, 10.0],
+        "force_place": False,
+        "placements": [
+            (0.15, "sunflower", 0, 0),
+            (0.20, "cabbage_pult", 1, 1),
+            (0.25, "kernel_pult", 2, 2),
+            (0.30, "melon_pult", 3, 3),
+            (0.35, "wallnut", 4, 4),
+        ],
+        "enemy_spawns": [
+            (1.1, "normal", 1, 6.4),
+            (1.4, "pole_vaulting", 2, 6.7),
+            (1.7, "bungee", 3, 6.5),
+        ],
+    },
+    {
         "name": "5-10",
         "type": "level",
         "cards": [],
@@ -355,7 +396,12 @@ def main() -> int:
                     if placements_done[idx]:
                         continue
                     if elapsed >= float(t_fire):
-                        ok = game.battle.spawn_plant_direct(str(kind), int(row), int(col), force_place=True)
+                        ok = game.battle.spawn_plant_direct(
+                            str(kind),
+                            int(row),
+                            int(col),
+                            force_place=bool(scenario.get("force_place", True)),
+                        )
                         audio_log.append(
                             {
                                 "scenario": current["scenario"],

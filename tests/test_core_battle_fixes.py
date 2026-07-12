@@ -205,7 +205,7 @@ class CoreBattleFixTests(unittest.TestCase):
                     )
                 )
 
-    def test_roof_conveyor_does_not_replace_cards_when_one_is_placeable(self):
+    def test_roof_conveyor_replaces_excess_main_demand_despite_one_open_pot(self):
         for code in ("5-5", "5-10"):
             with self.subTest(code=code):
                 battle = self.make_battle()
@@ -226,7 +226,8 @@ class CoreBattleFixTests(unittest.TestCase):
                 battle.update_conveyor()
 
                 self.assertEqual(battle.conveyor_cap, len(battle.cards))
-                self.assertNotIn("flower_pot", battle.cards)
+                self.assertIn("flower_pot", battle.cards)
+                self.assertLess(battle.cards.count("cabbage_pult"), battle.conveyor_cap)
 
     def test_roof_conveyor_replaces_all_pots_after_roof_is_fully_supported(self):
         for code in ("5-5", "5-10"):

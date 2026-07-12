@@ -10,9 +10,10 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import game
 
 try:
-    from adventure_validation import validate_adventure_levels
+    from adventure_validation import validate_adventure_levels, validate_roof_conveyor_rules
 except ImportError:
     validate_adventure_levels = None
+    validate_roof_conveyor_rules = None
 
 
 class AdventureInvariantTests(unittest.TestCase):
@@ -90,6 +91,20 @@ class AdventureInvariantTests(unittest.TestCase):
         for code in ("5-5", "5-10"):
             self.assertTrue(opening_cards.get(code), code)
             self.assertEqual("flower_pot", opening_cards[code][0], code)
+            self.assertGreaterEqual(opening_cards[code][:5].count("flower_pot"), 2, code)
+
+    def test_all_roof_conveyor_rule_sets_pass_static_support_validation(self):
+        self.assertIsNotNone(validate_roof_conveyor_rules)
+        rules = {
+            "5-5": {
+                "conveyor_pool": game.ADVENTURE_CONVEYOR_POOLS["5-5"],
+                "opening_cards": game.ADVENTURE_CONVEYOR_OPENING_CARDS["5-5"],
+            },
+            "5-10": game.ZOMBOSS_BOSS_RULESETS["adventure_zomboss_boss"],
+            "mini_dr_zomboss_revenge": game.ZOMBOSS_BOSS_RULESETS["mini_dr_zomboss_revenge"],
+        }
+
+        self.assertEqual([], validate_roof_conveyor_rules(rules))
 
     def test_adventure_reset_preplaces_5_1_pots_without_spending_sun(self):
         battle = self.make_battle()

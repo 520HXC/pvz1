@@ -54,6 +54,17 @@ def surface_content_bbox(surface: pygame.Surface) -> tuple[int, int, int, int]:
     return (int(rect.x), int(rect.y), int(rect.w), int(rect.h))
 
 
+def frame_anchor(
+    entity_kind: str,
+    bbox: tuple[int, int, int, int],
+    fallback: tuple[int, int],
+) -> tuple[int, int]:
+    if entity_kind != "zombie":
+        return fallback
+    x, y, width, height = bbox
+    return (int(round(x + width / 2.0)), int(y + height - 2))
+
+
 def export_pose_source(entity_kind: str, variant: str, sprite: pygame.Surface, pose_set: PoseAnimationSet) -> None:
     out_dir = anim_src_dir(entity_kind, variant)
     reset_dir(out_dir)
@@ -126,12 +137,14 @@ def export_battle_animation(entity_kind: str, variant: str, sprite: pygame.Surfa
                 continue
             file_name = f"{clip_name}_{idx:02d}.png"
             pygame.image.save(surface, str(out_dir / file_name))
+            bbox = surface_content_bbox(surface)
+            anchor_for_frame = frame_anchor(entity_kind, bbox, anchor)
             frame_entries.append(
                 {
                     "surface_path": file_name,
                     "duration_ms": int(frame.duration_ms),
-                    "content_bbox": list(surface_content_bbox(surface)),
-                    "anchor": [int(anchor[0]), int(anchor[1])],
+                    "content_bbox": list(bbox),
+                    "anchor": [int(anchor_for_frame[0]), int(anchor_for_frame[1])],
                 }
             )
         clips[clip_name] = {

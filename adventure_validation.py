@@ -190,15 +190,49 @@ def validate_adventure_levels(
 
         if battlefield == "roof" and code in pools:
             opening = tuple(openings.get(code, ()))
-            if not opening or opening[0] != "flower_pot":
+            if (
+                not opening
+                or opening[0] != "flower_pot"
+                or opening[:5].count("flower_pot") < 2
+            ):
                 issues.append(
                     AdventureValidationIssue(
                         code,
                         "roof conveyor opening",
-                        "roof conveyors must guarantee flower_pot as the first card",
+                        "roof conveyors must start with flower_pot and provide at least two in the first five cards",
                     )
                 )
 
+    return issues
+
+
+def validate_roof_conveyor_rules(
+    rule_sets: Mapping[str, Mapping[str, object]],
+) -> list[AdventureValidationIssue]:
+    issues: list[AdventureValidationIssue] = []
+    for mode_id, rules in rule_sets.items():
+        pool = tuple(str(kind) for kind in rules.get("conveyor_pool", ()))
+        opening = tuple(str(kind) for kind in rules.get("opening_cards", ()))
+        if "flower_pot" not in pool:
+            issues.append(
+                AdventureValidationIssue(
+                    mode_id,
+                    "roof conveyor pool",
+                    "roof conveyor pools must contain flower_pot",
+                )
+            )
+        if (
+            not opening
+            or opening[0] != "flower_pot"
+            or opening[:5].count("flower_pot") < 2
+        ):
+            issues.append(
+                AdventureValidationIssue(
+                    mode_id,
+                    "roof conveyor opening",
+                    "roof conveyors must start with flower_pot and provide at least two in the first five cards",
+                )
+            )
     return issues
 
 

@@ -985,7 +985,7 @@ SPECIAL_MINIGAME_RULESETS: Dict[str, Dict[str, object]] = {
 
 ZOMBOSS_BOSS_RULESETS: Dict[str, Dict[str, object]] = {
     "adventure_zomboss_boss": {
-        "opening_cards": ["flower_pot", "cabbage_pult", "jalapeno", "cabbage_pult", "ice_shroom"],
+        "opening_cards": ["flower_pot", "cabbage_pult", "flower_pot", "jalapeno", "ice_shroom"],
         "conveyor_pool": ["flower_pot", "cabbage_pult", "kernel_pult", "melon_pult", "jalapeno", "ice_shroom"],
         "conveyor_weights": {
             "flower_pot": 0.24,
@@ -1050,7 +1050,7 @@ ZOMBOSS_BOSS_RULESETS: Dict[str, Dict[str, object]] = {
         "duration_override": 9999.0,
     },
     "mini_dr_zomboss_revenge": {
-        "opening_cards": ["cabbage_pult", "jalapeno", "cabbage_pult", "ice_shroom"],
+        "opening_cards": ["flower_pot", "cabbage_pult", "flower_pot", "jalapeno", "ice_shroom"],
         "conveyor_pool": ["flower_pot", "cabbage_pult", "kernel_pult", "melon_pult", "jalapeno", "ice_shroom"],
         "conveyor_weights": {
             "flower_pot": 0.21,
@@ -2566,8 +2566,8 @@ ADVENTURE_CONVEYOR_POOLS: Dict[str, Tuple[str, ...]] = {
 }
 
 ADVENTURE_CONVEYOR_OPENING_CARDS: Dict[str, Tuple[str, ...]] = {
-    "5-5": ("flower_pot",),
-    "5-10": ("flower_pot", "cabbage_pult", "jalapeno", "cabbage_pult", "ice_shroom"),
+    "5-5": ("flower_pot", "chomper", "flower_pot", "pumpkin", "cherrybomb"),
+    "5-10": ("flower_pot", "cabbage_pult", "flower_pot", "jalapeno", "ice_shroom"),
 }
 
 MODE_ENTRY_STYLES: Dict[str, str] = {
@@ -3725,6 +3725,64 @@ def build_plant_grounding_profiles() -> Dict[str, Dict[str, float | str]]:
 PLANT_GROUNDING_PROFILES = build_plant_grounding_profiles()
 
 
+@dataclass(frozen=True)
+class ZombieGroundingProfile:
+    baseline_mode: str = "lane_bottom"
+    foot_inset_y: float = 2.0
+    max_width_cells: float = 1.60
+
+
+def build_zombie_grounding_profiles() -> Dict[str, ZombieGroundingProfile]:
+    profiles: Dict[str, ZombieGroundingProfile] = {}
+
+    def add(
+        names: Iterable[str],
+        *,
+        baseline_mode: str = "lane_bottom",
+        foot_inset_y: float = 2.0,
+        max_width_cells: float = 1.60,
+    ) -> None:
+        for name in names:
+            profiles[str(name)] = ZombieGroundingProfile(
+                baseline_mode=baseline_mode,
+                foot_inset_y=float(foot_inset_y),
+                max_width_cells=float(max_width_cells),
+            )
+
+    add(
+        (
+            "normal",
+            "conehead",
+            "buckethead",
+            "flag_zombie",
+            "newspaper",
+            "screen_door",
+            "football",
+            "dancing",
+            "backup_dancer",
+            "jack_in_the_box",
+            "ladder",
+            "pogo",
+            "digger",
+            "imp",
+        )
+    )
+    add(("pole_vaulting",), max_width_cells=2.40)
+    add(("gargantuar",), max_width_cells=1.85)
+    add(("zomboni", "catapult", "bobsled_team"), max_width_cells=2.40)
+    add(
+        ("ducky_tube", "snorkel", "dolphin_rider"),
+        baseline_mode="waterline",
+        max_width_cells=1.80,
+    )
+    add(("balloon", "bungee"), max_width_cells=1.80)
+    add(("zomboss",), max_width_cells=2.80)
+    return profiles
+
+
+ZOMBIE_GROUNDING_PROFILES = build_zombie_grounding_profiles()
+
+
 def build_zombies() -> Dict[str, ZombieType]:
     base: Dict[str, ZombieType] = {}
     _add_z(base, ZombieType("normal", "Zombie", 280, (16, 24), (20, 28), "walker"))
@@ -4028,6 +4086,7 @@ class BattleState:
         self.wave_rng = random.Random(1)
         self.row_rng = random.Random(2)
         self.combat_rng = random.Random(2)
+        self.conveyor_rng = random.Random(3)
         self.result: Optional[str] = None
         self.almanac_open = False
         self.main: Dict[Tuple[int, int], Plant] = {}
@@ -4071,6 +4130,7 @@ class BattleState:
         self.bobsled_burst_cycle_index = 0
         self.conveyor_opening_queue: List[str] = []
         self.conveyor_weights: Dict[str, float] = {}
+        self.conveyor_non_support_streak = 0
         self.notice_request_text = ""
         self.notice_request_key = ""
         self.notice_request_color: Tuple[int, int, int] = (58, 42, 24)
@@ -4751,7 +4811,9 @@ class BattleState:
         return False
 
     def damage_zomboss_cells(self, row: int, col_start: int, col_end: int, damage: float, flash_t: float = 0.18) -> None:
-        for rr in range(max(0, row - 1), min(self.rows(), row + 2)):
+        if not 0 <= row < self.rows():
+            return
+        for rr in (row,):
             for cc in range(max(0, col_start), min(COLS, col_end + 1)):
                 pos = (rr, cc)
                 for collection in (self.armor, self.main, self.support):
@@ -5340,9 +5402,7 @@ class BattleState:
         target.hp -= amount
         target.state["hit_flash"] = 0.18
         if target.hp <= 0.0:
-            self.armor.pop(pos, None)
-            self.main.pop(pos, None)
-            self.support.pop(pos, None)
+            self.remove_plant_instance(target)
         return True
 
     def zombie_cell_targets(
@@ -5745,9 +5805,7 @@ class BattleState:
                             plant.state["hit_flash"] = 0.16
                             self.hit_sparks.append({"x": float(self.cell_center(pos[0], pos[1])[0]), "y": float(self.row_y(pos[0]) - 10), "t": 0.16, "ttl": 0.16})
                         if plant.hp <= 0:
-                            self.armor.pop(pos, None)
-                            self.main.pop(pos, None)
-                            self.support.pop(pos, None)
+                            self.remove_plant_instance(plant)
                 self.bump_anim_event(zombie, "lob")
                 zombie.state["catapult_state"] = "recover"
                 recover_t = 1.17 if self.is_adventure_mainline() else rng.uniform(1.04, 1.30)
@@ -5773,9 +5831,7 @@ class BattleState:
                         self.hit_sparks.append({"x": float(self.cell_center(pos[0], pos[1])[0]), "y": float(self.row_y(pos[0]) - 10), "t": 0.16, "ttl": 0.16})
                         self.queue_audio_key("plant_hit")
                         if target.hp <= 0:
-                            self.armor.pop(pos, None)
-                            self.main.pop(pos, None)
-                            self.support.pop(pos, None)
+                            self.remove_plant_instance(target)
                 zombie.state["catapult_state"] = "walk"
                 walk_t = 2.09 if self.is_adventure_mainline() else rng.uniform(1.72, 2.46)
                 zombie.state["catapult_phase_t"] = walk_t
@@ -6481,9 +6537,7 @@ class BattleState:
         slot = "armor" if cfg.is_overlay else ("support" if cfg.is_support else "main")
         pos = (row, col)
         if force_place:
-            self.main.pop(pos, None)
-            self.support.pop(pos, None)
-            self.armor.pop(pos, None)
+            self.clear_plant_cell(row, col)
             self.graves.pop(pos, None)
         plant_hp = float(cfg.hp) * self.plant_hp_scale()
         plant = Plant(kind=kind, row=row, col=col, hp=plant_hp, slot=slot, cd=self.initial_plant_delay(kind))
@@ -6509,6 +6563,24 @@ class BattleState:
         else:
             self.armor[pos] = plant
         return True
+
+    def remove_plant_instance(self, plant: Plant) -> bool:
+        pos = (int(plant.row), int(plant.col))
+        collection = {
+            "main": self.main,
+            "support": self.support,
+            "armor": self.armor,
+        }.get(str(plant.slot))
+        if collection is None or collection.get(pos) is not plant:
+            return False
+        collection.pop(pos, None)
+        return True
+
+    def clear_plant_cell(self, row: int, col: int) -> None:
+        pos = (int(row), int(col))
+        self.armor.pop(pos, None)
+        self.main.pop(pos, None)
+        self.support.pop(pos, None)
 
     def spawn_zombie_instance(
         self,
@@ -8976,9 +9048,7 @@ class BattleState:
                     self.hit_sparks.append({"x": float(self.cell_center(pos[0], pos[1])[0]), "y": float(self.row_y(pos[0]) - 10), "t": 0.16, "ttl": 0.16})
                     self.queue_audio_key("plant_hit")
                     if target.hp <= 0:
-                        self.armor.pop(pos, None)
-                        self.main.pop(pos, None)
-                        self.support.pop(pos, None)
+                        self.remove_plant_instance(target)
         if zombie.kind == "pogo" and self.consume_anim_marker(zombie, "vault"):
             zombie.state["pogo_motion_started"] = 1.0
 
@@ -9180,6 +9250,7 @@ class BattleState:
         self.wave_rng = random.Random(wave_seed)
         self.row_rng = random.Random(wave_seed * 1013 + 193)
         self.combat_rng = random.Random(wave_seed * 1009 + 97)
+        self.conveyor_rng = random.Random(wave_seed * 1019 + 211)
         self.total_waves, self.large_wave_indices, self.final_wave_index, self.wave_budgets = self.mode_wave_budgets(level)
         self.elapsed = 0.0
         self.spawn_t = 0.0
@@ -9242,6 +9313,7 @@ class BattleState:
         self.bobsled_burst_cycle_index = 0
         self.conveyor_opening_queue = []
         self.conveyor_weights = {}
+        self.conveyor_non_support_streak = 0
         self.notice_request_text = ""
         self.notice_request_duration_ms = 0
         self.zomboss_hp = 0.0
@@ -9291,7 +9363,7 @@ class BattleState:
         else:
             self.conveyor_pool = []
             self.conveyor_cap = 8
-        if self.mode_bool("adventure_level_launch", False):
+        if self.is_adventure_mainline():
             for kind, row, col in level.preplaced_supports:
                 if kind in self.plant_types and self.plant_types[kind].is_support:
                     self.spawn_plant_direct(kind, row, col, force_place=False)
@@ -9906,6 +9978,119 @@ class BattleState:
     def any_conveyor_card_placeable(self) -> bool:
         return any(self.conveyor_card_placeable(kind) for kind in set(self.cards))
 
+    def roof_conveyor_support_count(self) -> int:
+        if not self.field.is_roof:
+            return 0
+        return sum(1 for plant in self.support.values() if plant.kind == "flower_pot")
+
+    def roof_conveyor_open_support_count(self) -> int:
+        if not self.field.is_roof:
+            return 0
+        return sum(
+            1
+            for pos, plant in self.support.items()
+            if plant.kind == "flower_pot" and pos not in self.main
+        )
+
+    def roof_conveyor_main_card_count(self) -> int:
+        return sum(
+            1
+            for kind in self.cards
+            if kind in self.plant_types
+            and not self.plant_types[kind].is_support
+            and not self.plant_types[kind].is_overlay
+        )
+
+    def roof_conveyor_has_unbuilt_cells(self) -> bool:
+        return self.field.is_roof and any(
+            self.can_place("flower_pot", row, col)
+            for row in range(self.rows())
+            for col in range(COLS)
+        )
+
+    def roof_conveyor_needs_support(self) -> bool:
+        if (
+            not self.field.is_roof
+            or "flower_pot" not in self.conveyor_pool
+            or not self.roof_conveyor_has_unbuilt_cells()
+        ):
+            return False
+        available_supply = self.cards.count("flower_pot") + self.roof_conveyor_open_support_count()
+        main_demand = self.roof_conveyor_main_card_count()
+        return (
+            main_demand > available_supply
+            or (
+                self.roof_conveyor_support_count() < 10
+                and self.conveyor_non_support_streak >= 3
+            )
+        )
+
+    def roof_conveyor_replacement_index(self) -> Optional[int]:
+        counts = {kind: self.cards.count(kind) for kind in set(self.cards)}
+        non_support_indices = [
+            index
+            for index, kind in enumerate(self.cards)
+            if kind != "flower_pot"
+        ]
+        priorities = (
+            lambda index: counts.get(self.cards[index], 0) > 1 and not self.conveyor_card_placeable(self.cards[index]),
+            lambda index: counts.get(self.cards[index], 0) > 1,
+            lambda index: not self.conveyor_card_placeable(self.cards[index]),
+            lambda _index: True,
+        )
+        for predicate in priorities:
+            candidates = [index for index in non_support_indices if predicate(index)]
+            if candidates:
+                return candidates[-1]
+        return None
+
+    def rebalance_roof_conveyor_hand(self) -> bool:
+        if len(self.cards) < self.conveyor_cap or not self.roof_conveyor_needs_support():
+            return False
+        replacement_index = self.roof_conveyor_replacement_index()
+        if replacement_index is None:
+            return False
+        self.cards[replacement_index] = "flower_pot"
+        self.conveyor_non_support_streak = 0
+        if self.selected not in self.cards or not self.conveyor_card_placeable(self.selected):
+            self.selected = "flower_pot"
+        return True
+
+    def choose_conveyor_card(self) -> str:
+        force_support = self.roof_conveyor_needs_support()
+        roof_support_sufficient = (
+            self.field.is_roof
+            and not force_support
+            and "flower_pot" in self.conveyor_pool
+        )
+        candidates = [
+            kind
+            for kind in self.conveyor_pool
+            if not roof_support_sufficient or kind != "flower_pot"
+        ]
+        if force_support:
+            return "flower_pot"
+        if not candidates:
+            candidates = list(self.conveyor_pool)
+        weighted_pool = [
+            (kind, self.conveyor_weights.get(kind, 0.0))
+            for kind in candidates
+            if self.conveyor_weights.get(kind, 0.0) > 0.0
+        ]
+        if weighted_pool:
+            return self.conveyor_rng.choices(
+                [kind for kind, _weight in weighted_pool],
+                weights=[weight for _kind, weight in weighted_pool],
+                k=1,
+            )[0]
+        return self.conveyor_rng.choice(candidates)
+
+    def record_conveyor_choice(self, choice: str) -> None:
+        if choice == "flower_pot":
+            self.conveyor_non_support_streak = 0
+        else:
+            self.conveyor_non_support_streak += 1
+
     def recover_roof_conveyor_softlock(self) -> bool:
         if (
             not self.field.is_roof
@@ -9938,19 +10123,15 @@ class BattleState:
         while self.conveyor_t >= interval:
             self.conveyor_t -= interval
             if len(self.cards) >= self.conveyor_cap:
-                self.recover_roof_conveyor_softlock()
+                if not self.rebalance_roof_conveyor_hand():
+                    self.recover_roof_conveyor_softlock()
                 continue
             if self.conveyor_opening_queue:
                 choice = self.conveyor_opening_queue.pop(0)
-            elif self.conveyor_weights:
-                weighted_pool = [(kind, weight) for kind, weight in self.conveyor_weights.items() if kind in self.conveyor_pool and weight > 0.0]
-                if weighted_pool:
-                    choice = random.choices([kind for kind, _ in weighted_pool], weights=[weight for _, weight in weighted_pool], k=1)[0]
-                else:
-                    choice = random.choice(self.conveyor_pool)
             else:
-                choice = random.choice(self.conveyor_pool)
+                choice = self.choose_conveyor_card()
             self.cards.append(choice)
+            self.record_conveyor_choice(choice)
             if self.selected not in self.cards:
                 self.selected = self.cards[0]
 
@@ -9995,8 +10176,7 @@ class BattleState:
                 else:
                     plant.state["death_t"] = death_t - dt
                     if plant.state["death_t"] <= 0.0:
-                        self.main.pop((plant.row, plant.col), None)
-                        self.support.pop((plant.row, plant.col), None)
+                        self.remove_plant_instance(plant)
                 continue
             morph_t = float(plant.state.get("imitater_morph_t", 0.0))
             if morph_t > 0.0:
@@ -10391,9 +10571,7 @@ class BattleState:
                         self.ice_rows[p.row] = max(float(self.ice_rows.get(p.row, 0.0)), 9999.0)
                     destroyed = hit_plant.hp <= 0
                     if destroyed:
-                        self.armor.pop(hit_pos, None)
-                        self.main.pop(hit_pos, None)
-                        self.support.pop(hit_pos, None)
+                        self.remove_plant_instance(hit_plant)
                     if p.kind in {"zomboss_fireball", "zomboss_iceball"} and destroyed:
                         continue
                     self.projs.remove(p)
@@ -10576,9 +10754,7 @@ class BattleState:
                 z.state["zomboni_crush_t"] = 0.42
                 z.state["zomboni_crush_total"] = 0.42
                 if target.hp <= 0:
-                    self.armor.pop(pos, None)
-                    self.main.pop(pos, None)
-                    self.support.pop(pos, None)
+                    self.clear_plant_cell(*pos)
                 target = None
             if z.kind == "ladder" and self.ladder_state(z) == "carrying":
                 ladder_target = self.ladderable_plant_at(pos)
@@ -10651,9 +10827,7 @@ class BattleState:
                 if target.kind == "garlic" and target.hp > 0:
                     z.row = int(clamp(z.row + rng.choice([-1, 1]), 0, self.rows() - 1))
                 if target.hp <= 0:
-                    self.armor.pop(pos, None)
-                    self.main.pop(pos, None)
-                    self.support.pop(pos, None)
+                    self.remove_plant_instance(target)
             else:
                 z.state["sun_bite_t"] = 0.0
                 direction = self.zombie_movement_direction(z)
@@ -10790,6 +10964,53 @@ class BattleState:
 
     def plant_ground_y(self, row: int) -> int:
         return LAWN_Y + row * CELL_H + int(CELL_H * 0.70)
+
+    def zombie_grounding_profile(self, kind: str) -> ZombieGroundingProfile:
+        return ZOMBIE_GROUNDING_PROFILES.get(str(kind), ZombieGroundingProfile())
+
+    def zombie_ground_y(self, kind: str, row: int) -> int:
+        profile = self.zombie_grounding_profile(kind)
+        row_top = LAWN_Y + int(row) * CELL_H
+        if profile.baseline_mode == "waterline":
+            return row_top + int(CELL_H * 0.76)
+        return row_top + CELL_H - 1
+
+    def zombie_foot_anchor(
+        self,
+        surface: pygame.Surface,
+        profile: ZombieGroundingProfile,
+    ) -> Tuple[float, float]:
+        rect = surface.get_bounding_rect(min_alpha=1)
+        if rect.w <= 0 or rect.h <= 0:
+            rect = surface.get_rect()
+        inset = clamp(
+            float(profile.foot_inset_y),
+            0.0,
+            max(0.0, float(rect.h - 1)),
+        )
+        return float(rect.centerx), float(rect.bottom - inset)
+
+    def zombie_animation_fit_scale(
+        self,
+        animation_surface: pygame.Surface,
+        static_surface: Optional[pygame.Surface],
+        profile: ZombieGroundingProfile,
+    ) -> float:
+        anim_rect = animation_surface.get_bounding_rect(min_alpha=1)
+        if anim_rect.w <= 0 or anim_rect.h <= 0:
+            anim_rect = animation_surface.get_rect()
+        static_rect = (
+            static_surface.get_bounding_rect(min_alpha=1)
+            if static_surface is not None
+            else pygame.Rect(0, 0, 56, 84)
+        )
+        if static_rect.w <= 0 or static_rect.h <= 0:
+            static_rect = static_surface.get_rect() if static_surface is not None else pygame.Rect(0, 0, 56, 84)
+        scale_ratio = float(static_rect.h) / max(1.0, float(anim_rect.h))
+        max_width = max(1.0, CELL_W * float(profile.max_width_cells))
+        if float(anim_rect.w) * scale_ratio > max_width:
+            scale_ratio = min(scale_ratio, max_width / max(1.0, float(anim_rect.w)))
+        return max(0.01, scale_ratio)
 
     def plant_shadow_y(self, row: int) -> int:
         return LAWN_Y + row * CELL_H + int(CELL_H * 0.76)
@@ -11711,7 +11932,10 @@ class BattleState:
                 pygame.draw.ellipse(dust, (128, 98, 66, alpha), (4, 8, 34, 8))
                 pygame.draw.ellipse(dust, (182, 154, 110, alpha // 2), (8, 4, 26, 10))
                 screen.blit(dust, (int(z.x) - 21, y + 16))
-            zsprite = zombie_sprite_fn(z.kind)
+            grounding = self.zombie_grounding_profile(kind)
+            static_zsprite = zombie_sprite_fn(z.kind)
+            zsprite = static_zsprite
+            render_anchor: Optional[Tuple[float, float]] = None
             anim_alpha = alpha
             if entity_anim_frame_fn is not None:
                 anim_surface, anim_frame = entity_anim_frame_fn(
@@ -11720,17 +11944,26 @@ class BattleState:
                     self.get_entity_animation_state(z),
                 )
                 if anim_surface is not None and anim_frame is not None and self.zombie_animation_variant(z):
-                    target_size = self.surface_content_size(zsprite)
-                    anim_surface, surf_dx, surf_dy, anim_scale_fit = self.normalize_animation_surface(
+                    motion_dx, motion_dy = dx, dy
+                    motion_scale, motion_angle = scale, angle
+                    anim_surface, surf_dx, surf_dy, _unused_scale = self.normalize_animation_surface(
                         anim_surface,
                         anim_frame,
-                        target_size=target_size,
                     )
                     zsprite = anim_surface
-                    dx = float(anim_frame.offset[0]) + surf_dx
-                    dy = float(anim_frame.offset[1]) + surf_dy
-                    scale = float(anim_frame.scale) * anim_scale_fit
-                    angle = float(anim_frame.angle)
+                    dx = motion_dx + float(anim_frame.offset[0])
+                    dy = motion_dy + float(anim_frame.offset[1])
+                    anim_scale_fit = self.zombie_animation_fit_scale(
+                        anim_surface,
+                        static_zsprite,
+                        grounding,
+                    )
+                    scale = motion_scale * float(anim_frame.scale) * anim_scale_fit * zombie_global_scale
+                    angle = motion_angle + float(anim_frame.angle)
+                    render_anchor = (
+                        float(anim_surface.get_width() / 2.0 - surf_dx),
+                        float(anim_surface.get_height() / 2.0 - surf_dy),
+                    )
                     anim_alpha = alpha * clamp(float(anim_frame.alpha) / 255.0, 0.0, 1.0)
                     used_anim_frame = True
             # Zombie death animation: body-fall rotation + head-pop
@@ -11749,27 +11982,55 @@ class BattleState:
                     pygame.draw.circle(pop_surf, (180, 200, 160, pop_alpha), (pop_r + 2, pop_r + 2), pop_r, 3)
                     screen.blit(pop_surf, (int(z.x + dx) - pop_r - 2, int(y - 16 + dy) - pop_r - 2))
 
-            draw_x = int(z.x + dx)
-            draw_y = int(y - 6 + dy)
+            draw_x = int(round(z.x + dx))
+            ground_y = self.zombie_ground_y(kind, z.row)
+            target_anchor_y = float(ground_y + dy)
+            draw_y = int(round(target_anchor_y))
             zombie_render_w = 56
             zombie_render_h = 84
+            zombie_render_rect = pygame.Rect(draw_x - 28, draw_y - 84, 56, 84)
             shadow_scale = 1.0 if kind not in ("gargantuar", "imp") else (1.28 if kind == "gargantuar" else 0.72)
             z_shadow_w = int(44 * shadow_scale)
             z_shadow_h = int(12 * shadow_scale)
-            pygame.draw.ellipse(screen, (24, 24, 24), (draw_x - z_shadow_w // 2, draw_y + 28, z_shadow_w, z_shadow_h))
+            pygame.draw.ellipse(
+                screen,
+                (24, 24, 24),
+                (
+                    draw_x - z_shadow_w // 2,
+                    int(round(ground_y - z_shadow_h / 2.0 + 2.0)),
+                    z_shadow_w,
+                    z_shadow_h,
+                ),
+            )
             if zsprite is not None:
                 flash_strength = (hit_flash / 0.24) if used_anim_frame else (hit_flash / 0.14)
+                render_scale = scale if used_anim_frame else scale * zombie_global_scale
                 sp = sprite_fx(
                     zsprite,
-                    scale=scale if used_anim_frame else scale * zombie_global_scale,
+                    scale=render_scale,
                     angle=angle,
                     flash=flash_strength,
                     alpha=anim_alpha,
                     flip_x=z.hypnotized,
                 )
-                z_rect = sp.get_rect(center=(draw_x, draw_y))
+                if render_anchor is None:
+                    render_anchor = self.zombie_foot_anchor(zsprite, grounding)
+                anchor_off_x, anchor_off_y = self.transformed_anchor_offset(
+                    zsprite.get_size(),
+                    render_anchor,
+                    scale=render_scale,
+                    angle=angle,
+                    flip_x=z.hypnotized,
+                )
+                render_center_x = float(draw_x) - anchor_off_x
+                render_center_y = target_anchor_y - anchor_off_y
+                z_rect = sp.get_rect(
+                    center=(int(round(render_center_x)), int(round(render_center_y)))
+                )
+                draw_x, draw_y = z_rect.center
                 zombie_render_w = max(24, z_rect.w)
                 zombie_render_h = max(24, z_rect.h)
+                zombie_render_rect = z_rect
                 screen.blit(sp, z_rect)
             else:
                 body_col = (130, 138, 148)
@@ -11783,9 +12044,17 @@ class BattleState:
                     h, w = 62, 42
                 elif kind in ("zomboni", "catapult", "bobsled_team"):
                     h, w = 54, 94
-                pygame.draw.rect(screen, body_col, (draw_x - w // 2, draw_y - h // 2, w, h), border_radius=8)
+                fallback_rect = pygame.Rect(
+                    int(round(z.x + dx - w / 2.0)),
+                    int(round(target_anchor_y - h)),
+                    w,
+                    h,
+                )
+                pygame.draw.rect(screen, body_col, fallback_rect, border_radius=8)
+                draw_x, draw_y = fallback_rect.center
                 zombie_render_w = w
                 zombie_render_h = h
+                zombie_render_rect = fallback_rect
                 if z.kind == "balloon":
                     pygame.draw.circle(screen, (236, 112, 112), (draw_x, draw_y - 40), 16)
             if kind == "bungee":
@@ -11827,8 +12096,8 @@ class BattleState:
                 hp_ratio = self.zombie_hp_ratio(z)
                 bar_w = int(clamp(zombie_render_w * 0.62, 34.0, 84.0))
                 bar_h = 10
-                bar_x = draw_x - bar_w // 2
-                bar_y = draw_y - max(50, int(zombie_render_h * 0.55))
+                bar_x = zombie_render_rect.centerx - bar_w // 2
+                bar_y = zombie_render_rect.top - 12
                 lane_track = zombie_bar_tracks.setdefault(z.row, [])
                 for prev_x, prev_y, prev_w in reversed(lane_track[-8:]):
                     overlap_w = int((bar_w + prev_w) * 0.55)
