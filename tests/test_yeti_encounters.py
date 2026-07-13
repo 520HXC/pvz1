@@ -334,7 +334,8 @@ class YetiBattleTests(unittest.TestCase):
         before = tuple(rng.getstate() for rng in rngs)
         global_before = random.getstate()
         screen = pygame.Surface((game.SCREEN_WIDTH, game.SCREEN_HEIGHT))
-        fonts = defaultdict(lambda: pygame.font.Font(None, 18))
+        font = game.UIFontManager().font(18)
+        fonts = defaultdict(lambda: font)
 
         for _ in range(3):
             battle.draw(

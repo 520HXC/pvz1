@@ -80,29 +80,42 @@ def main() -> int:
             level = by_code["5-9"]
             game.open_plant_select(level.idx - 1, return_scene="adventure_level_select")
             game.plant_select_selected = list(game.plant_select_pool[: game.plant_select_required_pick_count()])
+            game.battle.almanac_open = False
 
         def level_select() -> None:
             game.adventure_chapter_selected = 1
             game.scene = "adventure_level_select"
 
-        def encyclopedia_plant_detail() -> None:
-            game.almanac_tab = "plants"
-            game.almanac_page["plants"] = 0
-            game.almanac_selected_key["plants"] = "sunflower"
-            game.scene = "encyclopedia_detail"
+        def almanac_entry(category: str, page: int, key: str) -> Callable[[], None]:
+            def setup() -> None:
+                game.battle.almanac_open = False
+                game.battle_menu_open = False
+                game.almanac_tab = category
+                game.almanac_page[category] = page
+                keys = game.get_almanac_keys(category)
+                game.almanac_selected_key[category] = key
+                game.almanac_focus_index[category] = keys.index(key)
+                game.scene = "encyclopedia_detail"
+            return setup
 
-        def encyclopedia_zombie_detail() -> None:
-            game.almanac_tab = "zombies"
-            game.almanac_page["zombies"] = 0
-            game.almanac_selected_key["zombies"] = "normal"
-            game.scene = "encyclopedia_detail"
+        def battle_pause_almanac_entry() -> None:
+            level = by_code["1-1"]
+            game.level_idx = level.idx - 1
+            rules = game.adventure_stage_mode_rules(level)
+            rules["random_seed"] = 102
+            game.battle.reset(level, selected_cards=["peashooter"], mode_rules=rules)
+            game.scene = "battle"
+            game.open_battle_menu()
 
         def battle_almanac_overlay() -> None:
             level = by_code["1-1"]
+            game.level_idx = level.idx - 1
             rules = game.adventure_stage_mode_rules(level)
             rules["random_seed"] = 101
             game.battle.reset(level, selected_cards=["peashooter"], mode_rules=rules)
             game.battle.almanac_open = True
+            game.battle_menu_open = False
+            game.battle.paused = True
             game.almanac_tab = "zombies"
             game.almanac_page["zombies"] = 0
             game.almanac_selected_key["zombies"] = "normal"
@@ -110,6 +123,7 @@ def main() -> int:
 
         def boss_intro() -> None:
             level = by_code["5-10"]
+            game.level_idx = level.idx - 1
             rules = game.adventure_stage_mode_rules(level)
             rules["random_seed"] = 510
             game.battle.reset(level, selected_cards=[], mode_rules=rules)
@@ -134,7 +148,7 @@ def main() -> int:
 
         scenes = [
             ("start", plain("start")),
-            ("plant_select", plant_select),
+            ("plant_select_almanac_entry", plant_select),
             ("chapter_select", plain("adventure_chapter_select")),
             ("level_select", level_select),
             ("mini_select", plain("mini_select")),
@@ -145,8 +159,22 @@ def main() -> int:
             ("shop", plain("shop")),
             ("zen_garden", plain("zen_garden")),
             ("encyclopedia_menu", plain("encyclopedia_menu")),
-            ("encyclopedia_plant_detail", encyclopedia_plant_detail),
-            ("encyclopedia_zombie_detail", encyclopedia_zombie_detail),
+            ("plant_chapter_day", almanac_entry("plants", 0, "peashooter")),
+            ("plant_chapter_night", almanac_entry("plants", 1, "puff_shroom")),
+            ("plant_chapter_pool", almanac_entry("plants", 2, "lily_pad")),
+            ("plant_chapter_fog", almanac_entry("plants", 3, "cactus")),
+            ("plant_chapter_roof", almanac_entry("plants", 4, "cabbage_pult")),
+            ("plant_chapter_upgrades", almanac_entry("plants", 5, "twin_sunflower")),
+            ("zombie_chapter_day", almanac_entry("zombies", 0, "normal")),
+            ("zombie_chapter_night", almanac_entry("zombies", 1, "newspaper")),
+            ("zombie_chapter_pool", almanac_entry("zombies", 2, "snorkel")),
+            ("zombie_chapter_fog", almanac_entry("zombies", 3, "digger")),
+            ("zombie_chapter_roof", almanac_entry("zombies", 4, "bungee")),
+            ("encyclopedia_plant_detail", almanac_entry("plants", 0, "sunflower")),
+            ("encyclopedia_zombie_detail", almanac_entry("zombies", 0, "normal")),
+            ("encyclopedia_yeti_detail", almanac_entry("zombies", 3, "yeti")),
+            ("encyclopedia_zomboss_detail", almanac_entry("zombies", 4, "zomboss")),
+            ("battle_pause_almanac_entry", battle_pause_almanac_entry),
             ("battle_almanac_overlay", battle_almanac_overlay),
             ("boss_intro", boss_intro),
             ("portal_notice", portal_notice),

@@ -46,6 +46,15 @@ def test_almanac_layout_is_two_page_chapter_grid_with_readable_body() -> None:
     assert all(rect.width >= 44 and rect.height >= 44 for rect in ui["cards"])
 
 
+def test_detail_body_allows_two_lines_in_each_copy_section(game_instance: pvz.Game) -> None:
+    body = game_instance.almanac_layout()["detail_body"]
+    inner = body.inflate(-14, -12)
+    block_height = (inner.h - 10) // 3
+
+    assert body.height >= 214
+    assert block_height - 24 >= 2 * game_instance.fonts["tiny"].get_linesize()
+
+
 def test_almanac_card_buttons_are_a_three_by_three_page() -> None:
     game = object.__new__(pvz.Game)
     game.plants = pvz.build_plants()
@@ -147,3 +156,26 @@ def test_main_detail_and_battle_overlay_use_one_renderer(game_instance: pvz.Game
         game_instance.battle.almanac_open = True
         game_instance.draw_almanac()
         assert renderer.call_count == 2
+
+
+def test_plant_detail_rows_expose_complete_runtime_metadata(game_instance: pvz.Game) -> None:
+    game_instance.lang = "en"
+    entry = game_instance.almanac_catalog.entry("plants", "sun_shroom")
+
+    rows = dict(game_instance.almanac_stat_rows(entry))
+
+    assert {"Cost", "Cooldown", "Health", "Output", "Range", "Area", "Restrictions"} <= set(rows)
+    assert "15" in rows["Output"]
+    assert "25" in rows["Output"]
+    assert rows["Restrictions"]
+
+
+def test_zombie_detail_rows_expose_complete_runtime_metadata(game_instance: pvz.Game) -> None:
+    game_instance.lang = "en"
+    entry = game_instance.almanac_catalog.entry("zombies", "digger")
+
+    rows = dict(game_instance.almanac_stat_rows(entry))
+
+    assert {"Health", "Speed", "Bite DPS", "First Seen", "Behavior"} <= set(rows)
+    assert rows["First Seen"].startswith("4-")
+    assert rows["Behavior"]
