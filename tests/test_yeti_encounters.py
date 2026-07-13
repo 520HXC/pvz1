@@ -4,6 +4,7 @@ import os
 import random
 import unittest
 from collections import defaultdict
+from types import SimpleNamespace
 from unittest import mock
 
 
@@ -138,6 +139,15 @@ class YetiEncounterRuleTests(unittest.TestCase):
         self.assertNotEqual(first["encounter_seed"], second["encounter_seed"])
         self.assertFalse(second["yeti_encounter_scheduled"])
 
+        claimed = dict(first)
+        claimed["yeti_encounter_claimed"] = True
+        claimed_restart = instance.prepare_yeti_encounter_rules(
+            self.levels["1-1"],
+            claimed,
+        )
+        self.assertEqual(first["encounter_seed"], claimed_restart["encounter_seed"])
+        self.assertFalse(claimed_restart["yeti_encounter_scheduled"])
+
     def test_first_hunt_kill_disables_the_guarantee_on_restart(self):
         instance = self.make_game(
             {
@@ -165,6 +175,22 @@ class YetiEncounterRuleTests(unittest.TestCase):
         self.assertEqual(first["encounter_seed"], restarted["encounter_seed"])
         self.assertEqual(first["yeti_run_seed"], restarted["yeti_run_seed"])
         self.assertFalse(restarted["yeti_encounter_scheduled"])
+
+    def test_restart_rules_carry_the_claimed_reward_out_of_battle_state(self):
+        instance = object.__new__(game.Game)
+        instance.current_mode_base_rules = {
+            "encounter_seed": 31,
+            "yeti_run_seed": 31,
+            "yeti_encounter_scheduled": True,
+        }
+        instance.battle = SimpleNamespace(
+            mode_rules={"yeti_encounter_claimed": True},
+        )
+
+        restarted = instance.current_restart_mode_rules()
+
+        self.assertTrue(restarted["yeti_encounter_claimed"])
+        self.assertTrue(restarted["yeti_encounter_scheduled"])
 
 
 class YetiBattleTests(unittest.TestCase):
@@ -257,6 +283,7 @@ class YetiBattleTests(unittest.TestCase):
         self.assertEqual([100] * 5, [token.value for token in first.tokens])
         self.assertTrue(first.save_data["yeti_seen"])
         self.assertTrue(first.save_data["yeti_defeated"])
+        self.assertTrue(first.mode_rules["yeti_encounter_claimed"])
         self.assertTrue(first.consume_save_request())
         self.assertFalse(first.consume_save_request())
         first.update_zombies(0.01)
@@ -268,6 +295,7 @@ class YetiBattleTests(unittest.TestCase):
         repeat.update_zombies(0.01)
 
         self.assertEqual([100] * 4, [token.value for token in repeat.tokens])
+        self.assertTrue(repeat.mode_rules["yeti_encounter_claimed"])
 
     def test_yeti_spawn_uses_only_encounter_rng(self):
         battle = self.make_battle(scheduled=True)

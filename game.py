@@ -16,7 +16,7 @@ import pygame
 
 from almanac import AlmanacEntry, build_almanac_catalog
 from adventure_levels import ADVENTURE_LEVELS, SHOP_UPGRADE_PLANT_KEYS
-from progression import migrate_save_data, record_adventure_clear
+from progression import SAVE_VERSION, migrate_save_data, record_adventure_clear
 from ui_text import FontRole, UIFontManager, wrap_text
 from yeti_sprite import draw_yeti_sprite
 from zombie_behaviors import ZOMBIE_COMBAT_PROFILES, movement_multiplier, state_name
@@ -3977,12 +3977,23 @@ class SaveManager:
             return default
         try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
+            if (
+                isinstance(data, dict)
+                and type(data.get("save_version")) is int
+                and int(data["save_version"]) > SAVE_VERSION
+            ):
+                return data
             default.update(data)
             return default
         except Exception:
             return default
 
     def save(self, data: Dict[str, object]) -> None:
+        if (
+            type(data.get("save_version")) is int
+            and int(data["save_version"]) > SAVE_VERSION
+        ):
+            return
         self.path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
@@ -10804,6 +10815,7 @@ class BattleState:
                                 )
                             )
                         z.state["yeti_rewarded"] = 1.0
+                        self.mode_rules["yeti_encounter_claimed"] = True
                         self.save_data["yeti_seen"] = True
                         self.save_data["yeti_defeated"] = True
                         self.request_save()
@@ -16503,6 +16515,9 @@ class Game:
             and not isinstance(existing_run_seed, bool)
             and isinstance(existing_decision, bool)
         ):
+            if bool(rules.get("yeti_encounter_claimed", False)):
+                rules["yeti_encounter_scheduled"] = False
+                return rules
             if bool(rules.get("yeti_first_hunt_guarantee", False)) and bool(
                 self.save_data.get("yeti_defeated", False)
             ):
@@ -16550,6 +16565,12 @@ class Game:
         )
         rules["yeti_first_hunt_guarantee"] = first_hunt_guarantee
         rules["yeti_encounter_scheduled"] = bool(scheduled)
+        return rules
+
+    def current_restart_mode_rules(self) -> Dict[str, object]:
+        rules = dict(self.current_mode_base_rules)
+        if bool(self.battle.mode_rules.get("yeti_encounter_claimed", False)):
+            rules["yeti_encounter_claimed"] = True
         return rules
 
     def open_plant_select(
@@ -16948,7 +16969,7 @@ class Game:
             if self.battle_settings_restart_btn.collidepoint(p):
                 self.close_battle_settings()
                 selected = list(self.battle.initial_selected_cards) if self.battle.initial_selected_cards else list(self.battle.cards)
-                self.start_level(self.level_idx, selected_cards=selected, mode_rules=dict(self.current_mode_base_rules))
+                self.start_level(self.level_idx, selected_cards=selected, mode_rules=self.current_restart_mode_rules())
                 return True
             if self.battle_settings_main_btn.collidepoint(p):
                 self.close_battle_settings()
@@ -20331,7 +20352,7 @@ class Game:
                 if self.battle_menu_restart_btn.collidepoint(p):
                     self.close_battle_menu(resume=False)
                     selected = list(self.battle.initial_selected_cards) if self.battle.initial_selected_cards else list(self.battle.cards)
-                    self.start_level(self.level_idx, selected_cards=selected, mode_rules=dict(self.current_mode_base_rules))
+                    self.start_level(self.level_idx, selected_cards=selected, mode_rules=self.current_restart_mode_rules())
                     return
                 if self.battle_menu_select_btn.collidepoint(p):
                     self.close_battle_menu(resume=False)
@@ -22015,7 +22036,7 @@ class Game:
                         self.toggle_almanac()
                     if self.scene == "battle" and e.key == pygame.K_r and not self.battle_menu_open and not self.battle_settings_open:
                         selected = list(self.battle.initial_selected_cards) if self.battle.initial_selected_cards else list(self.battle.cards)
-                        self.start_level(self.level_idx, selected_cards=selected, mode_rules=dict(self.current_mode_base_rules))
+                        self.start_level(self.level_idx, selected_cards=selected, mode_rules=self.current_restart_mode_rules())
                     if self.scene == "adventure_chapter_select" and e.key == pygame.K_ESCAPE:
                         self.change_scene("start")
                     if self.scene == "adventure_level_select" and e.key == pygame.K_ESCAPE:

@@ -1,5 +1,8 @@
+import json
 import os
+import tempfile
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 
 
@@ -168,6 +171,23 @@ class ProgressionPureTests(unittest.TestCase):
         self.assertEqual(future, recorded)
         self.assertIsNot(future, migrated)
         self.assertIsNot(future, recorded)
+
+    def test_save_manager_does_not_fill_or_overwrite_future_save_versions(self):
+        future = {
+            "save_version": SAVE_VERSION + 1,
+            "future_field": {"keep": True},
+        }
+        with tempfile.TemporaryDirectory(prefix="pvz_future_save_") as temp_dir:
+            path = Path(temp_dir) / "save.json"
+            path.write_text(json.dumps(future), encoding="utf-8")
+            manager = game.SaveManager(path)
+
+            loaded = manager.load()
+            self.assertEqual(future, loaded)
+
+            loaded["zen_growth"] = {}
+            manager.save(loaded)
+            self.assertEqual(future, json.loads(path.read_text(encoding="utf-8")))
 
     def test_clear_requires_real_integer_index(self):
         saved = {"save_version": SAVE_VERSION, "unlocked": 1, "cleared_levels": []}

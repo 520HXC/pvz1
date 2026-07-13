@@ -106,4 +106,3 @@ def draw_yeti_sprite(size: Tuple[int, int] = (BASE_SIZE, BASE_SIZE)) -> pygame.S
     if target != surface.get_size():
         return pygame.transform.smoothscale(surface, target)
     return surface
-
