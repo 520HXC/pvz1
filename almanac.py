@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Mapping, Sequence
+from types import MappingProxyType
+from typing import Callable, Mapping, Sequence
 
 
 CLASSIC_PLANT_CHAPTERS: Mapping[str, tuple[str, ...]] = {
@@ -80,6 +81,25 @@ CLASSIC_PLANT_CHAPTER_KEYS = tuple(CLASSIC_PLANT_CHAPTERS)
 CLASSIC_ZOMBIE_CHAPTER_KEYS = tuple(CLASSIC_ZOMBIE_CHAPTERS)
 
 
+def _freeze_value(value: object) -> object:
+    if isinstance(value, Mapping):
+        return MappingProxyType(
+            {str(key): _freeze_value(item) for key, item in value.items()}
+        )
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze_value(item) for item in value)
+    if isinstance(value, (set, frozenset)):
+        return frozenset(_freeze_value(item) for item in value)
+    return value
+
+
+def _freeze_mapping(values: Mapping[str, object]) -> Mapping[str, object]:
+    frozen = _freeze_value(dict(values))
+    if not isinstance(frozen, Mapping):
+        raise TypeError("Expected a mapping")
+    return frozen
+
+
 @dataclass(frozen=True)
 class AlmanacEntry:
     key: str
@@ -89,6 +109,11 @@ class AlmanacEntry:
     texts: Mapping[str, Mapping[str, str]]
     sprite: str
     public: bool = True
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "names", _freeze_mapping(self.names))
+        object.__setattr__(self, "stats", _freeze_mapping(self.stats))
+        object.__setattr__(self, "texts", _freeze_mapping(self.texts))
 
     def name(self, language: str = "en") -> str:
         return self.names.get(language) or self.names.get("en") or self.key
@@ -134,35 +159,6 @@ class AlmanacCatalog:
                 if entry.key == key:
                     return entry
         raise KeyError((category, key))
-
-
-ZOMBIE_NAMES_ZH: Mapping[str, str] = {
-    "normal": "普通僵尸",
-    "flag_zombie": "旗帜僵尸",
-    "conehead": "路障僵尸",
-    "pole_vaulting": "撑杆僵尸",
-    "buckethead": "铁桶僵尸",
-    "newspaper": "读报僵尸",
-    "screen_door": "铁栅门僵尸",
-    "football": "橄榄球僵尸",
-    "dancing": "舞王僵尸",
-    "backup_dancer": "伴舞僵尸",
-    "ducky_tube": "鸭子救生圈僵尸",
-    "snorkel": "潜水僵尸",
-    "zomboni": "冰车僵尸",
-    "bobsled_team": "雪橇车僵尸小队",
-    "dolphin_rider": "海豚骑士僵尸",
-    "jack_in_the_box": "小丑僵尸",
-    "balloon": "气球僵尸",
-    "digger": "矿工僵尸",
-    "pogo": "跳跳僵尸",
-    "bungee": "蹦极僵尸",
-    "ladder": "扶梯僵尸",
-    "catapult": "投石车僵尸",
-    "gargantuar": "巨人僵尸",
-    "imp": "小鬼僵尸",
-    "zomboss": "僵王博士",
-}
 
 
 def _zombie_copy(mechanics_en: str, counter_en: str, flavor_en: str, mechanics_zh: str, counter_zh: str, flavor_zh: str) -> Mapping[str, Mapping[str, str]]:
@@ -373,48 +369,139 @@ ZOMBIE_COPY: Mapping[str, Mapping[str, Mapping[str, str]]] = {
         "为每种攻击保留传送带反制卡，并在暴露窗口集中所有投掷火力攻击本体。",
         "拥有博士学位，并不代表会做出合理的草坪管理决定。",
     ),
+    "yeti": _zombie_copy(
+        "Enters as a rare armored visitor, then turns around after a short window and escapes at high speed.",
+        "Prepare burst damage before the encounter and focus every lane weapon before the retreat reaches the edge.",
+        "The rarest lawn guest is also the least interested in staying for dinner.",
+        "作为罕见的高耐久访客登场，短暂停留后会突然转身并高速逃离草坪。",
+        "在遭遇前准备爆发火力，并在它退到场地边缘前集中整条路线的输出。",
+        "最稀有的草坪客人，偏偏最不愿意留下来吃晚饭。",
+    ),
 }
 
 
-def _plant_entry(key: str, cfg: object) -> AlmanacEntry:
-    behavior = str(getattr(cfg, "behavior", "special"))
-    damage = float(getattr(cfg, "damage", 0.0))
-    sun_amount = int(getattr(cfg, "sun_amount", 0))
-    mechanics_en = f"Uses the {behavior.replace('_', ' ')} role with values taken directly from the configured battle unit."
-    mechanics_zh = f"定位为{behavior.replace('_', ' ')}，基础数值直接来自当前战斗配置。"
-    if damage > 0:
-        mechanics_en += f" Its configured damage is {damage:g}."
-        mechanics_zh += f"当前配置伤害为{damage:g}。"
-    if sun_amount > 0:
-        mechanics_en += f" It produces {sun_amount} sun per activation."
-        mechanics_zh += f"每次产出{sun_amount}点阳光。"
+PlantCopyProvider = Mapping[str, object] | Callable[[str, object], object]
+
+
+PLANT_ROLE_LABELS: Mapping[str, tuple[str, str]] = {
+    "shoot": ("steady lane fire", "稳定单线射击"),
+    "shoot_slow": ("slowing lane fire", "减速单线射击"),
+    "shoot_short": ("short-range lane fire", "短距离射击"),
+    "sun": ("sun production", "阳光生产"),
+    "sun_shroom": ("growing sun production", "成长型阳光生产"),
+    "block": ("frontline blocking", "前排阻挡"),
+    "bomb": ("area burst damage", "范围爆发"),
+    "row_blast": ("full-lane clearing", "整行清场"),
+    "pult": ("lobbed artillery", "抛投火力"),
+    "kernel_pult": ("control artillery", "控制型抛投"),
+    "melon_pult": ("splash artillery", "范围抛投"),
+    "support": ("board support", "阵地辅助"),
+    "armor": ("protective armor", "外层防护"),
+    "spike": ("ground attrition", "地面持续伤害"),
+    "cattail": ("homing coverage", "追踪覆盖"),
+    "cob": ("heavy artillery", "重型火炮"),
+}
+
+
+def _cfg_display_names(cfg: object, key: str) -> Mapping[str, str]:
+    names = {
+        "en": str(getattr(cfg, "display_name_en", "")),
+        "zh": str(getattr(cfg, "display_name_zh", "")),
+    }
+    if not names["en"] or not names["zh"]:
+        raise ValueError(f"Missing configured display name for {key}")
+    return names
+
+
+def _provider_item(
+    provider: PlantCopyProvider | None,
+    key: str,
+    cfg: object,
+) -> object | None:
+    if provider is None:
+        return None
+    if isinstance(provider, Mapping):
+        return provider.get(key)
+    return provider(key, cfg)
+
+
+def _description_pair(payload: object, language: str) -> tuple[str, str]:
+    if not isinstance(payload, Mapping):
+        return "", ""
+    localized = payload.get(language)
+    if isinstance(localized, Mapping):
+        return str(localized.get("short", "")), str(localized.get("summary", ""))
+    if isinstance(localized, Sequence) and not isinstance(localized, (str, bytes)):
+        values = tuple(localized)
+        if len(values) >= 2:
+            return str(values[0]), str(values[1])
+    return "", ""
+
+
+def _flavor_text(payload: object, language: str) -> str:
+    if not isinstance(payload, Mapping):
+        return ""
+    localized = payload.get(language)
+    if isinstance(localized, Mapping):
+        return str(localized.get("flavor", ""))
+    if localized is not None:
+        return str(localized)
+    return ""
+
+
+def _plant_texts(
+    key: str,
+    cfg: object,
+    plant_descriptions: PlantCopyProvider | None,
+    plant_flavor: PlantCopyProvider | None,
+) -> Mapping[str, Mapping[str, str]]:
+    names = _cfg_display_names(cfg, key)
+    behavior = str(getattr(cfg, "behavior", ""))
+    role_en, role_zh = PLANT_ROLE_LABELS.get(
+        behavior,
+        ("specialized garden utility", "专项花园功能"),
+    )
+    description_payload = _provider_item(plant_descriptions, key, cfg)
+    flavor_payload = _provider_item(plant_flavor, key, cfg)
+    texts = {}
+    for language in ("en", "zh"):
+        mechanics, counter = _description_pair(description_payload, language)
+        flavor = _flavor_text(flavor_payload, language)
+        if language == "en":
+            mechanics = mechanics or f"{names['en']} provides {role_en} using its configured battle values."
+            counter = counter or f"Place and protect {names['en']} where that role contributes to the active lanes."
+            flavor = flavor or f"{names['en']} has a small but memorable job in every well-planned garden."
+        else:
+            mechanics = mechanics or f"{names['zh']}负责{role_zh}，具体效果采用当前战斗配置。"
+            counter = counter or f"把{names['zh']}放在能覆盖当前压力的位置，并为它补足必要保护。"
+            flavor = flavor or f"{names['zh']}在每一座认真布置的花园里都有自己的位置。"
+        texts[language] = {
+            "mechanics": mechanics,
+            "counter": counter,
+            "flavor": flavor,
+        }
+    return texts
+
+
+def _plant_entry(
+    key: str,
+    cfg: object,
+    plant_descriptions: PlantCopyProvider | None = None,
+    plant_flavor: PlantCopyProvider | None = None,
+) -> AlmanacEntry:
     return AlmanacEntry(
         key=key,
         category="plants",
-        names={
-            "en": str(getattr(cfg, "display_name_en", "") or getattr(cfg, "name", key)),
-            "zh": str(getattr(cfg, "display_name_zh", "") or getattr(cfg, "name", key)),
-        },
+        names=_cfg_display_names(cfg, key),
         stats={
             "cost": int(getattr(cfg, "cost", 0)),
             "hp": int(getattr(cfg, "hp", 0)),
             "cooldown": float(getattr(cfg, "cooldown", 0.0)),
-            "behavior": behavior,
-            "damage": damage,
+            "behavior": str(getattr(cfg, "behavior", "special")),
+            "damage": float(getattr(cfg, "damage", 0.0)),
             "interval": float(getattr(cfg, "interval", 0.0)),
         },
-        texts={
-            "en": {
-                "mechanics": mechanics_en,
-                "counter": "Protect its role with suitable lane support and replace it when the defense changes.",
-                "flavor": "A familiar garden specialist ready for another carefully planned defense.",
-            },
-            "zh": {
-                "mechanics": mechanics_zh,
-                "counter": "根据它的定位搭配前排与火力，并在战线变化时及时调整或补种。",
-                "flavor": "熟悉的花园专家，随时准备加入下一次防守。",
-            },
-        },
+        texts=_plant_texts(key, cfg, plant_descriptions, plant_flavor),
         sprite=str(getattr(cfg, "sprite_path", "") or f"assets/plants/{key}.png"),
     )
 
@@ -423,19 +510,14 @@ def _zombie_entry(key: str, cfg: object) -> AlmanacEntry:
     copy = ZOMBIE_COPY.get(key)
     if copy is None:
         raise ValueError(f"Missing specific almanac copy for zombie {key}")
-    speed = tuple(getattr(cfg, "speed", (0.0, 0.0)))
-    dps = tuple(getattr(cfg, "dps", (0.0, 0.0)))
     return AlmanacEntry(
         key=key,
         category="zombies",
-        names={
-            "en": str(getattr(cfg, "display_name_en", "") or getattr(cfg, "name", key)),
-            "zh": ZOMBIE_NAMES_ZH.get(key, str(getattr(cfg, "display_name_zh", "") or getattr(cfg, "name", key))),
-        },
+        names=_cfg_display_names(cfg, key),
         stats={
             "hp": int(getattr(cfg, "hp", 0)),
-            "speed": speed,
-            "dps": dps,
+            "speed": tuple(getattr(cfg, "speed", (0.0, 0.0))),
+            "dps": tuple(getattr(cfg, "dps", (0.0, 0.0))),
             "behavior": str(getattr(cfg, "behavior", "special")),
         },
         texts=copy,
@@ -447,8 +529,9 @@ def _build_chapters(
     category: str,
     declarations: Mapping[str, Sequence[str]],
     configured: Mapping[str, object],
+    plant_descriptions: PlantCopyProvider | None = None,
+    plant_flavor: PlantCopyProvider | None = None,
 ) -> tuple[AlmanacChapter, ...]:
-    entry_builder = _plant_entry if category == "plants" else _zombie_entry
     chapters = []
     seen = set()
     for chapter_key, declared in declarations.items():
@@ -457,10 +540,16 @@ def _build_chapters(
         for key in declared_keys:
             cfg = configured.get(key)
             if cfg is None:
-                continue
+                if category == "zombies" and key == "yeti":
+                    continue
+                raise KeyError(f"Missing declared {category} almanac key {key}")
             if key in seen:
                 raise ValueError(f"Duplicate {category} almanac key {key}")
-            entries.append(entry_builder(key, cfg))
+            if category == "plants":
+                entry = _plant_entry(key, cfg, plant_descriptions, plant_flavor)
+            else:
+                entry = _zombie_entry(key, cfg)
+            entries.append(entry)
             seen.add(key)
         chapters.append(
             AlmanacChapter(
@@ -480,8 +569,16 @@ def _build_chapters(
 def build_almanac_catalog(
     plants: Mapping[str, object],
     zombies: Mapping[str, object],
+    plant_descriptions: PlantCopyProvider | None = None,
+    plant_flavor: PlantCopyProvider | None = None,
 ) -> AlmanacCatalog:
     return AlmanacCatalog(
-        plant_chapters=_build_chapters("plants", CLASSIC_PLANT_CHAPTERS, plants),
+        plant_chapters=_build_chapters(
+            "plants",
+            CLASSIC_PLANT_CHAPTERS,
+            plants,
+            plant_descriptions,
+            plant_flavor,
+        ),
         zombie_chapters=_build_chapters("zombies", CLASSIC_ZOMBIE_CHAPTERS, zombies),
     )

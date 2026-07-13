@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib
 
 import game as pvz
+import pytest
 
 
 EXPECTED_PLANT_CHAPTERS = {
@@ -184,3 +185,93 @@ def test_every_zombie_has_specific_bilingual_mechanics_counter_and_flavor() -> N
     for language in ("en", "zh"):
         for field in ("mechanics", "counter", "flavor"):
             assert len({entry.text(language, field) for entry in entries}) >= 22
+
+
+def test_entry_nested_data_is_immutable_and_cannot_pollute_a_new_catalog() -> None:
+    almanac = importlib.import_module("almanac")
+    plants = pvz.build_plants()
+    zombies = pvz.build_zombies()
+    first = almanac.build_almanac_catalog(plants, zombies)
+    entry = first.entry("zombies", "normal")
+    original_name = entry.name("en")
+    original_mechanics = entry.text("en", "mechanics")
+    original_hp = entry.stats["hp"]
+
+    with pytest.raises(TypeError):
+        entry.names["en"] = "Mutated"
+    with pytest.raises(TypeError):
+        entry.texts["en"]["mechanics"] = "Mutated"
+    with pytest.raises(TypeError):
+        entry.stats["hp"] = 1
+
+    second = almanac.build_almanac_catalog(plants, zombies)
+    fresh = second.entry("zombies", "normal")
+    assert fresh.name("en") == original_name
+    assert fresh.text("en", "mechanics") == original_mechanics
+    assert fresh.stats["hp"] == original_hp
+
+
+def test_only_the_reserved_yeti_slot_may_be_missing() -> None:
+    almanac = importlib.import_module("almanac")
+    plants = pvz.build_plants()
+    zombies = pvz.build_zombies()
+
+    plants_without_sunflower = dict(plants)
+    plants_without_sunflower.pop("sunflower")
+    with pytest.raises(KeyError, match="sunflower"):
+        almanac.build_almanac_catalog(plants_without_sunflower, zombies)
+
+    zombies_without_normal = dict(zombies)
+    zombies_without_normal.pop("normal")
+    with pytest.raises(KeyError, match="normal"):
+        almanac.build_almanac_catalog(plants, zombies_without_normal)
+
+
+def test_zombie_names_come_directly_from_config_display_names() -> None:
+    almanac = importlib.import_module("almanac")
+    zombies = pvz.build_zombies()
+    catalog = almanac.build_almanac_catalog(pvz.build_plants(), zombies)
+
+    for key in ("ducky_tube", "bobsled_team", "ladder"):
+        entry = catalog.entry("zombies", key)
+        assert entry.name("en") == zombies[key].display_name_en
+        assert entry.name("zh") == zombies[key].display_name_zh
+
+
+def test_plant_description_mapping_supplies_copy_without_raw_behavior_tokens() -> None:
+    almanac = importlib.import_module("almanac")
+    plants = pvz.build_plants()
+    descriptions = {
+        key: {
+            "en": {
+                "short": f"Unique mechanics for {key}",
+                "summary": f"Unique placement guidance for {key}",
+            },
+            "zh": {
+                "short": f"{key}的专属机制说明",
+                "summary": f"{key}的专属布阵建议",
+            },
+        }
+        for key in plants
+    }
+    flavors = {
+        key: {"en": f"A small story for {key}", "zh": f"{key}的花园小故事"}
+        for key in plants
+    }
+
+    catalog = almanac.build_almanac_catalog(
+        plants,
+        pvz.build_zombies(),
+        plant_descriptions=descriptions,
+        plant_flavor=flavors,
+    )
+    snowpea = catalog.entry("plants", "snowpea")
+
+    assert snowpea.text("en", "mechanics") == descriptions["snowpea"]["en"]["short"]
+    assert snowpea.text("en", "counter") == descriptions["snowpea"]["en"]["summary"]
+    assert snowpea.text("zh", "mechanics") == descriptions["snowpea"]["zh"]["short"]
+    assert snowpea.text("zh", "counter") == descriptions["snowpea"]["zh"]["summary"]
+    assert snowpea.text("zh", "flavor") == flavors["snowpea"]["zh"]
+    assert "shoot_slow" not in "".join(
+        snowpea.text("zh", field) for field in ("mechanics", "counter", "flavor")
+    )
