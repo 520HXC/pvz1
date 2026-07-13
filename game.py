@@ -1731,7 +1731,7 @@ I18N = {
         "shop_locked_notice": "This upgrade unlocks after clearing {level}.",
         "shop_purchase_success": "Nice choice. {name} is ready for adventure!",
         "shop_insufficient_notice": "You need {amount} more coins.",
-        "shop_shortfall": "{amount} coins short",
+        "shop_shortfall": "Short by {amount}",
         "shop_future_save_notice": "This save is newer than this game build. No coins were spent.",
         "shop_invalid_data_notice": "The save data needs repair before Dave can sell this.",
         "shop_save_failed_notice": "The purchase could not be saved. No coins were spent.",

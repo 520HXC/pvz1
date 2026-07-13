@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import inspect
 import os
 from copy import deepcopy
 from pathlib import Path
@@ -216,22 +215,83 @@ def test_bilingual_shop_draw_fits_text_inside_declared_rectangles(
     assert all(container.contains(placed) for container, placed in game_instance.shop_text_placements)
 
 
-def test_crazy_dave_helper_is_shared_with_boss_intro_and_shop() -> None:
-    assert "draw_crazy_dave_character(" in inspect.getsource(pvz.BattleState.draw_battle_intro_overlay)
-    assert "draw_crazy_dave_character(" in inspect.getsource(pvz.Game.draw_shop)
+@pytest.mark.parametrize(
+    ("phase", "expected_bungee"),
+    (("bungee_snatch", True), ("dave_dialog_1", False)),
+)
+def test_boss_intro_calls_shared_dave_helper_with_exact_geometry(
+    game_instance: pvz.Game,
+    monkeypatch: pytest.MonkeyPatch,
+    phase: str,
+    expected_bungee: bool,
+) -> None:
+    calls: list[tuple[pygame.Surface, pygame.Rect, bool, int | None]] = []
+
+    def capture_dave(
+        screen: pygame.Surface,
+        rect: pygame.Rect,
+        *,
+        bungee: bool = False,
+        rope_y: int | None = None,
+        shop_pose: bool = False,
+    ) -> None:
+        calls.append((screen, rect.copy(), bungee, rope_y))
+
+    monkeypatch.setattr(pvz, "draw_crazy_dave_character", capture_dave)
+    battle = game_instance.battle
+    battle.battle_intro_phase = phase
+    battle.battle_intro_dave_x = 137
+    battle.battle_intro_dave_y = 512
+    battle.battle_intro_bungee_y = 76
+
+    battle.draw_battle_intro_overlay(game_instance.screen, game_instance.tr, game_instance.fonts)
+
+    assert calls == [
+        (game_instance.screen, pygame.Rect(137, 420, 92, 118), expected_bungee, 76)
+    ]
+
+
+def test_shop_draw_calls_shared_dave_helper_in_shop_pose(
+    game_instance: pvz.Game,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[pygame.Surface, pygame.Rect, bool]] = []
+
+    def capture_dave(
+        screen: pygame.Surface,
+        rect: pygame.Rect,
+        *,
+        bungee: bool = False,
+        rope_y: int | None = None,
+        shop_pose: bool = False,
+    ) -> None:
+        calls.append((screen, rect.copy(), shop_pose))
+
+    monkeypatch.setattr(pvz, "draw_crazy_dave_character", capture_dave)
+
+    game_instance.draw_shop()
+
+    assert calls == [
+        (game_instance.screen, game_instance.shop_layout()["dave"], True)
+    ]
 
 
 @pytest.mark.parametrize(
-    ("language", "expected"),
-    (("en", "1 coins short"), ("zh", "还差 1 金币")),
+    ("language", "coins", "expected"),
+    (
+        ("en", 499, "Short by 1"),
+        ("en", 488, "Short by 12"),
+        ("zh", 499, "还差 1 金币"),
+    ),
 )
 def test_insufficient_balance_is_visible_on_card_and_detail_before_click(
     game_instance: pvz.Game,
     monkeypatch: pytest.MonkeyPatch,
     language: str,
+    coins: int,
     expected: str,
 ) -> None:
-    set_shop_save(game_instance, coins=499, cleared_levels=["3-4"])
+    set_shop_save(game_instance, coins=coins, cleared_levels=["3-4"])
     game_instance.lang = language
     game_instance.shop_selected_key = "gatling"
     captured: list[str] = []
