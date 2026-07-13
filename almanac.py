@@ -709,25 +709,51 @@ def _plant_runtime_stats(cfg: object) -> Mapping[str, object]:
     damage = float(getattr(cfg, "damage", 0.0))
     projectile_count = max(1, int(getattr(cfg, "proj_count", 1)))
     sun_amount = int(getattr(cfg, "sun_amount", 0))
+    output_detail = {"en": "", "zh": ""}
 
-    if sun_amount > 0:
+    if key == "sun_shroom":
         output_kind = "sun"
-        output_value: int | float = sun_amount
+        output_value: int | float | tuple[int | float, int | float] = (15, 25)
+        output_value_min: int | float = 15
+        output_value_max: int | float = 25
+        output_detail = {
+            "en": "Produces 15 sun, then grows to 25 sun after 90 seconds.",
+            "zh": "前90秒每次产出15点阳光，成长后每次产出25点阳光。",
+        }
+    elif sun_amount > 0:
+        output_kind = "sun"
+        output_value = sun_amount
+        output_value_min = sun_amount
+        output_value_max = sun_amount
     elif behavior == "marigold":
         output_kind = "coin"
-        output_value = 0
+        output_value = (20, 25)
+        output_value_min = 20
+        output_value_max = 25
+        output_detail = {
+            "en": "Produces 20 or 25 coins every 9 to 13 seconds.",
+            "zh": "每9到13秒随机产出20或25枚金币。",
+        }
     elif behavior == "gold_magnet":
         output_kind = "collection"
         output_value = 0
+        output_value_min = 0
+        output_value_max = 0
     elif damage > 0:
         output_kind = "damage"
         output_value = damage * projectile_count
+        output_value_min = output_value
+        output_value_max = output_value
     elif behavior in {"hypno", "ice", "blover", "magnet", "garlic", "coffee"}:
         output_kind = "control"
         output_value = 0
+        output_value_min = 0
+        output_value_max = 0
     else:
         output_kind = "utility"
         output_value = 0
+        output_value_min = 0
+        output_value_max = 0
 
     lane_range = {
         "shoot",
@@ -799,6 +825,9 @@ def _plant_runtime_stats(cfg: object) -> Mapping[str, object]:
         "interval": float(getattr(cfg, "interval", 0.0)),
         "output_kind": output_kind,
         "output_value": output_value,
+        "output_value_min": output_value_min,
+        "output_value_max": output_value_max,
+        "output_detail": output_detail,
         "range": range_name,
         "area": area,
         "restrictions": tuple(restrictions),
