@@ -2,7 +2,7 @@ from copy import deepcopy
 from typing import Mapping
 
 
-SAVE_VERSION = 2
+SAVE_VERSION = 3
 MAX_ADVENTURE_LEVEL = 50
 
 
@@ -65,6 +65,14 @@ def migrate_save_data(raw_data: Mapping[str, object] | None) -> dict[str, object
     migrated["save_version"] = SAVE_VERSION
     migrated.setdefault("coins", 0)
     migrated.setdefault("upgrades", {})
+    migrated["yeti_seen"] = (
+        source.get("yeti_seen") if type(source.get("yeti_seen")) is bool else False
+    )
+    migrated["yeti_defeated"] = (
+        source.get("yeti_defeated")
+        if type(source.get("yeti_defeated")) is bool
+        else False
+    )
     return migrated
 
 

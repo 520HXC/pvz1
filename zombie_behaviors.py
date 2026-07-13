@@ -58,6 +58,7 @@ ZOMBIE_COMBAT_PROFILES = {
         smash_interval=2.3,
     ),
     "imp": ZombieCombatProfile(210, (26, 30), (20, 24), "fast cleanup"),
+    "yeti": ZombieCombatProfile(1350, (18, 22), (24, 30), "rare escape"),
     "zomboss": ZombieCombatProfile(9000, (0, 0), (0, 0), "boss"),
 }
 

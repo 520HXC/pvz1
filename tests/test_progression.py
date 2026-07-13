@@ -23,6 +23,43 @@ class ProgressionApiTests(unittest.TestCase):
 
 @unittest.skipUnless(PROGRESSION_AVAILABLE, "progression API not implemented yet")
 class ProgressionPureTests(unittest.TestCase):
+    def test_version_three_adds_boolean_yeti_progress_without_losing_data(self):
+        migrated = migrate_save_data(
+            {
+                "save_version": 2,
+                "unlocked": 50,
+                "coins": 735,
+                "upgrades": {"twin_sunflower": True},
+                "cleared_levels": ["5-10"],
+                "yeti_seen": True,
+                "yeti_defeated": True,
+            }
+        )
+
+        self.assertEqual(3, SAVE_VERSION)
+        self.assertEqual(3, migrated["save_version"])
+        self.assertEqual(735, migrated["coins"])
+        self.assertEqual({"twin_sunflower": True}, migrated["upgrades"])
+        self.assertEqual(["5-10"], migrated["cleared_levels"])
+        self.assertIs(migrated["yeti_seen"], True)
+        self.assertIs(migrated["yeti_defeated"], True)
+
+    def test_yeti_progress_defaults_false_and_rejects_non_boolean_values(self):
+        defaulted = migrate_save_data({"save_version": 2, "unlocked": 1})
+        malformed = migrate_save_data(
+            {
+                "save_version": 2,
+                "unlocked": 1,
+                "yeti_seen": "yes",
+                "yeti_defeated": 1,
+            }
+        )
+
+        self.assertIs(defaulted["yeti_seen"], False)
+        self.assertIs(defaulted["yeti_defeated"], False)
+        self.assertIs(malformed["yeti_seen"], False)
+        self.assertIs(malformed["yeti_defeated"], False)
+
     def test_legacy_force_unlock_is_reset_without_losing_player_data(self):
         legacy = {
             "unlocked": 50,
