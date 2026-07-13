@@ -18,6 +18,7 @@ from almanac import AlmanacEntry, build_almanac_catalog
 from adventure_levels import ADVENTURE_LEVELS, SHOP_UPGRADE_PLANT_KEYS
 from progression import migrate_save_data, record_adventure_clear
 from ui_text import FontRole, UIFontManager, wrap_text
+from yeti_sprite import draw_yeti_sprite
 from zombie_behaviors import ZOMBIE_COMBAT_PROFILES, movement_multiplier, state_name
 from wave_director import (
     ADVENTURE_ZOMBIE_POINT_COSTS,
@@ -13824,6 +13825,8 @@ class Game:
         return surf
 
     def draw_seed_zombie_signature(self, key: str) -> Optional[pygame.Surface]:
+        if key == "yeti":
+            return draw_yeti_sprite()
         if key == "normal":
             surf = self.new_seed_canvas()
             skin = (164, 206, 140)
@@ -14586,11 +14589,21 @@ class Game:
         cfg = self.zombies.get(kind)
         if not cfg:
             return None
-        sprite = self.load_image(cfg.sprite_path, size=size or (74, 102))
+        requested_size = size or (74, 102)
+        cache_key = (cfg.sprite_path, requested_size)
+        sprite = self.image_cache.get(cache_key)
+        if sprite is None:
+            sprite = self.load_image(cfg.sprite_path, size=requested_size)
+        used_programmatic_fallback = False
+        if sprite is None and kind == "yeti":
+            sprite = draw_yeti_sprite(requested_size)
+            self.image_cache[cache_key] = sprite
+            used_programmatic_fallback = True
         log_key = ("zombie", kind)
         if sprite is not None:
             if log_key not in self.logged_loaded_sprites:
-                print(f"[sprite loaded] zombie {kind} -> {cfg.sprite_path}")
+                status = "fallback" if used_programmatic_fallback else "loaded"
+                print(f"[sprite {status}] zombie {kind} -> {cfg.sprite_path}")
                 self.logged_loaded_sprites.add(log_key)
         else:
             if log_key not in self.logged_missing_sprites:

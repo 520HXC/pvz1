@@ -72,3 +72,4 @@ catapult -> NOT FOUND
 gargantuar -> NOT FOUND
 imp -> NOT FOUND
 zomboss -> NOT FOUND
+yeti -> ORIGINAL PROCEDURAL ART GENERATED IN REPOSITORY
