@@ -5,6 +5,7 @@ import random
 import re
 import struct
 import sys
+import tempfile
 import zlib
 from array import array
 from dataclasses import dataclass, field, replace
@@ -17,6 +18,7 @@ import pygame
 from almanac import AlmanacEntry, build_almanac_catalog
 from adventure_levels import ADVENTURE_LEVELS, SHOP_UPGRADE_PLANT_KEYS
 from progression import SAVE_VERSION, migrate_save_data, record_adventure_clear
+from shop import SHOP_CATALOG, ShopPurchaseStatus, prepare_shop_purchase
 from ui_text import FontRole, UIFontManager, wrap_text
 from yeti_sprite import draw_yeti_sprite
 from zombie_behaviors import ZOMBIE_COMBAT_PROFILES, movement_multiplier, state_name
@@ -3994,7 +3996,26 @@ class SaveManager:
             and int(data["save_version"]) > SAVE_VERSION
         ):
             return
-        self.path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        temp_path: Optional[Path] = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                "w",
+                encoding="utf-8",
+                dir=self.path.parent,
+                prefix=f".{self.path.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as temp_file:
+                temp_path = Path(temp_file.name)
+                json.dump(data, temp_file, indent=2)
+            os.replace(temp_path, self.path)
+        except Exception:
+            if temp_path is not None:
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            raise
 
 
 class ConfigManager:
@@ -9271,9 +9292,14 @@ class BattleState:
         if isinstance(sun, (int, float)):
             self.sun = max(0, int(sun))
 
-    def level_available_cards(self, level: LevelConfig) -> List[str]:
+    def level_available_cards(
+        self,
+        level: LevelConfig,
+        mode_rules: Optional[Dict[str, object]] = None,
+    ) -> List[str]:
         upgrade_locked = set(UPGRADE_PLANT_KEYS)
-        owned = set(k for k, v in self.save_data.get("upgrades", {}).items() if v)
+        raw_upgrades = self.save_data.get("upgrades", {})
+        owned = set(k for k, v in raw_upgrades.items() if v) if isinstance(raw_upgrades, dict) else set()
         cards: List[str] = []
         for c in level.cards:
             if c not in self.plant_types:
@@ -9281,6 +9307,19 @@ class BattleState:
             if c in upgrade_locked and c not in owned:
                 continue
             cards.append(c)
+        rules = mode_rules if isinstance(mode_rules, dict) else {}
+        normal_adventure_select = (
+            bool(rules.get("adventure_level_launch", False))
+            and str(getattr(level, "stage_style", "normal_select")) == "normal_select"
+            and not rules.get("mode_name")
+            and not rules.get("mode_family")
+            and not bool(rules.get("conveyor", False))
+            and "force_pool" not in rules
+        )
+        if normal_adventure_select:
+            for item in SHOP_CATALOG.items:
+                if item.key in owned and item.key in self.plant_types and item.key not in cards:
+                    cards.append(item.key)
         if not cards:
             cards = ["sunflower", "peashooter", "wallnut"]
         return cards
@@ -9294,7 +9333,7 @@ class BattleState:
         self.level = level
         self.mode_rules = dict(mode_rules or {})
         self.field = self.fields[level.battlefield]
-        available = self.level_available_cards(level)
+        available = self.level_available_cards(level, self.mode_rules)
         forced_pool = [k for k in self.mode_list("force_pool") if k in self.plant_types]
         if forced_pool:
             available = forced_pool
@@ -12478,6 +12517,18 @@ class Game:
         self.audio = AudioManager(self.assets_root)
         self.audio.set_enabled(self.options_music_on, self.options_sfx_on)
         self.update_scene_music(force=True)
+
+    def purchase_shop_item(self, item_key: str) -> ShopPurchaseStatus:
+        status, candidate = prepare_shop_purchase(self.save_data, item_key)
+        if status is not ShopPurchaseStatus.PURCHASED:
+            return status
+        try:
+            self.save_mgr.save(candidate)
+        except Exception:
+            return ShopPurchaseStatus.SAVE_FAILED
+        self.save_data.clear()
+        self.save_data.update(candidate)
+        return ShopPurchaseStatus.PURCHASED
 
     @property
     def encyclopedia_tab(self) -> str:
@@ -16587,12 +16638,14 @@ class Game:
         self.pending_level_idx = idx
         self.plant_select_return_scene = return_scene
         level = self.levels[idx]
-        available = [k for k in (forced_pool or []) if k in self.plants] if forced_pool else self.battle.level_available_cards(level)
+        rules = self.prepare_mode_rules_for_run(mode_rules)
+        available = [k for k in (forced_pool or []) if k in self.plants] if forced_pool else self.battle.level_available_cards(level, rules)
+        if forced_pool:
+            rules["force_pool"] = list(dict.fromkeys(available))
         if not available:
-            available = self.battle.level_available_cards(level)
+            available = self.battle.level_available_cards(level, rules)
         self.plant_select_pool = list(dict.fromkeys(available))
         self.plant_select_pick_limit = int(pick_limit if pick_limit is not None else self.default_plant_select_pick_limit)
-        rules = self.prepare_mode_rules_for_run(mode_rules)
         if forced_pool:
             rules["force_pool"] = list(self.plant_select_pool)
         self.pending_mode_rules = rules
