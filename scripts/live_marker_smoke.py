@@ -312,6 +312,9 @@ def main() -> int:
     pvz.BattleState.bump_anim_marker = wrapped_bump_anim_marker
 
     game = pvz.Game()
+    # The smoke suite exercises every scripted scene with an isolated profile.
+    # Do not let the repository or player's adventure progress lock later modes.
+    game.save_data["unlocked"] = 50
     game.options_music_on = True
     game.options_sfx_on = True
     game.sync_audio_options(force_music=True)
