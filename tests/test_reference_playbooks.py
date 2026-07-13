@@ -139,6 +139,14 @@ class ReferencePlaybookTests(unittest.TestCase):
         second = run_reference_playbook(level, playbook, 3, max_seconds=180)
         self.assertEqual(first, second)
 
+    def test_default_simulation_limit_covers_the_slow_fog_reference_win(self):
+        from reference_playbooks import run_reference_playbook
+
+        default_limit = inspect.signature(run_reference_playbook).parameters[
+            "max_seconds"
+        ].default
+        self.assertEqual(1200.0, default_limit)
+
     def test_runner_logs_only_legal_water_roof_and_balloon_placements(self):
         from reference_playbooks import run_reference_playbook
 

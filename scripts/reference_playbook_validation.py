@@ -25,10 +25,12 @@ def run_one(code: str, seed: int, max_seconds: float):
 
 
 def parse_args():
+    from reference_playbooks import REFERENCE_MAX_SECONDS
+
     parser = argparse.ArgumentParser(description="Validate legal adventure reference playbooks")
     parser.add_argument("--seeds", type=int, default=20)
     parser.add_argument("--workers", type=int, default=max(1, min(12, os.cpu_count() or 1)))
-    parser.add_argument("--max-seconds", type=float, default=900.0)
+    parser.add_argument("--max-seconds", type=float, default=REFERENCE_MAX_SECONDS)
     parser.add_argument("--codes", nargs="*", default=[])
     parser.add_argument("--json-out", type=Path)
     return parser.parse_args()

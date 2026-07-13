@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from typing import Tuple
 
 
+REFERENCE_MAX_SECONDS = 1200.0
+
+
 @dataclass(frozen=True)
 class ReferenceAction:
     at: float
@@ -850,7 +853,7 @@ def run_reference_playbook(
     playbook: ReferencePlaybook,
     seed: int,
     *,
-    max_seconds: float = 900.0,
+    max_seconds: float = REFERENCE_MAX_SECONDS,
     step_seconds: float = 1.0,
 ) -> ReferenceRunResult:
     import game
