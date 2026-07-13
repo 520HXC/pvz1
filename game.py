@@ -1731,6 +1731,7 @@ I18N = {
         "shop_locked_notice": "This upgrade unlocks after clearing {level}.",
         "shop_purchase_success": "Nice choice. {name} is ready for adventure!",
         "shop_insufficient_notice": "You need {amount} more coins.",
+        "shop_shortfall": "{amount} coins short",
         "shop_future_save_notice": "This save is newer than this game build. No coins were spent.",
         "shop_invalid_data_notice": "The save data needs repair before Dave can sell this.",
         "shop_save_failed_notice": "The purchase could not be saved. No coins were spent.",
@@ -2152,6 +2153,7 @@ I18N = {
         "shop_locked_notice": "通关 {level} 后才能购买这个升级。",
         "shop_purchase_success": "好选择，{name} 已经可以在冒险中使用了！",
         "shop_insufficient_notice": "还差 {amount} 枚金币。",
+        "shop_shortfall": "还差 {amount} 金币",
         "shop_future_save_notice": "这个存档来自更新版本，本次没有扣除金币。",
         "shop_invalid_data_notice": "存档数据需要修复，戴夫暂时不能出售这个升级。",
         "shop_save_failed_notice": "购买结果无法保存，本次没有扣除金币。",
@@ -21460,6 +21462,10 @@ class Game:
             return self.tr("shop_sold_out")
         if status is ShopPurchaseStatus.LOCKED:
             return self.tr("shop_unlock_at").format(level=item.unlock_level)
+        if status is ShopPurchaseStatus.INSUFFICIENT:
+            coins = self.save_data.get("coins", 0)
+            available = coins if type(coins) is int else 0
+            return self.tr("shop_shortfall").format(amount=max(0, item.price - available))
         if status in (ShopPurchaseStatus.FUTURE_SAVE, ShopPurchaseStatus.INVALID_DATA):
             return self.tr("shop_unavailable")
         return self.tr("shop_ready")
@@ -21570,13 +21576,15 @@ class Game:
             fill = (70, 128, 50)
         inner = (138, 198, 92) if enabled else (178, 170, 146)
         self.draw_framed_panel(rect, fill=fill, border=(48, 82, 34) if enabled else (94, 90, 76), radius=14, inner=inner)
-        if enabled:
+        if status is ShopPurchaseStatus.INSUFFICIENT:
+            label = self.shop_card_status_text(item.key, status)
+        elif enabled:
             label = f"{self.tr('buy')}  {item.price}"
         elif status is ShopPurchaseStatus.OWNED:
             label = self.tr("shop_sold_out")
         else:
             label = self.tr("shop_unavailable")
-        self.draw_shop_fitted_label(label, rect.inflate(-16, -10), FontRole.SMALL, (252, 246, 218) if enabled else (58, 54, 44), min_size=11)
+        self.draw_shop_fitted_label(label, rect.inflate(-16, -10), FontRole.SMALL, (38, 48, 22) if enabled else (58, 54, 44), min_size=11)
 
     def draw_shop(self) -> None:
         self.ensure_shop_selection()

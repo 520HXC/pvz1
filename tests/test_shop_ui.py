@@ -14,6 +14,7 @@ import pytest
 import game as pvz
 from progression import SAVE_VERSION
 from shop import SHOP_CATALOG
+from ui_text import contrast_ratio
 
 
 @pytest.fixture
@@ -218,3 +219,80 @@ def test_bilingual_shop_draw_fits_text_inside_declared_rectangles(
 def test_crazy_dave_helper_is_shared_with_boss_intro_and_shop() -> None:
     assert "draw_crazy_dave_character(" in inspect.getsource(pvz.BattleState.draw_battle_intro_overlay)
     assert "draw_crazy_dave_character(" in inspect.getsource(pvz.Game.draw_shop)
+
+
+@pytest.mark.parametrize(
+    ("language", "expected"),
+    (("en", "1 coins short"), ("zh", "还差 1 金币")),
+)
+def test_insufficient_balance_is_visible_on_card_and_detail_before_click(
+    game_instance: pvz.Game,
+    monkeypatch: pytest.MonkeyPatch,
+    language: str,
+    expected: str,
+) -> None:
+    set_shop_save(game_instance, coins=499, cleared_levels=["3-4"])
+    game_instance.lang = language
+    game_instance.shop_selected_key = "gatling"
+    captured: list[str] = []
+
+    def capture_label(text: str, *_args: object, **_kwargs: object) -> pygame.Rect:
+        captured.append(text)
+        return pygame.Rect(0, 0, 1, 1)
+
+    monkeypatch.setattr(game_instance, "draw_shop_fitted_label", capture_label)
+    card = game_instance.shop_layout()["item_rects"]["gatling"]
+    game_instance.draw_shop_item_card("gatling", card, selected=True, hover=False)
+    card_labels = list(captured)
+    captured.clear()
+    game_instance.draw_shop_detail(game_instance.shop_layout()["bubble"])
+
+    assert any(expected in label for label in card_labels)
+    assert any(expected in label for label in captured)
+
+
+def test_enabled_buy_button_text_meets_contrast_in_normal_hover_and_pressed_states(
+    game_instance: pvz.Game,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    set_shop_save(game_instance, coins=500, cleared_levels=["3-4"])
+    game_instance.shop_selected_key = "gatling"
+    rect = game_instance.shop_layout()["buy_btn"]
+    state = {"mouse": (-1, -1), "ticks": 100}
+    captured: dict[str, tuple[int, int, int]] = {}
+
+    monkeypatch.setattr(pvz.pygame.mouse, "get_pos", lambda: state["mouse"])
+    monkeypatch.setattr(pvz.pygame.time, "get_ticks", lambda: state["ticks"])
+
+    def capture_panel(
+        _rect: pygame.Rect,
+        *,
+        fill: tuple[int, int, int],
+        border: tuple[int, int, int],
+        radius: int,
+        inner: tuple[int, int, int],
+    ) -> None:
+        captured["background"] = inner
+
+    def capture_label(
+        _text: str,
+        _rect: pygame.Rect,
+        _role: object,
+        color: tuple[int, int, int],
+        **_kwargs: object,
+    ) -> pygame.Rect:
+        captured["text"] = color
+        return pygame.Rect(0, 0, 1, 1)
+
+    monkeypatch.setattr(game_instance, "draw_framed_panel", capture_panel)
+    monkeypatch.setattr(game_instance, "draw_shop_fitted_label", capture_label)
+
+    ratios: list[float] = []
+    for mouse, pressed_until in (((-1, -1), 0), (rect.center, 0), (rect.center, 200)):
+        state["mouse"] = mouse
+        game_instance.shop_pressed_until_ms = pressed_until
+        captured.clear()
+        game_instance.draw_shop_buy_button(rect)
+        ratios.append(contrast_ratio(captured["text"], captured["background"]))
+
+    assert all(ratio >= 4.5 for ratio in ratios)
