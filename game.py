@@ -102,6 +102,63 @@ UI_PALETTE = {
 }
 
 
+def draw_crazy_dave_character(
+    screen: pygame.Surface,
+    rect: pygame.Rect,
+    *,
+    bungee: bool = False,
+    rope_y: Optional[int] = None,
+    shop_pose: bool = False,
+) -> None:
+    """Draw the shared flat-outline Dave figure without external art assets."""
+    scale = min(rect.w / 92.0, rect.h / 118.0)
+    origin_x = rect.centerx - int(round(46 * scale))
+    origin_y = rect.bottom - int(round(118 * scale))
+
+    def sx(value: float) -> int:
+        return origin_x + int(round(value * scale))
+
+    def sy(value: float) -> int:
+        return origin_y + int(round(value * scale))
+
+    def sr(x: float, y: float, w: float, h: float) -> pygame.Rect:
+        return pygame.Rect(sx(x), sy(y), max(1, int(round(w * scale))), max(1, int(round(h * scale))))
+
+    hat = [(sx(16), sy(20)), (sx(62), sy(10)), (sx(74), sy(32)), (sx(22), sy(42))]
+    beard = sr(18, 46, 42, 34)
+    if shop_pose:
+        pygame.draw.line(screen, (64, 112, 54), (sx(21), sy(69)), (sx(6), sy(88)), max(2, int(round(6 * scale))))
+        pygame.draw.line(screen, (64, 112, 54), (sx(61), sy(69)), (sx(80), sy(84)), max(2, int(round(6 * scale))))
+        pygame.draw.circle(screen, (242, 212, 176), (sx(5), sy(90)), max(2, int(round(5 * scale))))
+        pygame.draw.circle(screen, (242, 212, 176), (sx(81), sy(86)), max(2, int(round(5 * scale))))
+    pygame.draw.ellipse(screen, (242, 212, 176), sr(22, 18, 34, 38))
+    pygame.draw.polygon(screen, (118, 74, 34), hat)
+    pygame.draw.polygon(screen, (78, 46, 18), hat, max(1, int(round(2 * scale))))
+    pygame.draw.rect(screen, (98, 160, 82), sr(18, 58, 44, 36), border_radius=max(2, int(round(12 * scale))))
+    pygame.draw.rect(screen, (64, 112, 54), sr(18, 58, 44, 36), max(1, int(round(2 * scale))), border_radius=max(2, int(round(12 * scale))))
+    pygame.draw.ellipse(screen, (248, 246, 238), beard)
+    pygame.draw.ellipse(screen, (164, 118, 66), beard, max(1, int(round(2 * scale))))
+    pygame.draw.circle(screen, (40, 32, 20), (sx(32), sy(36)), max(1, int(round(2 * scale))))
+    pygame.draw.circle(screen, (40, 32, 20), (sx(46), sy(38)), max(1, int(round(2 * scale))))
+    pygame.draw.arc(screen, (92, 52, 28), sr(28, 46, 18, 10), math.pi * 0.15, math.pi * 0.95, max(1, int(round(2 * scale))))
+    if shop_pose:
+        pygame.draw.rect(screen, (62, 74, 84), sr(23, 91, 15, 22), border_radius=max(1, int(round(3 * scale))))
+        pygame.draw.rect(screen, (62, 74, 84), sr(43, 91, 15, 22), border_radius=max(1, int(round(3 * scale))))
+        pygame.draw.ellipse(screen, (70, 48, 28), sr(19, 108, 22, 8))
+        pygame.draw.ellipse(screen, (70, 48, 28), sr(41, 108, 22, 8))
+        pygame.draw.line(screen, (78, 46, 24), (sx(27), sy(31)), (sx(35), sy(29)), max(1, int(round(2 * scale))))
+        pygame.draw.line(screen, (78, 46, 24), (sx(42), sy(30)), (sx(50), sy(32)), max(1, int(round(2 * scale))))
+        pygame.draw.ellipse(screen, (218, 170, 130), sr(35, 36, 9, 12))
+        pygame.draw.arc(screen, (92, 52, 28), sr(28, 44, 22, 13), math.pi * 0.10, math.pi * 0.92, max(1, int(round(2 * scale))))
+    if bungee:
+        rope_x = sx(54)
+        top = int(rope_y) if rope_y is not None else rect.top
+        pygame.draw.line(screen, (86, 72, 60), (rope_x, top), (rope_x, sy(8)), max(1, int(round(3 * scale))))
+        hook = [(sx(46), sy(8)), (sx(61), sy(8)), (sx(56), sy(24)), (sx(50), sy(24))]
+        pygame.draw.polygon(screen, (214, 198, 168), hook)
+        pygame.draw.polygon(screen, (96, 82, 64), hook, max(1, int(round(2 * scale))))
+
+
 class AudioManager:
     SOUND_EXTS = (".ogg", ".wav", ".mp3")
     SFX_COOLDOWNS_MS = {
@@ -1667,6 +1724,26 @@ I18N = {
         "press_a_close": "Press A to close",
         "owned": "Owned",
         "buy": "Buy",
+        "shop_stock_title": "Trunk Upgrades",
+        "shop_detail_title": "Dave's Pick",
+        "shop_sold_out": "SOLD OUT",
+        "shop_unlock_at": "Clear {level} to unlock",
+        "shop_locked_notice": "This upgrade unlocks after clearing {level}.",
+        "shop_purchase_success": "Nice choice. {name} is ready for adventure!",
+        "shop_insufficient_notice": "You need {amount} more coins.",
+        "shop_future_save_notice": "This save is newer than this game build. No coins were spent.",
+        "shop_invalid_data_notice": "The save data needs repair before Dave can sell this.",
+        "shop_save_failed_notice": "The purchase could not be saved. No coins were spent.",
+        "shop_hint": "Arrow keys select  |  Enter buys  |  Esc returns",
+        "shop_price": "Price {price}",
+        "shop_ready": "Ready to buy",
+        "shop_unavailable": "Unavailable",
+        "shop_dave_gatling": "Four peas at a time. That's four times the very reasonable noise.",
+        "shop_dave_twin_sunflower": "Two sunny faces, one premium patch of lawn.",
+        "shop_dave_gloom_shroom": "It looks grumpy because every nearby zombie is standing too close.",
+        "shop_dave_spikerock": "Dave-tested against tires, boots, and questionable parking.",
+        "shop_dave_winter_melon": "Big melon, cold landing, excellent roof manners.",
+        "shop_dave_cob_cannon": "Two Kernel-pults go in. One enormous problem solver comes out.",
         "field_day": "Day",
         "field_night": "Night",
         "field_pool": "Pool",
@@ -2068,6 +2145,26 @@ I18N = {
         "press_a_close": "按 A 键关闭",
         "owned": "已拥有",
         "buy": "购买",
+        "shop_stock_title": "后备箱升级货架",
+        "shop_detail_title": "戴夫推荐",
+        "shop_sold_out": "已售罄",
+        "shop_unlock_at": "通关 {level} 后解锁",
+        "shop_locked_notice": "通关 {level} 后才能购买这个升级。",
+        "shop_purchase_success": "好选择，{name} 已经可以在冒险中使用了！",
+        "shop_insufficient_notice": "还差 {amount} 枚金币。",
+        "shop_future_save_notice": "这个存档来自更新版本，本次没有扣除金币。",
+        "shop_invalid_data_notice": "存档数据需要修复，戴夫暂时不能出售这个升级。",
+        "shop_save_failed_notice": "购买结果无法保存，本次没有扣除金币。",
+        "shop_hint": "方向键选择  |  回车购买  |  Esc 返回",
+        "shop_price": "价格 {price}",
+        "shop_ready": "可以购买",
+        "shop_unavailable": "暂不可用",
+        "shop_dave_gatling": "一次四颗豌豆，动静也非常合理地翻了四倍。",
+        "shop_dave_twin_sunflower": "两个笑脸挤在一格里，阳光当然也要加倍。",
+        "shop_dave_gloom_shroom": "它看起来不高兴，因为附近的僵尸站得太近了。",
+        "shop_dave_spikerock": "戴夫亲测，轮胎、靴子和乱停车都扛不住。",
+        "shop_dave_winter_melon": "瓜够大，落地够冷，屋顶礼仪也很优秀。",
+        "shop_dave_cob_cannon": "放进两株玉米投手，得到一个超大号问题解决器。",
         "field_day": "白天",
         "field_night": "夜晚",
         "field_pool": "泳池",
@@ -5202,25 +5299,12 @@ class BattleState:
         bubble = pygame.Rect(184, panel_rect.y + 8, panel_rect.w - 232, panel_rect.h - 16)
         draw_intro_panel(bubble, fill=(252, 247, 228), border=(142, 108, 56), radius=16, inner=(255, 252, 238))
         dave_rect = pygame.Rect(int(self.battle_intro_dave_x), int(self.battle_intro_dave_y) - 92, 92, 118)
-        hat = [(dave_rect.x + 16, dave_rect.y + 20), (dave_rect.x + 62, dave_rect.y + 10), (dave_rect.x + 74, dave_rect.y + 32), (dave_rect.x + 22, dave_rect.y + 42)]
-        beard = pygame.Rect(dave_rect.x + 18, dave_rect.y + 46, 42, 34)
-        pygame.draw.ellipse(screen, (242, 212, 176), pygame.Rect(dave_rect.x + 22, dave_rect.y + 18, 34, 38))
-        pygame.draw.polygon(screen, (118, 74, 34), hat)
-        pygame.draw.polygon(screen, (78, 46, 18), hat, 2)
-        pygame.draw.rect(screen, (98, 160, 82), pygame.Rect(dave_rect.x + 18, dave_rect.y + 58, 44, 36), border_radius=12)
-        pygame.draw.rect(screen, (64, 112, 54), pygame.Rect(dave_rect.x + 18, dave_rect.y + 58, 44, 36), 2, border_radius=12)
-        pygame.draw.ellipse(screen, (248, 246, 238), beard)
-        pygame.draw.ellipse(screen, (164, 118, 66), beard, 2)
-        pygame.draw.circle(screen, (40, 32, 20), (dave_rect.x + 32, dave_rect.y + 36), 2)
-        pygame.draw.circle(screen, (40, 32, 20), (dave_rect.x + 46, dave_rect.y + 38), 2)
-        pygame.draw.arc(screen, (92, 52, 28), pygame.Rect(dave_rect.x + 28, dave_rect.y + 46, 18, 10), math.pi * 0.15, math.pi * 0.95, 2)
-        if phase == "bungee_snatch":
-            rope_x = dave_rect.centerx + 8
-            rope_y = int(self.battle_intro_bungee_y)
-            pygame.draw.line(screen, (86, 72, 60), (rope_x, rope_y), (rope_x, dave_rect.y + 8), 3)
-            hook = [(rope_x - 8, dave_rect.y + 8), (rope_x + 7, dave_rect.y + 8), (rope_x + 2, dave_rect.y + 24), (rope_x - 4, dave_rect.y + 24)]
-            pygame.draw.polygon(screen, (214, 198, 168), hook)
-            pygame.draw.polygon(screen, (96, 82, 64), hook, 2)
+        draw_crazy_dave_character(
+            screen,
+            dave_rect,
+            bungee=phase == "bungee_snatch",
+            rope_y=int(self.battle_intro_bungee_y),
+        )
         label_font = fonts["tiny"]
         name_font = fonts["small"]
         draw_intro_label(name_font, "Crazy Dave", (bubble.x + 84, bubble.y + 18), outline_width=2)
@@ -12514,6 +12598,13 @@ class Game:
         self.zen_notice = ""
         self.zen_notice_until_ms = 0
         self.shop_return_scene = "start"
+        self.shop_selected_key = SHOP_CATALOG.items[0].key
+        self.shop_focus_index = 0
+        self.shop_notice = ""
+        self.shop_notice_kind = ""
+        self.shop_notice_until_ms = 0
+        self.shop_pressed_until_ms = 0
+        self.shop_text_placements: List[Tuple[pygame.Rect, pygame.Rect]] = []
         self.audio = AudioManager(self.assets_root)
         self.audio.set_enabled(self.options_music_on, self.options_sfx_on)
         self.update_scene_music(force=True)
@@ -12529,6 +12620,133 @@ class Game:
         self.save_data.clear()
         self.save_data.update(candidate)
         return ShopPurchaseStatus.PURCHASED
+
+    def shop_layout(self) -> Dict[str, object]:
+        item_rects: Dict[str, pygame.Rect] = {}
+        card_w, card_h = 224, 150
+        for index, item in enumerate(SHOP_CATALOG.items):
+            col = index % 3
+            row = index // 3
+            item_rects[item.key] = pygame.Rect(500 + col * 236, 220 + row * 166, card_w, card_h)
+        return {
+            "header": pygame.Rect(40, 24, 1200, 72),
+            "coin": pygame.Rect(752, 34, 208, 52),
+            "dave": pygame.Rect(48, 374, 184, 236),
+            "bubble": pygame.Rect(48, 114, 396, 246),
+            "trunk": pygame.Rect(468, 112, 764, 536),
+            "item_rects": item_rects,
+            "buy_btn": pygame.Rect(244, 568, 200, 56),
+            "back_btn": pygame.Rect(48, 660, 188, 44),
+            "hint": pygame.Rect(468, 660, 764, 44),
+        }
+
+    def ensure_shop_selection(self) -> None:
+        keys = SHOP_CATALOG.keys()
+        if not keys:
+            self.shop_selected_key = ""
+            self.shop_focus_index = 0
+            return
+        if getattr(self, "shop_selected_key", "") not in keys:
+            self.shop_selected_key = keys[0]
+        self.shop_focus_index = keys.index(self.shop_selected_key)
+
+    def shop_preview_status(self, item_key: str) -> ShopPurchaseStatus:
+        status, _candidate = prepare_shop_purchase(self.save_data, item_key)
+        return status
+
+    def shop_status_message(self, status: ShopPurchaseStatus, item_key: str) -> str:
+        item = SHOP_CATALOG.get(item_key)
+        if item is None:
+            return self.tr("shop_invalid_data_notice")
+        if status is ShopPurchaseStatus.PURCHASED:
+            return self.tr("shop_purchase_success").format(name=self.plant_display_name(item.key))
+        if status is ShopPurchaseStatus.OWNED:
+            return self.tr("shop_sold_out")
+        if status is ShopPurchaseStatus.INSUFFICIENT:
+            coins = self.save_data.get("coins", 0)
+            available = coins if type(coins) is int else 0
+            return self.tr("shop_insufficient_notice").format(amount=max(0, item.price - available))
+        if status is ShopPurchaseStatus.LOCKED:
+            return self.tr("shop_locked_notice").format(level=item.unlock_level)
+        if status is ShopPurchaseStatus.FUTURE_SAVE:
+            return self.tr("shop_future_save_notice")
+        if status is ShopPurchaseStatus.SAVE_FAILED:
+            return self.tr("shop_save_failed_notice")
+        return self.tr("shop_invalid_data_notice")
+
+    def set_shop_notice(self, status: ShopPurchaseStatus, item_key: str) -> None:
+        self.shop_notice_kind = status.value
+        self.shop_notice = self.shop_status_message(status, item_key)
+        self.shop_notice_until_ms = pygame.time.get_ticks() + 3200
+
+    def attempt_shop_purchase(self) -> ShopPurchaseStatus:
+        self.ensure_shop_selection()
+        item_key = self.shop_selected_key
+        preview = self.shop_preview_status(item_key)
+        if preview in (ShopPurchaseStatus.PURCHASED, ShopPurchaseStatus.INSUFFICIENT):
+            status = self.purchase_shop_item(item_key)
+        else:
+            status = preview
+        self.set_shop_notice(status, item_key)
+        self.shop_pressed_until_ms = pygame.time.get_ticks() + 150
+        self.play_sfx("shop_buy" if status is ShopPurchaseStatus.PURCHASED else "ui_back")
+        return status
+
+    def handle_shop_click(self, p: Tuple[int, int]) -> bool:
+        layout = self.shop_layout()
+        back_btn = layout["back_btn"]
+        if isinstance(back_btn, pygame.Rect) and back_btn.collidepoint(p):
+            self.play_sfx("ui_back")
+            destination = self.shop_return_scene if self.shop_return_scene in ("start", "select") else "start"
+            self.change_scene(destination)
+            return True
+        item_rects = layout["item_rects"]
+        if isinstance(item_rects, dict):
+            for index, item in enumerate(SHOP_CATALOG.items):
+                rect = item_rects.get(item.key)
+                if isinstance(rect, pygame.Rect) and rect.collidepoint(p):
+                    self.shop_selected_key = item.key
+                    self.shop_focus_index = index
+                    self.shop_notice = ""
+                    self.shop_notice_kind = ""
+                    self.play_sfx("ui_click")
+                    return True
+        buy_btn = layout["buy_btn"]
+        if isinstance(buy_btn, pygame.Rect) and buy_btn.collidepoint(p):
+            self.attempt_shop_purchase()
+            return True
+        return False
+
+    def handle_shop_key(self, key: int) -> bool:
+        self.ensure_shop_selection()
+        keys = SHOP_CATALOG.keys()
+        if key == pygame.K_ESCAPE:
+            self.play_sfx("ui_back")
+            destination = self.shop_return_scene if self.shop_return_scene in ("start", "select") else "start"
+            self.change_scene(destination)
+            return True
+        if not keys:
+            return False
+        index = self.shop_focus_index
+        if key == pygame.K_LEFT:
+            index = max(0, index - 1)
+        elif key == pygame.K_RIGHT:
+            index = min(len(keys) - 1, index + 1)
+        elif key == pygame.K_UP:
+            index = max(0, index - 3)
+        elif key == pygame.K_DOWN:
+            index = min(len(keys) - 1, index + 3)
+        elif key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            self.attempt_shop_purchase()
+            return True
+        else:
+            return False
+        self.shop_focus_index = index
+        self.shop_selected_key = keys[index]
+        self.shop_notice = ""
+        self.shop_notice_kind = ""
+        self.play_sfx("ui_click")
+        return True
 
     @property
     def encyclopedia_tab(self) -> str:
@@ -20357,27 +20575,7 @@ class Game:
                 self.play_sfx("ui_click")
             return
         if self.scene == "shop":
-            if self.back_btn.collidepoint(p):
-                self.play_sfx("ui_back")
-                self.change_scene(self.shop_return_scene if self.shop_return_scene in ("start", "select") else "start")
-                return
-            upgrades = [("twin_sunflower", 500), ("gloom_shroom", 750), ("winter_melon", 1000), ("spikerock", 800), ("cob_cannon", 1200)]
-            for i, (name, cost) in enumerate(upgrades):
-                rect = pygame.Rect(96, 214 + i * 86, 1088, 70)
-                if rect.collidepoint(p):
-                    if self.save_data.get("upgrades", {}).get(name):
-                        self.play_sfx("ui_click")
-                        return
-                    if int(self.save_data.get("coins", 0)) >= cost:
-                        self.save_data["coins"] = int(self.save_data.get("coins", 0)) - cost
-                        up = dict(self.save_data.get("upgrades", {}))
-                        up[name] = True
-                        self.save_data["upgrades"] = up
-                        self.save_mgr.save(self.save_data)
-                        self.play_sfx("shop_buy")
-                    else:
-                        self.play_sfx("ui_back")
-                    return
+            self.handle_shop_click(p)
             return
         if self.scene == "battle":
             if self.battle_result_hold_active():
@@ -21162,45 +21360,278 @@ class Game:
     def draw_encyclopedia_detail_legacy(self) -> None:
         self.draw_almanac_book(overlay=False)
 
+    def draw_shop_fitted_label(
+        self,
+        text: str,
+        rect: pygame.Rect,
+        role: FontRole | str,
+        color: Tuple[int, int, int],
+        *,
+        align: str = "center",
+        min_size: int = 10,
+    ) -> pygame.Rect:
+        fitted = self.font_manager.fit_label(
+            str(text),
+            role,
+            max(1, rect.w),
+            max(1, rect.h),
+            min_size=min_size,
+            color=color,
+        )
+        if align == "left":
+            placed = fitted.surface.get_rect(midleft=(rect.x, rect.centery))
+        elif align == "right":
+            placed = fitted.surface.get_rect(midright=(rect.right, rect.centery))
+        else:
+            placed = fitted.surface.get_rect(center=rect.center)
+        self.screen.blit(fitted.surface, placed)
+        self.shop_text_placements.append((rect.copy(), placed.copy()))
+        return placed
+
+    def draw_shop_wrapped_text(
+        self,
+        text: str,
+        rect: pygame.Rect,
+        color: Tuple[int, int, int],
+        *,
+        max_lines: int,
+        font_size: int = 15,
+    ) -> List[pygame.Rect]:
+        font = self.font_manager.font(font_size)
+        while font_size > 10 and font.get_linesize() * max_lines > rect.h:
+            font_size -= 1
+            font = self.font_manager.font(font_size)
+        lines = self.font_manager.wrap_text(str(text), font, rect.w, max_lines=max_lines)
+        placements: List[pygame.Rect] = []
+        y = rect.y
+        for line in lines:
+            surface = font.render(line, True, color)
+            placed = surface.get_rect(topleft=(rect.x, y))
+            if placed.bottom > rect.bottom:
+                break
+            self.screen.blit(surface, placed)
+            self.shop_text_placements.append((rect.copy(), placed.copy()))
+            placements.append(placed)
+            y += font.get_linesize()
+        return placements
+
+    def draw_shop_car_trunk(self, rect: pygame.Rect) -> None:
+        lid = pygame.Rect(rect.x + 28, rect.y, rect.w - 56, 98)
+        lid_points = [
+            (lid.x + 28, lid.bottom),
+            (lid.x + 70, lid.y + 10),
+            (lid.right - 64, lid.y + 10),
+            (lid.right - 22, lid.bottom),
+        ]
+        pygame.draw.polygon(self.screen, (66, 126, 70), lid_points)
+        pygame.draw.polygon(self.screen, (38, 76, 42), lid_points, 5)
+        inner_lid = pygame.Rect(lid.x + 82, lid.y + 23, lid.w - 164, 48)
+        pygame.draw.rect(self.screen, (110, 78, 50), inner_lid, border_radius=16)
+        pygame.draw.rect(self.screen, (46, 34, 24), inner_lid, 4, border_radius=16)
+
+        body = pygame.Rect(rect.x, rect.y + 74, rect.w, rect.h - 74)
+        pygame.draw.rect(self.screen, (52, 116, 64), body, border_radius=34)
+        pygame.draw.rect(self.screen, (30, 70, 38), body, 5, border_radius=34)
+        gloss = pygame.Rect(body.x + 18, body.y + 12, body.w - 36, 24)
+        pygame.draw.rect(self.screen, (102, 164, 104), gloss, border_radius=12)
+
+        bay = pygame.Rect(body.x + 20, body.y + 50, body.w - 40, body.h - 108)
+        pygame.draw.rect(self.screen, (54, 39, 27), bay, border_radius=18)
+        pygame.draw.rect(self.screen, (24, 20, 16), bay, 4, border_radius=18)
+        for row_y in (bay.y + 174, bay.y + 340):
+            shelf = pygame.Rect(bay.x + 8, row_y, bay.w - 16, 14)
+            pygame.draw.rect(self.screen, (162, 108, 56), shelf, border_radius=5)
+            pygame.draw.rect(self.screen, (82, 50, 24), shelf, 3, border_radius=5)
+            pygame.draw.line(self.screen, (214, 158, 88), (shelf.x + 12, shelf.y + 3), (shelf.right - 12, shelf.y + 3), 2)
+
+        bumper = pygame.Rect(body.x + 92, body.bottom - 34, body.w - 184, 30)
+        pygame.draw.rect(self.screen, (152, 158, 154), bumper, border_radius=12)
+        pygame.draw.rect(self.screen, (68, 76, 72), bumper, 4, border_radius=12)
+        pygame.draw.line(self.screen, (224, 228, 218), (bumper.x + 18, bumper.y + 7), (bumper.right - 18, bumper.y + 7), 2)
+        for wheel_x in (body.x + 48, body.right - 78):
+            pygame.draw.ellipse(self.screen, (32, 34, 32), pygame.Rect(wheel_x, body.bottom - 18, 42, 34))
+            pygame.draw.ellipse(self.screen, (94, 100, 94), pygame.Rect(wheel_x + 10, body.bottom - 10, 22, 18))
+
+    def shop_card_status_text(self, item_key: str, status: ShopPurchaseStatus) -> str:
+        item = SHOP_CATALOG.get(item_key)
+        if item is None:
+            return self.tr("shop_unavailable")
+        if status is ShopPurchaseStatus.OWNED:
+            return self.tr("shop_sold_out")
+        if status is ShopPurchaseStatus.LOCKED:
+            return self.tr("shop_unlock_at").format(level=item.unlock_level)
+        if status in (ShopPurchaseStatus.FUTURE_SAVE, ShopPurchaseStatus.INVALID_DATA):
+            return self.tr("shop_unavailable")
+        return self.tr("shop_ready")
+
+    def draw_shop_item_card(
+        self,
+        item_key: str,
+        rect: pygame.Rect,
+        *,
+        selected: bool,
+        hover: bool,
+    ) -> None:
+        status = self.shop_preview_status(item_key)
+        fill = (255, 246, 216) if selected else ((250, 239, 204) if hover else (239, 222, 181))
+        border = (238, 190, 74) if selected else ((186, 136, 62) if hover else (112, 76, 38))
+        pygame.draw.rect(self.screen, (28, 20, 14), rect.move(3, 4), border_radius=14)
+        self.draw_framed_panel(rect, fill=fill, border=border, radius=14, inner=(255, 249, 228))
+        if selected:
+            pygame.draw.rect(self.screen, (255, 228, 112), rect.inflate(4, 4), 3, border_radius=17)
+
+        icon_rect = pygame.Rect(rect.x + 10, rect.y + 12, 72, 72)
+        pygame.draw.rect(self.screen, (205, 224, 164), icon_rect, border_radius=12)
+        pygame.draw.rect(self.screen, (86, 118, 60), icon_rect, 2, border_radius=12)
+        sprite = self.get_plant_sprite(item_key, (64, 64))
+        if sprite is not None:
+            self.screen.blit(sprite, sprite.get_rect(center=icon_rect.center))
+        if status is ShopPurchaseStatus.LOCKED:
+            dim = pygame.Surface(icon_rect.size, pygame.SRCALPHA)
+            dim.fill((32, 28, 22, 128))
+            self.screen.blit(dim, icon_rect.topleft)
+            lock_body = pygame.Rect(icon_rect.centerx - 10, icon_rect.centery - 2, 20, 17)
+            pygame.draw.arc(self.screen, (250, 232, 180), pygame.Rect(lock_body.x + 3, lock_body.y - 12, 14, 18), math.pi, math.tau, 3)
+            pygame.draw.rect(self.screen, (250, 232, 180), lock_body, border_radius=3)
+
+        name_rect = pygame.Rect(rect.x + 90, rect.y + 12, rect.w - 100, 34)
+        self.draw_shop_fitted_label(self.plant_display_name(item_key), name_rect, FontRole.SMALL, (52, 36, 20), align="left", min_size=12)
+        price_rect = pygame.Rect(rect.x + 90, rect.y + 48, rect.w - 100, 27)
+        item = SHOP_CATALOG.get(item_key)
+        price_text = self.tr("shop_price").format(price=item.price) if item is not None else self.tr("shop_unavailable")
+        self.draw_shop_fitted_label(
+            price_text,
+            price_rect,
+            FontRole.TINY,
+            (92, 54, 22),
+            align="left",
+            min_size=10,
+        )
+        if item is not None:
+            tag_rect = pygame.Rect(rect.x + 10, rect.bottom - 48, rect.w - 20, 34)
+            tag_fill = (194, 220, 164) if status is ShopPurchaseStatus.OWNED else (232, 198, 126)
+            pygame.draw.rect(self.screen, tag_fill, tag_rect, border_radius=8)
+            pygame.draw.rect(self.screen, (112, 76, 34), tag_rect, 2, border_radius=8)
+            tag_text = self.shop_card_status_text(item_key, status)
+            self.draw_shop_fitted_label(tag_text, tag_rect.inflate(-8, -6), FontRole.TINY, (50, 36, 20), min_size=10)
+
+    def draw_shop_detail(self, bubble: pygame.Rect) -> None:
+        self.ensure_shop_selection()
+        item = SHOP_CATALOG.get(self.shop_selected_key)
+        if item is None:
+            return
+        pygame.draw.rect(self.screen, (252, 246, 218), bubble, border_radius=22)
+        pygame.draw.rect(self.screen, (118, 80, 38), bubble, 4, border_radius=22)
+        tail = [(bubble.x + 54, bubble.bottom - 2), (bubble.x + 92, bubble.bottom - 2), (bubble.x + 72, bubble.bottom + 24)]
+        pygame.draw.polygon(self.screen, (252, 246, 218), tail)
+        pygame.draw.lines(self.screen, (118, 80, 38), False, [tail[0], tail[2], tail[1]], 4)
+
+        inner = bubble.inflate(-24, -18)
+        self.draw_shop_fitted_label(self.tr("shop_detail_title"), pygame.Rect(inner.x, inner.y, inner.w, 20), FontRole.BADGE, (98, 66, 30), align="left")
+        self.draw_shop_fitted_label(self.plant_display_name(item.key), pygame.Rect(inner.x, inner.y + 22, inner.w, 32), FontRole.MID, (48, 34, 20), align="left", min_size=15)
+        status = self.shop_preview_status(item.key)
+        self.draw_shop_fitted_label(
+            f"{self.tr('shop_price').format(price=item.price)}  |  {self.shop_card_status_text(item.key, status)}",
+            pygame.Rect(inner.x, inner.y + 56, inner.w, 24),
+            FontRole.SMALL,
+            (40, 92, 46) if status is ShopPurchaseStatus.OWNED else (112, 62, 22),
+            align="left",
+            min_size=11,
+        )
+
+        entry = self.almanac_catalog.entry("plants", item.key)
+        stat_parts = [f"{label} {value}" for label, value in self.almanac_stat_rows(entry)[:3]]
+        self.draw_shop_wrapped_text("  |  ".join(stat_parts), pygame.Rect(inner.x, inner.y + 83, inner.w, 38), (66, 50, 30), max_lines=2, font_size=13)
+        mechanism = entry.text(self.lang, "mechanics")
+        self.draw_shop_wrapped_text(mechanism, pygame.Rect(inner.x, inner.y + 124, inner.w, 42), (52, 42, 28), max_lines=2, font_size=14)
+
+        now = pygame.time.get_ticks()
+        if self.shop_notice and now <= self.shop_notice_until_ms:
+            message = self.shop_notice
+            message_color = (38, 92, 46) if self.shop_notice_kind == "purchased" else (132, 42, 32)
+        else:
+            message = self.tr(f"shop_dave_{item.key}")
+            message_color = (72, 52, 28)
+        self.draw_shop_wrapped_text(message, pygame.Rect(inner.x, inner.y + 172, inner.w, 46), message_color, max_lines=2, font_size=14)
+
+    def draw_shop_buy_button(self, rect: pygame.Rect) -> None:
+        self.ensure_shop_selection()
+        item = SHOP_CATALOG.get(self.shop_selected_key)
+        if item is None:
+            return
+        status = self.shop_preview_status(item.key)
+        enabled = status in (ShopPurchaseStatus.PURCHASED, ShopPurchaseStatus.INSUFFICIENT)
+        hover = enabled and rect.collidepoint(pygame.mouse.get_pos())
+        pressed = enabled and pygame.time.get_ticks() < self.shop_pressed_until_ms
+        fill = (92, 158, 64) if enabled else (148, 142, 118)
+        if hover:
+            fill = (108, 180, 74)
+        if pressed:
+            fill = (70, 128, 50)
+        inner = (138, 198, 92) if enabled else (178, 170, 146)
+        self.draw_framed_panel(rect, fill=fill, border=(48, 82, 34) if enabled else (94, 90, 76), radius=14, inner=inner)
+        if enabled:
+            label = f"{self.tr('buy')}  {item.price}"
+        elif status is ShopPurchaseStatus.OWNED:
+            label = self.tr("shop_sold_out")
+        else:
+            label = self.tr("shop_unavailable")
+        self.draw_shop_fitted_label(label, rect.inflate(-16, -10), FontRole.SMALL, (252, 246, 218) if enabled else (58, 54, 44), min_size=11)
+
     def draw_shop(self) -> None:
+        self.ensure_shop_selection()
         mouse = pygame.mouse.get_pos()
         self.draw_scene_backdrop()
-        panel = pygame.Rect(54, 40, SCREEN_WIDTH - 108, SCREEN_HEIGHT - 96)
-        self.draw_book_panel(panel)
-        self.draw_wood_sign(pygame.Rect(304, 54, 672, 80), self.tr("shop"), self.tr("daves_shop"))
-        coin_bar = pygame.Rect(84, 142, 300, 56)
-        self.draw_coin_plaque(coin_bar, int(self.save_data.get("coins", 0)))
-        stock_head = pygame.Rect(404, 150, 286, 24)
-        self.draw_menu_section_strip(stock_head, self.tr("plants_tab"), font=self.fonts["small"])
-        upgrades = [("twin_sunflower", 500), ("gloom_shroom", 750), ("winter_melon", 1000), ("spikerock", 800), ("cob_cannon", 1200)]
-        for i, (name, cost) in enumerate(upgrades):
-            y = 214 + i * 86
-            rect = pygame.Rect(96, y, 1088, 70)
-            hover = rect.collidepoint(mouse)
-            fill = (246, 236, 208) if hover else (240, 231, 199)
-            self.draw_framed_panel(rect, fill=fill, border=(130, 96, 42), radius=12, inner=(252, 246, 228))
-            owned = bool(self.save_data.get("upgrades", {}).get(name))
-            icon = self.get_plant_sprite(name, (48, 48))
-            if icon is not None:
-                self.screen.blit(icon, icon.get_rect(center=(rect.x + 44, rect.centery)))
-            status = self.tr("owned") if owned else f"{self.tr('buy')} {cost}"
-            name_plate = pygame.Rect(rect.x + 128, rect.y + 12, 308, 20)
-            self.draw_menu_section_strip(name_plate, self.plant_display_name(name), font=self.fonts["small"])
-            buy_chip = pygame.Rect(rect.right - 176, rect.y + 17, 144, 34)
-            chip_fill = (196, 222, 164) if owned else (234, 206, 146)
-            chip_border = (94, 140, 74) if owned else (134, 96, 42)
-            chip_inner = (216, 238, 186) if owned else (246, 224, 170)
-            self.draw_framed_panel(buy_chip, fill=chip_fill, border=chip_border, radius=10, inner=chip_inner)
-            self.draw_pvz_hud_label(
-                self.fonts["small"],
-                status,
-                buy_chip.center,
-                fill=(248, 238, 210),
-                outline=(46, 82, 34) if owned else (74, 46, 18),
-                outline_width=2,
+        layout = self.shop_layout()
+        self.shop_text_placements = []
+
+        header = layout["header"]
+        assert isinstance(header, pygame.Rect)
+        self.draw_framed_panel(header, fill=(122, 76, 38), border=(62, 38, 20), radius=18, inner=(164, 108, 54))
+        self.draw_shop_fitted_label(self.tr("daves_shop"), pygame.Rect(header.x + 24, header.y + 8, 470, 34), FontRole.UI, (255, 244, 210), align="left", min_size=17)
+        self.draw_shop_fitted_label(self.tr("shop_stock_title"), pygame.Rect(header.x + 24, header.y + 42, 470, 20), FontRole.TINY, (246, 220, 164), align="left", min_size=11)
+
+        coin = layout["coin"]
+        assert isinstance(coin, pygame.Rect)
+        self.draw_framed_panel(coin, fill=(238, 202, 92), border=(104, 68, 26), radius=14, inner=(252, 226, 134))
+        pygame.draw.circle(self.screen, (250, 216, 92), (coin.x + 28, coin.centery), 14)
+        pygame.draw.circle(self.screen, (136, 88, 24), (coin.x + 28, coin.centery), 14, 3)
+        coins = self.save_data.get("coins", 0)
+        coin_value = coins if type(coins) is int else 0
+        self.draw_shop_fitted_label(f"{self.tr('coins')}  {coin_value}", pygame.Rect(coin.x + 52, coin.y + 8, coin.w - 64, coin.h - 16), FontRole.SMALL, (54, 38, 18), align="left", min_size=11)
+
+        trunk = layout["trunk"]
+        assert isinstance(trunk, pygame.Rect)
+        self.draw_shop_car_trunk(trunk)
+        stock_title = pygame.Rect(trunk.x + 180, trunk.y + 84, trunk.w - 360, 30)
+        self.draw_shop_fitted_label(self.tr("shop_stock_title"), stock_title, FontRole.SMALL, (250, 232, 188), min_size=12)
+
+        item_rects = layout["item_rects"]
+        assert isinstance(item_rects, dict)
+        for item in SHOP_CATALOG.items:
+            rect = item_rects[item.key]
+            self.draw_shop_item_card(
+                item.key,
+                rect,
+                selected=item.key == self.shop_selected_key,
+                hover=rect.collidepoint(mouse),
             )
+
+        bubble = layout["bubble"]
+        dave = layout["dave"]
+        buy_btn = layout["buy_btn"]
+        back_btn = layout["back_btn"]
+        hint = layout["hint"]
+        assert all(isinstance(rect, pygame.Rect) for rect in (bubble, dave, buy_btn, back_btn, hint))
+        self.draw_shop_detail(bubble)
+        draw_crazy_dave_character(self.screen, dave, shop_pose=True)
+        self.draw_shop_buy_button(buy_btn)
         back_label = self.tr("back_to_start") if self.shop_return_scene == "start" else self.tr("back")
-        self.draw_secondary_button(self.back_btn, back_label, hover=self.back_btn.collidepoint(mouse))
+        self.back_btn = back_btn
+        self.draw_framed_panel(back_btn, fill=(214, 176, 102) if back_btn.collidepoint(mouse) else (194, 150, 78), border=(92, 58, 28), radius=12, inner=(232, 198, 126))
+        self.draw_shop_fitted_label(back_label, back_btn.inflate(-12, -8), FontRole.SMALL, (52, 36, 20), min_size=11)
+        self.draw_framed_panel(hint, fill=(80, 64, 42), border=(42, 32, 22), radius=10, inner=(106, 82, 50))
+        self.draw_shop_fitted_label(self.tr("shop_hint"), hint.inflate(-16, -8), FontRole.TINY, (252, 238, 204), min_size=10)
         return
 
     def draw_battle_controls(self) -> None:
@@ -22066,6 +22497,8 @@ class Game:
                         self.scene == "encyclopedia_detail"
                         or (self.scene == "battle" and self.battle.almanac_open)
                     ) and self.handle_almanac_key(e.key):
+                        continue
+                    if self.scene == "shop" and self.handle_shop_key(e.key):
                         continue
                     if self.scene == "battle" and e.key == pygame.K_o:
                         if self.battle_settings_open:
