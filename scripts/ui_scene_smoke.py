@@ -85,10 +85,28 @@ def main() -> int:
             game.adventure_chapter_selected = 1
             game.scene = "adventure_level_select"
 
-        def encyclopedia_detail() -> None:
-            game.encyclopedia_tab = "plants"
-            game.encyclopedia_selected_key["plants"] = "sunflower"
+        def encyclopedia_plant_detail() -> None:
+            game.almanac_tab = "plants"
+            game.almanac_page["plants"] = 0
+            game.almanac_selected_key["plants"] = "sunflower"
             game.scene = "encyclopedia_detail"
+
+        def encyclopedia_zombie_detail() -> None:
+            game.almanac_tab = "zombies"
+            game.almanac_page["zombies"] = 0
+            game.almanac_selected_key["zombies"] = "normal"
+            game.scene = "encyclopedia_detail"
+
+        def battle_almanac_overlay() -> None:
+            level = by_code["1-1"]
+            rules = game.adventure_stage_mode_rules(level)
+            rules["random_seed"] = 101
+            game.battle.reset(level, selected_cards=["peashooter"], mode_rules=rules)
+            game.battle.almanac_open = True
+            game.almanac_tab = "zombies"
+            game.almanac_page["zombies"] = 0
+            game.almanac_selected_key["zombies"] = "normal"
+            game.scene = "battle"
 
         def boss_intro() -> None:
             level = by_code["5-10"]
@@ -127,7 +145,9 @@ def main() -> int:
             ("shop", plain("shop")),
             ("zen_garden", plain("zen_garden")),
             ("encyclopedia_menu", plain("encyclopedia_menu")),
-            ("encyclopedia_detail", encyclopedia_detail),
+            ("encyclopedia_plant_detail", encyclopedia_plant_detail),
+            ("encyclopedia_zombie_detail", encyclopedia_zombie_detail),
+            ("battle_almanac_overlay", battle_almanac_overlay),
             ("boss_intro", boss_intro),
             ("portal_notice", portal_notice),
         ]

@@ -14,6 +14,7 @@ from urllib.request import Request, urlopen
 
 import pygame
 
+from almanac import AlmanacEntry, CLASSIC_PLANT_CHAPTERS, build_almanac_catalog
 from adventure_levels import ADVENTURE_LEVELS, SHOP_UPGRADE_PLANT_KEYS
 from progression import migrate_save_data, record_adventure_clear
 from ui_text import FontRole, UIFontManager, wrap_text
@@ -12201,6 +12202,12 @@ class Game:
         self.plants = build_plants()
         self.zombies = build_zombies()
         ensure_localized_descriptions(self.plants, self.zombies)
+        self.almanac_catalog = build_almanac_catalog(
+            self.plants,
+            self.zombies,
+            plant_descriptions=PLANT_DESCRIPTIONS,
+            plant_flavor=self.almanac_plant_flavor,
+        )
         # Keep startup stable: only generate missing sprites by default.
         self.ensure_original_seed_sprites(force=False, force_zombies=False)
         self.levels = build_levels(50)
@@ -12252,7 +12259,7 @@ class Game:
         self.almanac_list_page_size = 9
         self.encyclopedia_mode = "menu"
         self.encyclopedia_tab = "plants"
-        self.encyclopedia_selected_key = {"plants": "", "zombies": ""}
+        self.encyclopedia_selected_key = self.almanac_selected_key
         self.encyclopedia_scroll_y = 0
         self.encyclopedia_scroll_step = 40
         self.tip_idx = self.ui_rng.randrange(len(START_TIPS)) if START_TIPS else 0
@@ -12323,6 +12330,58 @@ class Game:
         self.audio = AudioManager(self.assets_root)
         self.audio.set_enabled(self.options_music_on, self.options_sfx_on)
         self.update_scene_music(force=True)
+
+    @property
+    def encyclopedia_tab(self) -> str:
+        return self.almanac_tab
+
+    @encyclopedia_tab.setter
+    def encyclopedia_tab(self, value: str) -> None:
+        self.almanac_tab = str(value)
+
+    @property
+    def encyclopedia_selected_key(self) -> Dict[str, str]:
+        return self.almanac_selected_key
+
+    @encyclopedia_selected_key.setter
+    def encyclopedia_selected_key(self, value: Dict[str, str]) -> None:
+        self.almanac_selected_key = value
+
+    @property
+    def encyclopedia_scroll_y(self) -> int:
+        return 0
+
+    @encyclopedia_scroll_y.setter
+    def encyclopedia_scroll_y(self, _value: int) -> None:
+        return
+
+    def almanac_plant_flavor(self, key: str, cfg: object) -> Dict[str, str]:
+        chapter_key = next(
+            (chapter for chapter, keys in CLASSIC_PLANT_CHAPTERS.items() if key in keys),
+            "day",
+        )
+        name_en = str(getattr(cfg, "display_name_en", "") or getattr(cfg, "name", key))
+        name_zh = str(getattr(cfg, "display_name_zh", "") or getattr(cfg, "name", key))
+        en_templates = {
+            "day": "{name} learned its trade where every backyard defense begins.",
+            "night": "{name} is most at home when moonlight replaces the morning sun.",
+            "pool": "{name} keeps calm when the lawn gives way to water lanes.",
+            "fog": "{name} does its best work when the next threat is hard to see.",
+            "roof": "{name} treats every roof tile as one more place worth defending.",
+            "upgrades": "{name} proves that a familiar garden role can still grow further.",
+        }
+        zh_templates = {
+            "day": "{name}从最普通的前院起步，也最懂基础防线的分量。",
+            "night": "{name}习惯在月光代替阳光时守住自己的位置。",
+            "pool": "{name}面对水路从不慌张，总能找到适合自己的落脚点。",
+            "fog": "{name}越是在看不清前路的时候，越知道该把本事用在哪里。",
+            "roof": "{name}相信屋顶上的每一块瓦片都值得认真防守。",
+            "upgrades": "{name}证明了熟悉的花园职责依然可以继续成长。",
+        }
+        return {
+            "en": en_templates.get(chapter_key, en_templates["day"]).format(name=name_en),
+            "zh": zh_templates.get(chapter_key, zh_templates["day"]).format(name=name_zh),
+        }
 
     def make_font(self, size: int, bold: bool = False) -> pygame.font.Font:
         if not hasattr(self, "font_manager"):
@@ -17086,122 +17145,143 @@ class Game:
         return slots
 
     def get_encyclopedia_keys(self, tab: str) -> List[str]:
-        if tab == "zombies":
-            return list(self.zombies.keys())
-        return list(self.plants.keys())
+        return self.get_almanac_keys(tab)
 
     def encyclopedia_detail_layout(self) -> Dict[str, pygame.Rect]:
-        panel = pygame.Rect(36, 28, SCREEN_WIDTH - 72, SCREEN_HEIGHT - 56)
-        header = pygame.Rect(panel.x + 22, panel.y + 16, panel.w - 44, 84)
-        tabs = pygame.Rect(panel.x + 28, panel.y + 114, 262, 42)
-        left = pygame.Rect(panel.x + 24, panel.y + 168, 346, panel.h - 238)
-        list_view = pygame.Rect(left.x + 14, left.y + 56, left.w - 28, left.h - 70)
-        right = pygame.Rect(left.right + 22, panel.y + 168, panel.right - left.right - 46, panel.h - 238)
-        tab_plants = pygame.Rect(tabs.x, tabs.y, 124, 38)
-        tab_zombies = pygame.Rect(tabs.x + 136, tabs.y, 124, 38)
-        return {
-            "panel": panel,
-            "header": header,
-            "tabs": tabs,
-            "left": left,
-            "list_view": list_view,
-            "right": right,
-            "tab_plants": tab_plants,
-            "tab_zombies": tab_zombies,
-        }
+        return self.almanac_layout()
 
     def encyclopedia_scroll_max(self) -> int:
-        keys = self.get_encyclopedia_keys(self.encyclopedia_tab)
-        row_h = 52
-        gap = 8
-        content_h = len(keys) * row_h + max(0, len(keys) - 1) * gap
-        view_h = self.encyclopedia_detail_layout()["list_view"].h
-        return max(0, content_h - view_h)
+        return 0
 
     def ensure_encyclopedia_state(self) -> None:
-        if self.encyclopedia_tab not in ("plants", "zombies"):
-            self.encyclopedia_tab = "plants"
-        for tab in ("plants", "zombies"):
-            keys = self.get_encyclopedia_keys(tab)
-            if not keys:
-                self.encyclopedia_selected_key[tab] = ""
-            elif self.encyclopedia_selected_key.get(tab, "") not in keys:
-                self.encyclopedia_selected_key[tab] = keys[0]
-        self.encyclopedia_scroll_y = int(clamp(float(self.encyclopedia_scroll_y), 0.0, float(self.encyclopedia_scroll_max())))
+        self.ensure_almanac_state()
 
-    def scroll_encyclopedia(self, delta: int) -> None:
-        self.encyclopedia_scroll_y += int(delta)
-        self.ensure_encyclopedia_state()
+    def scroll_encyclopedia(self, _delta: int) -> None:
+        self.ensure_almanac_state()
 
     def encyclopedia_entry_buttons(self) -> List[Tuple[str, pygame.Rect]]:
-        self.ensure_encyclopedia_state()
-        keys = self.get_encyclopedia_keys(self.encyclopedia_tab)
-        list_view = self.encyclopedia_detail_layout()["list_view"]
-        row_h = 52
-        gap = 8
-        buttons: List[Tuple[str, pygame.Rect]] = []
-        for i, key in enumerate(keys):
-            y = list_view.y + i * (row_h + gap) - int(self.encyclopedia_scroll_y)
-            buttons.append((key, pygame.Rect(list_view.x, y, list_view.w, row_h)))
-        return buttons
+        self.ensure_almanac_state()
+        return self.almanac_entry_buttons(
+            self.almanac_tab,
+            self.almanac_layout()["card_grid"],
+        )
+
+    def ensure_almanac_catalog(self) -> None:
+        if hasattr(self, "almanac_catalog"):
+            return
+        self.almanac_catalog = build_almanac_catalog(
+            self.plants,
+            self.zombies,
+            plant_descriptions=PLANT_DESCRIPTIONS,
+        )
 
     def get_almanac_keys(self, tab: str) -> List[str]:
-        if tab == "zombies":
-            return list(self.zombies.keys())
-        return list(self.plants.keys())
+        self.ensure_almanac_catalog()
+        chapters = self.almanac_catalog.chapters(tab)
+        if not chapters:
+            return []
+        page = int(clamp(float(self.almanac_page.get(tab, 0)), 0.0, float(len(chapters) - 1)))
+        return [entry.key for entry in chapters[page].entries]
 
     def ensure_almanac_state(self) -> None:
+        self.ensure_almanac_catalog()
         if self.almanac_tab not in ("plants", "zombies"):
             self.almanac_tab = "plants"
         for tab in ("plants", "zombies"):
+            chapters = self.almanac_catalog.chapters(tab)
+            max_page = max(0, len(chapters) - 1)
+            self.almanac_page[tab] = int(
+                clamp(float(self.almanac_page.get(tab, 0)), 0.0, float(max_page))
+            )
             keys = self.get_almanac_keys(tab)
             if not keys:
                 self.almanac_selected_key[tab] = ""
-                self.almanac_page[tab] = 0
                 continue
             if self.almanac_selected_key.get(tab, "") not in keys:
                 self.almanac_selected_key[tab] = keys[0]
-            max_page = max(0, (len(keys) - 1) // self.almanac_list_page_size)
-            self.almanac_page[tab] = int(clamp(float(self.almanac_page.get(tab, 0)), 0.0, float(max_page)))
 
     def almanac_layout(self) -> Dict[str, pygame.Rect]:
-        panel = pygame.Rect(64, 46, SCREEN_WIDTH - 128, SCREEN_HEIGHT - 92)
-        header = pygame.Rect(panel.x + 20, panel.y + 14, panel.w - 40, 72)
-        tabs = pygame.Rect(panel.x + 24, panel.y + 96, 262, 40)
-        left = pygame.Rect(panel.x + 22, panel.y + 150, 322, panel.h - 180)
-        right = pygame.Rect(left.right + 18, panel.y + 150, panel.right - left.right - 40, panel.h - 180)
-        close = pygame.Rect(panel.right - 108, panel.y + 22, 84, 34)
-        list_area = pygame.Rect(left.x + 12, left.y + 54, left.w - 24, left.h - 112)
-        page_prev = pygame.Rect(left.x + 16, left.bottom - 44, 46, 30)
-        page_next = pygame.Rect(left.right - 62, left.bottom - 44, 46, 30)
-        plant_tab = pygame.Rect(tabs.x, tabs.y, 124, 36)
-        zombie_tab = pygame.Rect(tabs.x + 136, tabs.y, 124, 36)
+        panel = pygame.Rect(30, 24, SCREEN_WIDTH - 60, SCREEN_HEIGHT - 48)
+        header = pygame.Rect(panel.centerx - 320, panel.y + 14, 640, 72)
+        left_page = pygame.Rect(panel.x + 20, panel.y + 98, 526, 518)
+        right_page = pygame.Rect(left_page.right + 24, left_page.y, panel.right - left_page.right - 44, left_page.h)
+        tabs = pygame.Rect(panel.x + 26, panel.y + 22, 258, 44)
+        plant_tab = pygame.Rect(tabs.x, tabs.y, 122, 44)
+        zombie_tab = pygame.Rect(tabs.x + 134, tabs.y, 122, 44)
+        close = pygame.Rect(panel.right - 142, panel.bottom - 50, 124, 44)
+        chapter_nav = pygame.Rect(left_page.x + 16, left_page.y + 16, left_page.w - 32, 44)
+        card_grid = pygame.Rect(left_page.x + 16, chapter_nav.bottom + 12, left_page.w - 32, left_page.bottom - chapter_nav.bottom - 28)
+        gap = 8
+        card_w = (card_grid.w - gap * 2) // 3
+        card_h = (card_grid.h - gap * 2) // 3
+        cards = [
+            pygame.Rect(
+                card_grid.x + (i % 3) * (card_w + gap),
+                card_grid.y + (i // 3) * (card_h + gap),
+                card_w,
+                card_h,
+            )
+            for i in range(9)
+        ]
+        preview = pygame.Rect(right_page.x + 18, right_page.y + 18, 220, 208)
+        name_plate = pygame.Rect(preview.right + 16, right_page.y + 18, right_page.right - preview.right - 34, 48)
+        stats = pygame.Rect(name_plate.x, name_plate.bottom + 10, name_plate.w, preview.bottom - name_plate.bottom - 10)
+        detail_body = pygame.Rect(right_page.x + 18, preview.bottom + 14, right_page.w - 36, right_page.bottom - preview.bottom - 32)
         return {
             "panel": panel,
             "header": header,
             "tabs": tabs,
-            "left": left,
-            "right": right,
+            "left": left_page,
+            "right": right_page,
+            "left_page": left_page,
+            "right_page": right_page,
             "close": close,
-            "list_area": list_area,
-            "page_prev": page_prev,
-            "page_next": page_next,
+            "chapter_nav": chapter_nav,
+            "card_grid": card_grid,
+            "list_area": card_grid,
+            "list_view": card_grid,
+            "cards": cards,
+            "preview": preview,
+            "name_plate": name_plate,
+            "stats": stats,
+            "detail_body": detail_body,
+            "page_prev": pygame.Rect(0, 0, 0, 0),
+            "page_next": pygame.Rect(0, 0, 0, 0),
             "tab_plants": plant_tab,
             "tab_zombies": zombie_tab,
         }
 
     def almanac_entry_buttons(self, tab: str, list_rect: pygame.Rect) -> List[Tuple[str, pygame.Rect]]:
         keys = self.get_almanac_keys(tab)
-        page = int(self.almanac_page.get(tab, 0))
-        start = page * self.almanac_list_page_size
-        visible = keys[start : start + self.almanac_list_page_size]
-        buttons: List[Tuple[str, pygame.Rect]] = []
-        row_h = 38
+        gap = 8
+        card_w = (list_rect.w - gap * 2) // 3
+        card_h = (list_rect.h - gap * 2) // 3
+        return [
+            (
+                key,
+                pygame.Rect(
+                    list_rect.x + (i % 3) * (card_w + gap),
+                    list_rect.y + (i // 3) * (card_h + gap),
+                    card_w,
+                    card_h,
+                ),
+            )
+            for i, key in enumerate(keys[:9])
+        ]
+
+    def almanac_chapter_buttons(self, category: str) -> List[Tuple[str, pygame.Rect]]:
+        self.ensure_almanac_catalog()
+        nav = self.almanac_layout()["chapter_nav"]
+        chapters = self.almanac_catalog.chapters(category)
         gap = 6
-        for i, key in enumerate(visible):
-            rect = pygame.Rect(list_rect.x, list_rect.y + i * (row_h + gap), list_rect.w, row_h)
-            buttons.append((key, rect))
-        return buttons
+        button_w = (nav.w - gap * max(0, len(chapters) - 1)) // max(1, len(chapters))
+        return [
+            (
+                chapter.key,
+                pygame.Rect(nav.x + i * (button_w + gap), nav.y, button_w, nav.h),
+            )
+            for i, chapter in enumerate(chapters)
+        ]
 
     def almanac_behavior_label_legacy(self, behavior: str, is_plant: bool) -> Tuple[str, str]:
         labels = PLANT_BEHAVIOR_LABELS if is_plant else ZOMBIE_BEHAVIOR_LABELS
@@ -17277,12 +17357,17 @@ class Game:
                 pygame.draw.rect(self.screen, (172, 178, 188), (cx - 42, cy - 164, 84, 52), border_radius=6)
 
     def handle_almanac_click(self, p: Tuple[int, int]) -> bool:
-        if not self.battle.almanac_open:
+        in_battle_overlay = bool(self.battle.almanac_open)
+        in_detail_scene = self.scene == "encyclopedia_detail"
+        if not in_battle_overlay and not in_detail_scene:
             return False
         self.ensure_almanac_state()
         ui = self.almanac_layout()
         if ui["close"].collidepoint(p):
-            self.battle.almanac_open = False
+            if in_battle_overlay:
+                self.battle.almanac_open = False
+            else:
+                self.change_scene("encyclopedia_menu")
             return True
         if ui["tab_plants"].collidepoint(p):
             self.almanac_tab = "plants"
@@ -17292,15 +17377,12 @@ class Game:
             self.almanac_tab = "zombies"
             self.ensure_almanac_state()
             return True
-        keys = self.get_almanac_keys(self.almanac_tab)
-        max_page = max(0, (len(keys) - 1) // self.almanac_list_page_size)
-        if ui["page_prev"].collidepoint(p):
-            self.almanac_page[self.almanac_tab] = max(0, int(self.almanac_page[self.almanac_tab]) - 1)
-            return True
-        if ui["page_next"].collidepoint(p):
-            self.almanac_page[self.almanac_tab] = min(max_page, int(self.almanac_page[self.almanac_tab]) + 1)
-            return True
-        for key, rect in self.almanac_entry_buttons(self.almanac_tab, ui["list_area"]):
+        for chapter_index, (_chapter_key, rect) in enumerate(self.almanac_chapter_buttons(self.almanac_tab)):
+            if rect.collidepoint(p):
+                self.almanac_page[self.almanac_tab] = chapter_index
+                self.ensure_almanac_state()
+                return True
+        for key, rect in self.almanac_entry_buttons(self.almanac_tab, ui["card_grid"]):
             if rect.collidepoint(p):
                 self.almanac_selected_key[self.almanac_tab] = key
                 return True
@@ -19874,31 +19956,8 @@ class Game:
                 return
             return
         if self.scene == "encyclopedia_detail":
-            self.ensure_encyclopedia_state()
-            layout = self.encyclopedia_detail_layout()
-            if self.encyclopedia_back_btn.collidepoint(p):
-                self.play_sfx("ui_back")
-                self.encyclopedia_mode = "menu"
-                self.change_scene("encyclopedia_menu")
-                return
-            if layout["tab_plants"].collidepoint(p):
+            if self.handle_almanac_click(p):
                 self.play_sfx("ui_click")
-                self.encyclopedia_tab = "plants"
-                self.encyclopedia_scroll_y = 0
-                self.ensure_encyclopedia_state()
-                return
-            if layout["tab_zombies"].collidepoint(p):
-                self.play_sfx("ui_click")
-                self.encyclopedia_tab = "zombies"
-                self.encyclopedia_scroll_y = 0
-                self.ensure_encyclopedia_state()
-                return
-            if layout["list_view"].collidepoint(p):
-                for key, rect in self.encyclopedia_entry_buttons():
-                    if rect.collidepoint(p):
-                        self.play_sfx("ui_click")
-                        self.encyclopedia_selected_key[self.encyclopedia_tab] = key
-                        return
             return
         if self.scene == "shop":
             if self.back_btn.collidepoint(p):
@@ -21640,101 +21699,150 @@ class Game:
             outline=(74, 48, 22),
         )
 
-    def draw_almanac_detail_content(self, tab: str, selected_key: str, detail_rect: pygame.Rect, *, compact: bool) -> None:
+    def almanac_chapter_label(self, category: str, key: str) -> str:
+        labels = {
+            "plants": {
+                "day": ("Day", "白天"),
+                "night": ("Night", "夜晚"),
+                "pool": ("Pool", "泳池"),
+                "fog": ("Fog", "迷雾"),
+                "roof": ("Roof", "屋顶"),
+                "upgrades": ("Upgrades", "升级"),
+            },
+            "zombies": {
+                "day": ("Day", "白天"),
+                "night": ("Night", "夜晚"),
+                "pool": ("Pool", "泳池"),
+                "fog": ("Fog", "迷雾"),
+                "roof": ("Roof", "屋顶"),
+            },
+        }
+        pair = labels.get(category, {}).get(key, (key.title(), key))
+        return pair[1] if self.lang == "zh" else pair[0]
+
+    def almanac_stat_rows(self, entry: AlmanacEntry) -> List[Tuple[str, str]]:
         use_zh = self.lang == "zh"
-        stats_title = "核心属性" if use_zh else "Core Stats"
-        preview_title = self.tr("plants_tab") if tab == "plants" else self.tr("zombies_tab")
-        if tab == "plants":
-            cfg = self.plants[selected_key]
-            info = self.get_plant_almanac_text(selected_key, cfg)
-            display_name = self.plant_display_name(selected_key) if use_zh else (cfg.display_name_en or cfg.name)
-            behavior = info["behavior_zh"] if use_zh else info["behavior_en"]
-            preview = self.load_image(cfg.sprite_path, size=(max(176, detail_rect.w // 3), max(176, detail_rect.w // 3)))
-            stat_lines = [
-                f"{self.tr('cost')}: {cfg.cost}",
-                f"{self.tr('hp')}: {int(cfg.hp)}",
-                f"{self.tr('cooldown')}: {cfg.cooldown:.1f}s",
-                f"{self.tr('behavior')}: {behavior}",
+        stats = entry.stats
+        if entry.category == "plants":
+            behavior_en, behavior_zh = self.almanac_behavior_label(str(stats.get("behavior", "")), True)
+            rows = [
+                (("Cost", "花费"), str(stats.get("cost", 0))),
+                (("Health", "生命值"), str(stats.get("hp", 0))),
+                (("Cooldown", "冷却"), f"{float(stats.get('cooldown', 0.0)):.1f}s"),
+                (("Role", "定位"), behavior_zh if use_zh else behavior_en),
             ]
-            body_pairs = [
-                (self.tr("intro"), info["short_zh"] if use_zh else info["short_en"]),
-                (self.tr("gameplay"), info["summary_zh"] if use_zh else info["summary_en"]),
-            ]
-            fallback_kind = "plants"
         else:
-            cfg = self.zombies[selected_key]
-            info = self.get_zombie_almanac_text(selected_key, cfg)
-            display_name = self.zombie_display_name(selected_key) if use_zh else (cfg.display_name_en or cfg.name)
-            movement = info["movement_zh"] if use_zh else info["movement_en"]
-            beh_en, beh_zh = self.almanac_behavior_label(cfg.behavior, False)
-            behavior = beh_zh if use_zh else beh_en
-            preview = self.load_image(cfg.sprite_path, size=(max(176, detail_rect.w // 3), max(208, detail_rect.w // 3 + 24)))
-            stat_lines = [
-                f"{self.tr('hp')}: {int(cfg.hp)}",
-                f"{self.tr('movement')}: {movement}",
-                f"{self.tr('behavior')}: {behavior}",
+            behavior_en, behavior_zh = self.almanac_behavior_label(str(stats.get("behavior", "")), False)
+            speed = tuple(stats.get("speed", (0, 0)))
+            dps = tuple(stats.get("dps", (0, 0)))
+            speed_text = f"{float(speed[0]):g}-{float(speed[-1]):g}" if speed else "0"
+            dps_text = f"{float(dps[0]):g}-{float(dps[-1]):g}" if dps else "0"
+            rows = [
+                (("Health", "生命值"), str(stats.get("hp", 0))),
+                (("Speed", "速度"), speed_text),
+                (("Damage", "伤害"), dps_text),
+                (("Threat", "威胁"), behavior_zh if use_zh else behavior_en),
             ]
-            body_pairs = [
-                (self.tr("intro"), info["short_zh"] if use_zh else info["short_en"]),
-                (self.tr("threat"), info["threat_zh"] if use_zh else info["threat_en"]),
-            ]
-            fallback_kind = "zombies"
+        return [(label[1] if use_zh else label[0], value) for label, value in rows]
 
-        name_plate_h = 52 if compact else 58
-        name_plate = pygame.Rect(detail_rect.x + 20, detail_rect.y + 18, detail_rect.w - 40, name_plate_h)
-        top_y = name_plate.bottom + 14
-        preview_w = min(300 if not compact else 262, max(228, int(detail_rect.w * (0.40 if compact else 0.43))))
-        preview_h = 240 if compact else 292
-        preview_box = pygame.Rect(detail_rect.x + 20, top_y, preview_w, preview_h)
-        stats_box = pygame.Rect(preview_box.right + 18, top_y, detail_rect.right - preview_box.right - 38, preview_h)
-        body_box = pygame.Rect(detail_rect.x + 20, preview_box.bottom + 16, detail_rect.w - 40, detail_rect.bottom - preview_box.bottom - 34)
-
-        self.draw_framed_panel(name_plate, fill=(150, 104, 56), border=(82, 50, 22), radius=14, inner=(188, 136, 82))
-        self.draw_parchment_panel(preview_box, radius=14)
-        self.draw_framed_panel(stats_box, fill=(240, 226, 194), border=(132, 96, 48), radius=14, inner=(248, 238, 212))
-        self.draw_parchment_panel(body_box, radius=14)
-
-        title_font = self.fonts["mid"] if compact else self.fonts["ui"]
-        title_text = self.fit_label(display_name, title_font, name_plate.w - 20)
-        self.draw_text_center_shadow(title_font, title_text, (56, 38, 20), name_plate.center, shadow=(252, 242, 214), offset=(1, 1))
-
-        preview_head = pygame.Rect(preview_box.x + 14, preview_box.y + 10, preview_box.w - 28, 22)
-        stats_head = pygame.Rect(stats_box.x + 14, stats_box.y + 10, stats_box.w - 28, 22)
-        self.draw_menu_section_strip(preview_head, preview_title, font=self.fonts["small"])
-        self.draw_menu_section_strip(stats_head, stats_title, font=self.fonts["small"])
-
-        preview_inner = pygame.Rect(preview_box.x + 18, preview_head.bottom + 10, preview_box.w - 36, preview_box.bottom - preview_head.bottom - 20)
-        if preview is not None:
-            self.screen.blit(preview, preview.get_rect(center=preview_inner.center))
-        else:
-            self.draw_fallback_almanac_sprite(fallback_kind, selected_key, preview_inner)
-
-        row_y = stats_head.bottom + 12
-        row_h = 30 if compact else 32
-        row_gap = 8
-        for line in stat_lines:
-            row = pygame.Rect(stats_box.x + 14, row_y, stats_box.w - 28, row_h)
-            self.draw_framed_panel(row, fill=(246, 236, 210), border=(136, 102, 56), radius=9, inner=(252, 246, 228))
-            self.screen.blit(self.fonts["small"].render(line, True, (50, 38, 26)), (row.x + 12, row.y + 6))
-            row_y += row_h + row_gap
-
-        body_font = self.fonts["small"]
-        y = body_box.y + 14
-        wrap_width = body_box.w - 28
-        max_lines = 5 if not compact else 4
-        section_font = self.fonts["tiny"] if compact else self.fonts["small"]
-        for title_txt, body in body_pairs:
-            strip = pygame.Rect(body_box.x + 14, y, min(236, wrap_width), 22)
-            self.draw_menu_section_strip(strip, title_txt, font=section_font)
-            y += 30
-            for line in self.wrap_text_lines(body_font, body, wrap_width)[:max_lines]:
-                if y > body_box.bottom - 24:
+    def draw_almanac_detail_copy(self, entry: AlmanacEntry, body: pygame.Rect) -> List[pygame.Rect]:
+        self.draw_parchment_panel(body, radius=12)
+        labels = (
+            ("Mechanics", "机制", "mechanics"),
+            ("Counter", "反制", "counter"),
+            ("Flavor", "小传", "flavor"),
+        )
+        placements: List[pygame.Rect] = []
+        gap = 5
+        inner = body.inflate(-14, -12)
+        block_h = (inner.h - gap * 2) // 3
+        body_font = self.fonts["tiny"]
+        for index, (label_en, label_zh, field) in enumerate(labels):
+            block = pygame.Rect(inner.x, inner.y + index * (block_h + gap), inner.w, block_h)
+            header = pygame.Rect(block.x, block.y, min(132, block.w), 20)
+            self.draw_menu_section_strip(
+                header,
+                label_zh if self.lang == "zh" else label_en,
+                font=self.fonts["badge"],
+            )
+            placements.append(header.copy())
+            text = entry.text(self.lang, field)
+            lines = self.font_manager.wrap_text(
+                text,
+                body_font,
+                block.w - 8,
+                max_lines=max(1, (block.h - 24) // max(1, body_font.get_linesize())),
+            )
+            line_y = header.bottom + 3
+            for line in lines:
+                surface = body_font.render(line, True, (52, 38, 24))
+                rect = surface.get_rect(x=block.x + 4, y=line_y)
+                if rect.bottom > block.bottom:
                     break
-                self.screen.blit(body_font.render(line, True, (52, 38, 24)), (body_box.x + 14, y))
-                y += 22 if compact else 24
-            y += 8
+                self.screen.blit(surface, rect)
+                placements.append(rect.copy())
+                line_y += body_font.get_linesize()
+        return placements
 
-    def draw_encyclopedia_detail(self) -> None:
+    def draw_almanac_detail_content(self, tab: str, selected_key: str, detail_rect: pygame.Rect, *, compact: bool) -> None:
+        del detail_rect, compact
+        self.ensure_almanac_catalog()
+        entry = self.almanac_catalog.entry(tab, selected_key)
+        self.draw_almanac_entry_detail(entry, self.almanac_layout())
+
+    def draw_almanac_entry_detail(self, entry: AlmanacEntry, ui: Dict[str, pygame.Rect]) -> None:
+        preview = ui["preview"]
+        name_plate = ui["name_plate"]
+        stats = ui["stats"]
+        self.draw_parchment_panel(preview, radius=12)
+        plate_fill = (146, 104, 58) if entry.category == "plants" else (92, 104, 126)
+        plate_inner = (184, 138, 82) if entry.category == "plants" else (126, 140, 164)
+        self.draw_framed_panel(name_plate, fill=plate_fill, border=(76, 52, 28), radius=12, inner=plate_inner)
+        fitted_name = self.font_manager.fit_label(
+            entry.name(self.lang),
+            FontRole.MID,
+            name_plate.w - 16,
+            name_plate.h - 8,
+            min_size=12,
+            color=(252, 242, 218),
+        )
+        self.draw_pvz_hud_label(
+            fitted_name.font,
+            fitted_name.text,
+            name_plate.center,
+            fill=(252, 242, 218),
+            outline=(54, 34, 18),
+            outline_width=2,
+        )
+        icon_size = (176, 176) if entry.category == "plants" else (164, 190)
+        sprite = self.load_image(entry.sprite_path, size=icon_size)
+        preview_inner = preview.inflate(-18, -18)
+        if sprite is not None:
+            self.screen.blit(sprite, sprite.get_rect(center=preview_inner.center))
+        else:
+            self.draw_fallback_almanac_sprite(entry.category, entry.key, preview_inner)
+
+        self.draw_framed_panel(stats, fill=(230, 216, 188), border=(126, 92, 48), radius=12, inner=(244, 234, 210))
+        rows = self.almanac_stat_rows(entry)
+        row_gap = 5
+        row_h = (stats.h - 20 - row_gap * max(0, len(rows) - 1)) // max(1, len(rows))
+        row_y = stats.y + 10
+        for label, value in rows:
+            row = pygame.Rect(stats.x + 10, row_y, stats.w - 20, row_h)
+            self.draw_framed_panel(row, fill=(246, 238, 218), border=(142, 112, 72), radius=7, inner=(252, 246, 232))
+            fitted = self.font_manager.fit_label(
+                f"{label}  {value}",
+                FontRole.BADGE,
+                row.w - 12,
+                row.h - 4,
+                min_size=9,
+                color=(54, 42, 28),
+            )
+            self.screen.blit(fitted.surface, fitted.surface.get_rect(center=row.center))
+            row_y += row_h + row_gap
+        self.draw_almanac_detail_copy(entry, ui["detail_body"])
+
+    def draw_encyclopedia_detail_list_legacy(self) -> None:
         mouse = pygame.mouse.get_pos()
         self.ensure_encyclopedia_state()
         self.draw_scene_backdrop()
@@ -21801,7 +21909,7 @@ class Game:
         if selected_key:
             self.draw_almanac_detail_content(self.encyclopedia_tab, selected_key, right, compact=False)
 
-    def draw_almanac(self) -> None:
+    def draw_almanac_list_legacy(self) -> None:
         if not self.battle.almanac_open:
             return
         self.ensure_almanac_state()
@@ -21868,6 +21976,118 @@ class Game:
 
         if selected_key:
             self.draw_almanac_detail_content(self.almanac_tab, selected_key, right, compact=True)
+
+    def draw_almanac_card(
+        self,
+        entry: AlmanacEntry,
+        rect: pygame.Rect,
+        *,
+        selected: bool,
+        hover: bool,
+    ) -> None:
+        plant_card = entry.category == "plants"
+        fill = (178, 132, 80) if plant_card else (104, 116, 138)
+        inner = (214, 174, 116) if plant_card else (144, 158, 180)
+        if hover:
+            fill = tuple(min(255, value + 14) for value in fill)
+            inner = tuple(min(255, value + 14) for value in inner)
+        self.draw_framed_panel(rect, fill=fill, border=(72, 50, 30), radius=10, inner=inner)
+        image_area = pygame.Rect(rect.x + 8, rect.y + 8, rect.w - 16, max(44, rect.h - 43))
+        sprite_size = (min(74, image_area.w), min(74, image_area.h))
+        sprite = self.load_image(entry.sprite_path, size=sprite_size)
+        if sprite is not None:
+            self.screen.blit(sprite, sprite.get_rect(center=image_area.center))
+        else:
+            self.draw_fallback_almanac_sprite(entry.category, entry.key, image_area)
+        label_rect = pygame.Rect(rect.x + 5, rect.bottom - 32, rect.w - 10, 27)
+        pygame.draw.rect(self.screen, (74, 52, 34), label_rect, border_radius=6)
+        fitted = self.font_manager.fit_label(
+            entry.name(self.lang),
+            FontRole.BADGE,
+            label_rect.w - 8,
+            label_rect.h - 4,
+            min_size=9,
+            color=(252, 242, 218),
+        )
+        self.screen.blit(fitted.surface, fitted.surface.get_rect(center=label_rect.center))
+        if selected:
+            pygame.draw.rect(self.screen, (250, 190, 54), rect, 4, border_radius=10)
+
+    def draw_almanac_book(self, *, overlay: bool) -> None:
+        self.ensure_almanac_state()
+        mouse = pygame.mouse.get_pos()
+        if overlay:
+            shade = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+            shade.fill((16, 12, 8, 174))
+            self.screen.blit(shade, (0, 0))
+        else:
+            self.draw_scene_backdrop()
+
+        ui = self.almanac_layout()
+        panel = ui["panel"]
+        self.draw_book_panel(panel.inflate(12, 12))
+        self.draw_parchment_panel(panel, radius=22)
+        self.draw_framed_panel(
+            ui["left_page"],
+            fill=(226, 204, 164),
+            border=(116, 80, 42),
+            radius=16,
+            inner=(244, 232, 202),
+        )
+        self.draw_framed_panel(
+            ui["right_page"],
+            fill=(238, 222, 188),
+            border=(116, 80, 42),
+            radius=16,
+            inner=(250, 240, 216),
+        )
+        active_chapter_index = int(self.almanac_page[self.almanac_tab])
+        active_chapter = self.almanac_catalog.chapters(self.almanac_tab)[active_chapter_index]
+        subtitle = self.tr("press_a_close") if overlay else self.almanac_chapter_label(
+            self.almanac_tab,
+            active_chapter.key,
+        )
+        self.draw_wood_sign(ui["header"], self.tr("encyclopedia"), subtitle)
+
+        for category, rect, label in (
+            ("plants", ui["tab_plants"], self.tr("plants_tab")),
+            ("zombies", ui["tab_zombies"], self.tr("zombies_tab")),
+        ):
+            if self.almanac_tab == category:
+                self.draw_primary_button(rect, label, enabled=True, hover=rect.collidepoint(mouse))
+            else:
+                self.draw_secondary_button(rect, label, hover=rect.collidepoint(mouse))
+        self.draw_secondary_button(ui["close"], self.tr("close"), hover=ui["close"].collidepoint(mouse))
+        self.encyclopedia_back_btn = ui["close"]
+
+        for chapter_index, (chapter_key, rect) in enumerate(self.almanac_chapter_buttons(self.almanac_tab)):
+            label = self.almanac_chapter_label(self.almanac_tab, chapter_key)
+            if chapter_index == active_chapter_index:
+                self.draw_primary_button(rect, label, enabled=True, hover=rect.collidepoint(mouse))
+            else:
+                self.draw_secondary_button(rect, label, hover=rect.collidepoint(mouse))
+
+        selected_key = self.almanac_selected_key[self.almanac_tab]
+        for key, rect in self.almanac_entry_buttons(self.almanac_tab, ui["card_grid"]):
+            entry = self.almanac_catalog.entry(self.almanac_tab, key)
+            self.draw_almanac_card(
+                entry,
+                rect,
+                selected=key == selected_key,
+                hover=rect.collidepoint(mouse),
+            )
+        if selected_key:
+            self.draw_almanac_entry_detail(
+                self.almanac_catalog.entry(self.almanac_tab, selected_key),
+                ui,
+            )
+
+    def draw_encyclopedia_detail(self) -> None:
+        self.draw_almanac_book(overlay=False)
+
+    def draw_almanac(self) -> None:
+        if self.battle.almanac_open:
+            self.draw_almanac_book(overlay=True)
 
     def draw(self) -> None:
         if self.scene not in ("battle", "result"):
