@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from copy import deepcopy
 import json
 import os
 import shutil
@@ -42,18 +43,24 @@ def make_temp_manager_classes(temp_root: Path):
 
 
 def render_scene(game: pvz.Game, name: str, setup: Callable[[], None], output: Path) -> dict[str, object]:
-    setup()
-    game._transition_active = False
-    game._transition_snapshot = None
-    game.draw()
-    path = output / f"{game.lang}_{name}.png"
-    pygame.image.save(game.screen, path)
-    return {
-        "scene": name,
-        "lang": game.lang,
-        "path": str(path),
-        "size": list(game.screen.get_size()),
-    }
+    save_data = game.save_data
+    save_snapshot = deepcopy(save_data)
+    try:
+        setup()
+        game._transition_active = False
+        game._transition_snapshot = None
+        game.draw()
+        path = output / f"{game.lang}_{name}.png"
+        pygame.image.save(game.screen, path)
+        return {
+            "scene": name,
+            "lang": game.lang,
+            "path": str(path),
+            "size": list(game.screen.get_size()),
+        }
+    finally:
+        save_data.clear()
+        save_data.update(save_snapshot)
 
 
 def main() -> int:

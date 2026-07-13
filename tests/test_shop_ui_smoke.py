@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+from copy import deepcopy
 import hashlib
 import json
 import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any, Callable
+
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,6 +21,176 @@ SHOP_SCENES = (
     "shop_owned",
     "shop_save_failed",
 )
+
+
+def make_render_game(smoke: Any, save_data: dict[str, object]) -> SimpleNamespace:
+    battle = SimpleNamespace(save_data=save_data)
+    return SimpleNamespace(
+        save_data=save_data,
+        battle=battle,
+        screen=smoke.pygame.Surface((8, 8)),
+        lang="en",
+        draw=lambda: None,
+        _transition_active=True,
+        _transition_snapshot=object(),
+    )
+
+
+def test_render_scene_restores_shared_save_data_object_after_screenshot(
+    tmp_path: Path,
+) -> None:
+    from scripts import ui_scene_smoke as smoke
+
+    original_state = {
+        "coins": 135,
+        "upgrades": {"twin_sunflower": True},
+        "cleared_levels": ["1-1"],
+        "zen_growth": {"sunflower": 5},
+    }
+    save_data = deepcopy(original_state)
+    game = make_render_game(smoke, save_data)
+
+    def setup() -> None:
+        save_data.clear()
+        save_data.update(
+            {
+                "coins": 500,
+                "upgrades": {},
+                "cleared_levels": ["3-4"],
+            }
+        )
+
+    result = smoke.render_scene(game, "shop_available", setup, tmp_path)
+
+    assert Path(result["path"]).is_file()
+    assert game.save_data is save_data
+    assert game.save_data == original_state
+    assert game.battle.save_data is save_data
+
+
+@pytest.mark.parametrize("failure_stage", ("draw", "save"))
+def test_render_scene_restores_save_data_when_rendering_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure_stage: str,
+) -> None:
+    from scripts import ui_scene_smoke as smoke
+
+    original_state = {
+        "coins": 135,
+        "upgrades": {"twin_sunflower": True},
+        "cleared_levels": [],
+    }
+    save_data = deepcopy(original_state)
+    game = make_render_game(smoke, save_data)
+
+    def fail_draw() -> None:
+        raise RuntimeError("draw failed")
+
+    def fail_save(*_args: object, **_kwargs: object) -> None:
+        raise OSError("save failed")
+
+    if failure_stage == "draw":
+        game.draw = fail_draw
+        expected_error = RuntimeError
+    else:
+        monkeypatch.setattr(smoke.pygame.image, "save", fail_save)
+        expected_error = OSError
+
+    def setup() -> None:
+        save_data.clear()
+        save_data.update(
+            {
+                "coins": 500,
+                "upgrades": {},
+                "cleared_levels": ["3-4"],
+            }
+        )
+
+    with pytest.raises(expected_error):
+        smoke.render_scene(game, "shop_save_failed", setup, tmp_path)
+
+    assert game.save_data is save_data
+    assert game.save_data == original_state
+    assert game.battle.save_data is save_data
+
+
+def test_smoke_sequence_does_not_leak_shop_state_between_scenes_or_languages(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from scripts import ui_scene_smoke as smoke
+
+    observations: list[dict[str, object]] = []
+    real_render_scene = smoke.render_scene
+
+    def observe_render_scene(
+        game: Any,
+        name: str,
+        setup: Callable[[], None],
+        output: Path,
+    ) -> dict[str, object]:
+        before = deepcopy(game.save_data)
+        during: dict[str, object] = {}
+
+        def observed_setup() -> None:
+            nonlocal during
+            setup()
+            during = deepcopy(game.save_data)
+
+        result = real_render_scene(game, name, observed_setup, output)
+        observations.append(
+            {
+                "lang": game.lang,
+                "scene": name,
+                "before": before,
+                "during": during,
+                "after": deepcopy(game.save_data),
+                "shared": game.battle.save_data is game.save_data,
+            }
+        )
+        return result
+
+    monkeypatch.setattr(smoke, "render_scene", observe_render_scene)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "ui_scene_smoke.py",
+            "--output",
+            str(tmp_path / "sequence"),
+            "--scenes",
+            "start",
+            "shop_save_failed",
+            "zen_garden",
+        ],
+    )
+
+    assert smoke.main() == 0
+    assert [(item["lang"], item["scene"]) for item in observations] == [
+        (language, scene)
+        for language in ("zh", "en")
+        for scene in ("start", "shop_save_failed", "zen_garden")
+    ]
+
+    baseline = observations[0]["before"]
+    for item in observations:
+        assert item["before"] == baseline
+        assert item["after"] == baseline
+        assert item["shared"] is True
+
+    shop_states = [
+        item["during"]
+        for item in observations
+        if item["scene"] == "shop_save_failed"
+    ]
+    assert all(state["coins"] == 500 for state in shop_states)
+    assert all(state["cleared_levels"] == ["3-4"] for state in shop_states)
+    assert all(
+        item["during"] == baseline
+        for item in observations
+        if item["scene"] in ("start", "zen_garden")
+    )
 
 
 def test_shop_smoke_renders_bilingual_state_matrix_without_touching_real_state(
