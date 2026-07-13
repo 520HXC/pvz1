@@ -136,7 +136,7 @@ def test_catalog_is_fully_public_and_covers_every_configured_entry_once() -> Non
     assert len(plant_entries) == 49
     assert len({entry.key for entry in plant_entries}) == len(plant_entries)
     assert {entry.key for entry in plant_entries} == set(plants)
-    assert len(zombie_entries) == 25
+    assert len(zombie_entries) == 26
     assert len({entry.key for entry in zombie_entries}) == len(zombie_entries)
     assert {entry.key for entry in zombie_entries} == set(zombies)
     assert all(entry.public for entry in plant_entries + zombie_entries)
@@ -156,15 +156,15 @@ def test_zombie_catalog_uses_five_classic_fixed_chapters() -> None:
     assert {
         chapter.key: tuple(entry.key for entry in chapter.entries)
         for chapter in chapters
-    } == {
-        key: tuple(entry for entry in declared if entry != "yeti")
-        for key, declared in EXPECTED_ZOMBIE_CHAPTERS.items()
-    }
+    } == EXPECTED_ZOMBIE_CHAPTERS
+    assert tuple(entry.key for entry in catalog.chapter("zombies", "fog").entries).count("yeti") == 1
 
 
 def test_missing_yeti_is_safely_skipped_but_its_fog_slot_is_reserved() -> None:
     build_almanac_catalog = importlib.import_module("almanac").build_almanac_catalog
-    catalog = build_almanac_catalog(pvz.build_plants(), pvz.build_zombies())
+    zombies = pvz.build_zombies()
+    zombies.pop("yeti")
+    catalog = build_almanac_catalog(pvz.build_plants(), zombies)
     fog = catalog.chapter("zombies", "fog")
 
     assert "yeti" in fog.declared_keys

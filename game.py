@@ -2488,6 +2488,7 @@ ZOMBIE_NAMES = {
     "catapult": {"en": "Catapult Zombie", "zh": "投石车僵尸"},
     "gargantuar": {"en": "Gargantuar", "zh": "巨人僵尸"},
     "imp": {"en": "Imp", "zh": "小鬼僵尸"},
+    "yeti": {"en": "Zombie Yeti", "zh": "雪人僵尸"},
     "zomboss": {"en": "Dr. Zomboss", "zh": "僵王博士"},
 }
 
@@ -2552,6 +2553,7 @@ ZOMBIE_BEHAVIOR_LABELS = {
     "pogo": {"en": "Hop Flanker", "zh": "跳跳突进"},
     "ladder": {"en": "Wall Breacher", "zh": "架梯破阵"},
     "imp": {"en": "Small Fast Unit", "zh": "小型快攻"},
+    "yeti": {"en": "Rare Escape", "zh": "稀有逃脱"},
 }
 PLANT_DESCRIPTIONS: Dict[str, Dict[str, Dict[str, str]]] = {}
 
@@ -3767,6 +3769,7 @@ def build_zombie_grounding_profiles() -> Dict[str, ZombieGroundingProfile]:
             "pogo",
             "digger",
             "imp",
+            "yeti",
         )
     )
     add(("pole_vaulting",), max_width_cells=2.40)
@@ -3797,7 +3800,8 @@ def build_zombies() -> Dict[str, ZombieType]:
         ("zomboni", "Zomboni"), ("bobsled_team", "Zombie Bobsled Team"), ("dolphin_rider", "Dolphin Rider Zombie"),
         ("jack_in_the_box", "Jack-in-the-Box Zombie"), ("balloon", "Balloon Zombie"), ("digger", "Digger Zombie"),
         ("pogo", "Pogo Zombie"), ("bungee", "Bungee Zombie"), ("ladder", "Ladder Zombie"),
-        ("catapult", "Catapult Zombie"), ("gargantuar", "Gargantuar"), ("imp", "Imp"), ("zomboss", "Dr. Zomboss"),
+        ("catapult", "Catapult Zombie"), ("gargantuar", "Gargantuar"), ("imp", "Imp"),
+        ("yeti", "Zombie Yeti"), ("zomboss", "Dr. Zomboss"),
     ]
     for key, name in req:
         profile = ZOMBIE_COMBAT_PROFILES[key]
@@ -4091,6 +4095,11 @@ class BattleState:
         self.conveyor_rng = random.Random(3)
         self.mode_rng = random.Random(4)
         self.visual_rng = random.Random(5)
+        self.encounter_rng = random.Random(6)
+        self.yeti_encounter_scheduled = False
+        self.yeti_encounter_wave = 0
+        self.yeti_encounter_spawned = False
+        self.save_dirty_request = False
         self.result: Optional[str] = None
         self.almanac_open = False
         self.main: Dict[Tuple[int, int], Plant] = {}
@@ -4364,6 +4373,14 @@ class BattleState:
         self.notice_request_key = ""
         self.notice_request_duration_ms = 0
         return text, key, color, duration
+
+    def request_save(self) -> None:
+        self.save_dirty_request = True
+
+    def consume_save_request(self) -> bool:
+        requested = bool(self.save_dirty_request)
+        self.save_dirty_request = False
+        return requested
 
     def battle_intro_target_pos(self) -> Tuple[float, float]:
         x = float(LAWN_X + CELL_W * 1.1)
@@ -5432,7 +5449,23 @@ class BattleState:
             return False
         return True
 
+    def yeti_state(self, zombie: Zombie) -> str:
+        return str(zombie.state.get("yeti_state", "approach"))
+
+    def zombie_is_escaping_yeti(self, zombie: Zombie) -> bool:
+        return zombie.kind == "yeti" and self.yeti_state(zombie) == "escaping"
+
+    def zombie_blocks_wave_progress(self, zombie: Zombie) -> bool:
+        if self.zombie_is_escaping_yeti(zombie):
+            return False
+        return zombie.hp > 0 or float(zombie.state.get("dying_t", 0.0)) > 0.0
+
+    def zombie_render_flip_x(self, zombie: Zombie) -> bool:
+        return bool(zombie.hypnotized or self.zombie_is_escaping_yeti(zombie))
+
     def zombie_can_attack_plants(self, zombie: Zombie) -> bool:
+        if self.zombie_is_escaping_yeti(zombie):
+            return False
         if zombie.kind == "balloon":
             return self.balloon_state(zombie) == "grounded"
         if zombie.kind == "bungee":
@@ -5453,6 +5486,8 @@ class BattleState:
 
     def zombie_movement_direction(self, zombie: Zombie) -> int:
         if zombie.hypnotized:
+            return 1
+        if self.zombie_is_escaping_yeti(zombie):
             return 1
         if zombie.kind == "digger" and self.digger_state(zombie) == "surface_attack":
             return 1
@@ -6359,12 +6394,12 @@ class BattleState:
                 return [row for row in range(self.rows()) if not self.is_water(row)]
         return list(range(self.rows()))
 
-    def choose_spawn_row(self, kind: str) -> int:
+    def choose_spawn_row(self, kind: str, rng_override=None) -> int:
         rows = self.spawn_rows_for_kind(kind)
         if not rows:
             return 0
         pressure_limit = self.adventure_lane_pressure_limit() if self.is_adventure_mainline() else max(2, int(self.level.danger) if self.level else 2)
-        rng = self.row_rng if self.is_adventure_mainline() else random
+        rng = rng_override if rng_override is not None else (self.row_rng if self.is_adventure_mainline() else random)
         scored: List[Tuple[float, float, int]] = []
         cost = self.zombie_point_cost(kind)
         for row in rows:
@@ -6391,17 +6426,29 @@ class BattleState:
         ]
         return rng.choice(top_rows)
 
+    def inject_yeti_into_wave_queue(self, queue: List[str], wave_idx: int) -> List[str]:
+        if (
+            self.yeti_encounter_scheduled
+            and not self.yeti_encounter_spawned
+            and wave_idx == self.yeti_encounter_wave
+            and "yeti" in self.zombie_types
+            and "yeti" not in queue
+        ):
+            queue.insert(len(queue) // 2, "yeti")
+        return queue
+
     def build_adventure_wave_queue(self, wave_idx: int) -> List[str]:
         if not self.level:
             return []
         if self.level.fixed_waves:
             fixed_idx = max(0, min(len(self.level.fixed_waves) - 1, wave_idx - 1))
-            return [
+            queue = [
                 kind
                 for kind in self.level.fixed_waves[fixed_idx]
                 if kind in self.zombie_types
                 and not (kind == "zomboss" and self.is_zomboss_boss_mode())
             ]
+            return self.inject_yeti_into_wave_queue(queue, wave_idx)
         pool = [kind for kind in self.level.adventure_zombie_pool if kind in self.zombie_types]
         if not pool:
             pool = [kind for kind in self.level.z_weights.keys() if kind in self.zombie_types]
@@ -6463,7 +6510,7 @@ class BattleState:
         if not queue and not reserved_boss_identity:
             cheapest = min(pool, key=lambda kind: self.zombie_point_cost(kind))
             queue.append(cheapest)
-        return queue
+        return self.inject_yeti_into_wave_queue(queue, wave_idx)
 
     def start_custom_adventure_wave(self) -> bool:
         if not self.is_adventure_mainline() or self.total_waves <= 0:
@@ -6493,7 +6540,9 @@ class BattleState:
         active_zombies = [
             z
             for z in self.zombies
-            if z.hp > 0 and float(z.state.get("dying_t", 0.0)) <= 0.0
+            if z.hp > 0
+            and float(z.state.get("dying_t", 0.0)) <= 0.0
+            and self.zombie_blocks_wave_progress(z)
         ]
         if not self.wave_recovery_ready(dt, active_zombies):
             return False
@@ -6594,7 +6643,7 @@ class BattleState:
     ) -> Zombie:
         zcfg = self.zombie_types.get(kind, self.zombie_types["normal"])
         wave_prog = 0.0 if self.total_waves <= 1 else (wave_idx - 1) / max(1, self.total_waves - 1)
-        rng = self.gameplay_rng()
+        rng = self.encounter_rng if kind == "yeti" else self.gameplay_rng()
         if self.is_adventure_mainline():
             hp = float(zcfg.hp) * (1.0 + wave_prog * 0.04)
             spd = ((zcfg.speed[0] + zcfg.speed[1]) * 0.5) * (1.0 + wave_prog * 0.018)
@@ -6655,6 +6704,13 @@ class BattleState:
             z.state["digger_target_x"] = LAWN_X + emerge_col * CELL_W + CELL_W * 0.48
         if kind == "catapult":
             z.state["catapult_phase_t"] = 2.25 if self.is_adventure_mainline() else rng.uniform(1.7, 2.8)
+        if kind == "yeti":
+            z.state["yeti_state"] = "approach"
+            z.state["yeti_elapsed"] = 0.0
+            z.state["yeti_rewarded"] = 0.0
+            if not bool(self.save_data.get("yeti_seen", False)):
+                self.save_data["yeti_seen"] = True
+                self.request_save()
         return z
 
     def start_next_wave(self) -> None:
@@ -6670,6 +6726,12 @@ class BattleState:
             self.wave_spawn_queue = []
             self.wave_spawn_total = self.wave_budgets[budget_idx] if budget_idx < len(self.wave_budgets) else (4 + self.level.danger)
             self.wave_spawn_remaining = self.wave_spawn_total
+            if (
+                self.yeti_encounter_scheduled
+                and not self.yeti_encounter_spawned
+                and self.current_wave == self.yeti_encounter_wave
+            ):
+                self.spawn_zombie(self.current_wave, forced_kind="yeti")
         self.spawn_t = 0.0
         self.next_wave = 0.0
         if self.current_wave in self.large_wave_indices or self.current_wave == self.final_wave_index:
@@ -9256,7 +9318,22 @@ class BattleState:
         self.conveyor_rng = random.Random(wave_seed * 1019 + 211)
         self.mode_rng = random.Random(wave_seed * 1021 + 223)
         self.visual_rng = random.Random(wave_seed * 1031 + 227)
+        raw_encounter_seed = self.mode_rules.get("encounter_seed")
+        encounter_seed = (
+            raw_encounter_seed
+            if isinstance(raw_encounter_seed, int) and not isinstance(raw_encounter_seed, bool)
+            else wave_seed * 1033 + 229
+        )
+        self.encounter_rng = random.Random(encounter_seed)
         self.total_waves, self.large_wave_indices, self.final_wave_index, self.wave_budgets = self.mode_wave_budgets(level)
+        self.yeti_encounter_scheduled = self.mode_bool("yeti_encounter_scheduled", False)
+        if self.yeti_encounter_scheduled:
+            midpoint = max(1, (self.total_waves + 1) // 2)
+            self.yeti_encounter_wave = 6 if str(level.display_code) == "4-10" else min(self.total_waves, midpoint)
+        else:
+            self.yeti_encounter_wave = 0
+        self.yeti_encounter_spawned = False
+        self.save_dirty_request = False
         self.elapsed = 0.0
         self.spawn_t = 0.0
         self.sky_t = 0.0
@@ -9470,11 +9547,14 @@ class BattleState:
                         fallback_pairs = list(self.level.z_weights.items())
                     kinds = [k for k, _ in fallback_pairs]
                     kind = composition_rng.choices(kinds, weights=[v for _, v in fallback_pairs], k=1)[0]
-        row = self.choose_spawn_row(kind)
+        spawn_rng = self.encounter_rng if kind == "yeti" else combat_rng
+        row = self.choose_spawn_row(kind, rng_override=self.encounter_rng if kind == "yeti" else None)
         row_load = sum(1 for z in self.zombies if z.row == row and z.hp > 0 and float(z.state.get("dying_t", 0.0)) <= 0.0)
-        spawn_x = self.lawn_right() + combat_rng.randint(26, 108) + row_load * 12
+        spawn_x = self.lawn_right() + spawn_rng.randint(26, 108) + row_load * 12
         z = self.spawn_zombie_instance(kind, row, spawn_x, wave_idx=wave_idx or max(1, self.current_wave))
         self.zombies.append(z)
+        if kind == "yeti":
+            self.yeti_encounter_spawned = True
 
     def mushroom_sleeping(self, plant: Plant) -> bool:
         cfg = self.plant_types[plant.kind]
@@ -9784,6 +9864,16 @@ class BattleState:
             and not self.wave_spawn_queue
             and self.wave_spawn_remaining <= 0
         )
+        if waves_complete:
+            blockers_other_than_escaping_yeti = any(
+                self.zombie_blocks_wave_progress(z)
+                for z in self.zombies
+                if not self.zombie_is_escaping_yeti(z)
+            )
+            if not blockers_other_than_escaping_yeti:
+                self.zombies[:] = [
+                    z for z in self.zombies if not self.zombie_is_escaping_yeti(z)
+                ]
         if (
             self.uses_wave_system()
             and waves_complete
@@ -9871,7 +9961,9 @@ class BattleState:
             active_zombies = [
                 z
                 for z in self.zombies
-                if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0
+                if z.hp > 0
+                and z.state.get("dying_t", 0.0) <= 0.0
+                and self.zombie_blocks_wave_progress(z)
             ]
             if self.wave_spawn_remaining <= 0 and self.current_wave > 0 and self.current_wave < self.total_waves:
                 if self.wave_recovery_ready(dt, active_zombies):
@@ -9917,7 +10009,9 @@ class BattleState:
                 active_after_spawn = [
                     z
                     for z in self.zombies
-                    if z.hp > 0 and z.state.get("dying_t", 0.0) <= 0.0
+                    if z.hp > 0
+                    and z.state.get("dying_t", 0.0) <= 0.0
+                    and self.zombie_blocks_wave_progress(z)
                 ]
                 self.wave_recovery_ready(0.0, active_after_spawn)
         if self.mode_bool("conveyor", False):
@@ -10693,9 +10787,47 @@ class BattleState:
                 z.state["dying_t"] = 0.34
                 if float(z.state.get("counts_for_kill", 1.0)) > 0.0:
                     self.kills += 1
-                if self.gameplay_rng().random() < 0.45:
+                if z.kind == "yeti":
+                    if float(z.state.get("yeti_rewarded", 0.0)) <= 0.0:
+                        first_kill = not bool(self.save_data.get("yeti_defeated", False))
+                        reward_count = 5 if first_kill else 4
+                        center = (reward_count - 1) / 2.0
+                        for index in range(reward_count):
+                            self.tokens.append(
+                                Token(
+                                    z.x + (index - center) * 18.0,
+                                    self.row_y(z.row) - 10.0,
+                                    100,
+                                    10.0,
+                                    "coin",
+                                )
+                            )
+                        z.state["yeti_rewarded"] = 1.0
+                        self.save_data["yeti_seen"] = True
+                        self.save_data["yeti_defeated"] = True
+                        self.request_save()
+                elif self.gameplay_rng().random() < 0.45:
                     self.tokens.append(Token(z.x, self.row_y(z.row), self.gameplay_rng().choice([10, 15, 20]), 10.0, "coin"))
                 continue
+            if z.kind == "yeti":
+                if self.yeti_state(z) == "escaping":
+                    z.speed = 42.0
+                    z.state["bite_t"] = 0.0
+                    z.x += 42.0 * dt
+                    if z.x > self.lawn_right() + 72.0 and z in self.zombies:
+                        self.zombies.remove(z)
+                    continue
+                if z.x <= self.lawn_right():
+                    elapsed = float(z.state.get("yeti_elapsed", 0.0)) + dt
+                    z.state["yeti_elapsed"] = elapsed
+                    if elapsed + TIME_EPSILON >= 7.0:
+                        z.state["yeti_state"] = "escaping"
+                        z.state["bite_t"] = 0.0
+                        z.speed = 42.0
+                        z.x += 42.0 * dt
+                        if z.x > self.lawn_right() + 72.0 and z in self.zombies:
+                            self.zombies.remove(z)
+                        continue
             if z.slow_t > 0:
                 z.slow_t -= dt
             if z.stunned_t > 0:
@@ -12016,7 +12148,7 @@ class BattleState:
                     angle=angle,
                     flash=flash_strength,
                     alpha=anim_alpha,
-                    flip_x=z.hypnotized,
+                    flip_x=self.zombie_render_flip_x(z),
                 )
                 if render_anchor is None:
                     render_anchor = self.zombie_foot_anchor(zsprite, grounding)
@@ -12025,7 +12157,7 @@ class BattleState:
                     render_anchor,
                     scale=render_scale,
                     angle=angle,
-                    flip_x=z.hypnotized,
+                    flip_x=self.zombie_render_flip_x(z),
                 )
                 render_center_x = float(draw_x) - anchor_off_x
                 render_center_y = target_anchor_y - anchor_off_y
@@ -12540,6 +12672,12 @@ class Game:
         self.battle.mode_rules["zombie_hp_scale"] = float(base.get("zombie_hp_scale", 1.0)) * self.setting_float("zombie_health_multiplier", 1.0)
         self.battle.mode_rules["zombie_dps_scale"] = float(base.get("zombie_dps_scale", 1.0)) * self.setting_float("zombie_damage_multiplier", 1.0)
         self.battle.mode_rules["cooldown_scale"] = float(base.get("cooldown_scale", 1.0)) * self.setting_float("cooldown_multiplier", 1.0)
+
+    def flush_battle_save_request(self) -> bool:
+        if not self.battle.consume_save_request():
+            return False
+        self.save_mgr.save(self.save_data)
+        return True
 
     def ensure_original_seed_sprites(self, force: bool = False, force_zombies: bool = False) -> None:
         plant_keys = sorted(self.plants.keys())
@@ -16361,6 +16499,71 @@ class Game:
             rules["random_seed"] = seed
         return rules
 
+    def prepare_yeti_encounter_rules(
+        self,
+        level: LevelConfig,
+        mode_rules: Optional[Dict[str, object]],
+    ) -> Dict[str, object]:
+        rules = dict(mode_rules or {})
+        existing_seed = rules.get("encounter_seed")
+        existing_run_seed = rules.get("yeti_run_seed")
+        existing_decision = rules.get("yeti_encounter_scheduled")
+        if (
+            isinstance(existing_seed, int)
+            and not isinstance(existing_seed, bool)
+            and isinstance(existing_run_seed, int)
+            and not isinstance(existing_run_seed, bool)
+            and isinstance(existing_decision, bool)
+        ):
+            if bool(rules.get("yeti_first_hunt_guarantee", False)) and bool(
+                self.save_data.get("yeti_defeated", False)
+            ):
+                rules["yeti_encounter_scheduled"] = False
+            return rules
+
+        clears_raw = self.save_data.get("cleared_levels", [])
+        clears = set(clears_raw) if isinstance(clears_raw, list) else set()
+        defeated = bool(self.save_data.get("yeti_defeated", False))
+        code = str(level.display_code or level.idx)
+        adventure_launch = bool(rules.get("adventure_level_launch", False))
+        first_hunt_guarantee = (
+            adventure_launch
+            and code == "4-10"
+            and "5-10" in clears
+            and not defeated
+        )
+
+        ordinary_replay = (
+            defeated
+            and adventure_launch
+            and code in clears
+            and str(getattr(level, "stage_style", "normal_select")) == "normal_select"
+            and not rules.get("mode_name")
+            and not rules.get("mode_family")
+            and not bool(rules.get("conveyor", False))
+        )
+        survival_new_run = (
+            defeated
+            and str(rules.get("mode_family", "")) == "survival"
+            and int(float(rules.get("survival_round_index", 1.0))) == 1
+            and not bool(rules.get("survival_resume", False))
+        )
+        random_eligible = ordinary_replay or survival_new_run
+        if not first_hunt_guarantee and not random_eligible:
+            rules["yeti_first_hunt_guarantee"] = False
+            rules["yeti_encounter_scheduled"] = False
+            return rules
+
+        encounter_seed = int(self.run_seed_source.getrandbits(63))
+        rules["encounter_seed"] = encounter_seed
+        rules["yeti_run_seed"] = encounter_seed
+        scheduled = first_hunt_guarantee or (
+            random_eligible and random.Random(encounter_seed).random() < 0.03
+        )
+        rules["yeti_first_hunt_guarantee"] = first_hunt_guarantee
+        rules["yeti_encounter_scheduled"] = bool(scheduled)
+        return rules
+
     def open_plant_select(
         self,
         idx: int,
@@ -16400,6 +16603,7 @@ class Game:
     ) -> None:
         self.level_idx = idx
         base_rules = self.prepare_mode_rules_for_run(mode_rules if mode_rules is not None else (self.pending_mode_rules or {}))
+        base_rules = self.prepare_yeti_encounter_rules(self.levels[idx], base_rules)
         base_rules.setdefault("return_scene", self.plant_select_return_scene or "adventure_level_select")
         self.current_mode_base_rules = dict(base_rules)
         active_rules = self.apply_runtime_battle_rules(base_rules)
@@ -22299,6 +22503,7 @@ class Game:
                 hold_active = self.battle_result_hold_active()
                 if not hold_active and not self.battle.result:
                     self.battle.update(sim_dt)
+                    self.flush_battle_save_request()
                     for audio_key in self.battle.consume_audio_requests():
                         self.play_sfx(audio_key)
                     notice_text, notice_key, notice_color, notice_duration = self.battle.consume_notice_request()

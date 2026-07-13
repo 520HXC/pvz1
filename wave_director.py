@@ -27,6 +27,7 @@ ADVENTURE_ZOMBIE_POINT_COSTS: dict[str, int] = {
     "catapult": 8,
     "gargantuar": 18,
     "imp": 2,
+    "yeti": 12,
     "zomboss": 18,
 }
 
