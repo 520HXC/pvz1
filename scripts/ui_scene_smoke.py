@@ -59,6 +59,12 @@ def render_scene(game: pvz.Game, name: str, setup: Callable[[], None], output: P
 def main() -> int:
     parser = argparse.ArgumentParser(description="Render bilingual Pygame UI smoke scenes")
     parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--scenes",
+        nargs="+",
+        metavar="SCENE",
+        help="Render only the named scenes. The legacy shop name maps to shop_available.",
+    )
     args = parser.parse_args()
     output = args.output or Path(tempfile.mkdtemp(prefix="pvz_ui_smoke_"))
     output.mkdir(parents=True, exist_ok=True)
@@ -85,6 +91,38 @@ def main() -> int:
         def level_select() -> None:
             game.adventure_chapter_selected = 1
             game.scene = "adventure_level_select"
+
+        def shop_state(
+            selected_key: str,
+            *,
+            coins: int,
+            cleared_levels: list[str],
+            upgrades: dict[str, bool] | None = None,
+            notice_status: pvz.ShopPurchaseStatus | None = None,
+        ) -> Callable[[], None]:
+            def setup() -> None:
+                game.save_data.clear()
+                game.save_data.update(
+                    {
+                        "save_version": pvz.SAVE_VERSION,
+                        "unlocked": 1,
+                        "coins": coins,
+                        "upgrades": dict(upgrades or {}),
+                        "cleared_levels": list(cleared_levels),
+                    }
+                )
+                game.scene = "shop"
+                game.shop_return_scene = "start"
+                game.shop_selected_key = selected_key
+                game.ensure_shop_selection()
+                game.shop_notice = ""
+                game.shop_notice_kind = ""
+                game.shop_notice_until_ms = 0
+                game.shop_pressed_until_ms = 0
+                if notice_status is not None:
+                    game.set_shop_notice(notice_status, selected_key)
+
+            return setup
 
         def almanac_entry(category: str, page: int, key: str) -> Callable[[], None]:
             def setup() -> None:
@@ -146,6 +184,38 @@ def main() -> int:
             game.battle.portal_shift_notice_t = 1.6
             game.scene = "battle"
 
+        shop_scenes = [
+            (
+                "shop_locked",
+                shop_state("gloom_shroom", coins=2000, cleared_levels=[]),
+            ),
+            (
+                "shop_available",
+                shop_state("gatling", coins=500, cleared_levels=["3-4"]),
+            ),
+            (
+                "shop_insufficient",
+                shop_state("gatling", coins=499, cleared_levels=["3-4"]),
+            ),
+            (
+                "shop_owned",
+                shop_state(
+                    "gatling",
+                    coins=500,
+                    cleared_levels=["3-4"],
+                    upgrades={"gatling": True},
+                ),
+            ),
+            (
+                "shop_save_failed",
+                shop_state(
+                    "gatling",
+                    coins=500,
+                    cleared_levels=["3-4"],
+                    notice_status=pvz.ShopPurchaseStatus.SAVE_FAILED,
+                ),
+            ),
+        ]
         scenes = [
             ("start", plain("start")),
             ("plant_select_almanac_entry", plant_select),
@@ -156,7 +226,7 @@ def main() -> int:
             ("survival_select", plain("survival_select")),
             ("options", plain("options_scene")),
             ("help", plain("help_scene")),
-            ("shop", plain("shop")),
+            *shop_scenes,
             ("zen_garden", plain("zen_garden")),
             ("encyclopedia_menu", plain("encyclopedia_menu")),
             ("plant_chapter_day", almanac_entry("plants", 0, "peashooter")),
@@ -179,7 +249,19 @@ def main() -> int:
             ("boss_intro", boss_intro),
             ("portal_notice", portal_notice),
         ]
-        languages = ("zh", "en") if game.font_manager.cjk_available else ("en",)
+        scene_by_name = dict(scenes)
+        if args.scenes:
+            requested: list[str] = []
+            for raw_name in args.scenes:
+                for supplied_name in raw_name.split(","):
+                    name = "shop_available" if supplied_name == "shop" else supplied_name
+                    if name not in scene_by_name:
+                        parser.error(f"unknown scene {supplied_name!r}")
+                    if name not in requested:
+                        requested.append(name)
+            scenes = [(name, scene_by_name[name]) for name in requested]
+
+        languages = ("zh", "en")
         for language in languages:
             game.lang = language
             for name, setup in scenes:
