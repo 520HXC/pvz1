@@ -42,6 +42,10 @@ def make_temp_manager_classes(temp_root: Path):
     return TempSaveManager, TempConfigManager
 
 
+def smoke_languages(font_manager: pvz.UIFontManager) -> tuple[str, ...]:
+    return ("zh", "en") if font_manager.cjk_available else ("en",)
+
+
 def render_scene(game: pvz.Game, name: str, setup: Callable[[], None], output: Path) -> dict[str, object]:
     save_data = game.save_data
     save_snapshot = deepcopy(save_data)
@@ -268,7 +272,7 @@ def main() -> int:
                         requested.append(name)
             scenes = [(name, scene_by_name[name]) for name in requested]
 
-        languages = ("zh", "en")
+        languages = smoke_languages(game.font_manager)
         for language in languages:
             game.lang = language
             for name, setup in scenes:

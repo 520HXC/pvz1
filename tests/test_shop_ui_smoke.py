@@ -36,6 +36,30 @@ def make_render_game(smoke: Any, save_data: dict[str, object]) -> SimpleNamespac
     )
 
 
+def current_smoke_languages() -> tuple[str, ...]:
+    from ui_text import UIFontManager
+
+    return ("zh", "en") if UIFontManager().cjk_available else ("en",)
+
+
+@pytest.mark.parametrize(
+    ("cjk_available", "expected"),
+    (
+        (True, ("zh", "en")),
+        (False, ("en",)),
+    ),
+)
+def test_smoke_languages_follow_cjk_font_capability(
+    cjk_available: bool,
+    expected: tuple[str, ...],
+) -> None:
+    from scripts import ui_scene_smoke as smoke
+
+    font_manager = SimpleNamespace(cjk_available=cjk_available)
+
+    assert smoke.smoke_languages(font_manager) == expected
+
+
 def test_render_scene_restores_shared_save_data_object_after_screenshot(
     tmp_path: Path,
 ) -> None:
@@ -121,6 +145,7 @@ def test_smoke_sequence_does_not_leak_shop_state_between_scenes_or_languages(
 ) -> None:
     from scripts import ui_scene_smoke as smoke
 
+    languages = current_smoke_languages()
     observations: list[dict[str, object]] = []
     real_render_scene = smoke.render_scene
 
@@ -169,7 +194,7 @@ def test_smoke_sequence_does_not_leak_shop_state_between_scenes_or_languages(
     assert smoke.main() == 0
     assert [(item["lang"], item["scene"]) for item in observations] == [
         (language, scene)
-        for language in ("zh", "en")
+        for language in languages
         for scene in ("start", "shop_save_failed", "zen_garden")
     ]
 
@@ -196,6 +221,7 @@ def test_smoke_sequence_does_not_leak_shop_state_between_scenes_or_languages(
 def test_shop_smoke_renders_bilingual_state_matrix_without_touching_real_state(
     tmp_path: Path,
 ) -> None:
+    languages = current_smoke_languages()
     state_before = {
         name: (ROOT / name).read_bytes()
         for name in ("save.json", "config.json")
@@ -231,7 +257,7 @@ def test_shop_smoke_renders_bilingual_state_matrix_without_touching_real_state(
     assert completed.returncode == 0, completed.stderr
     expected_names = {
         f"{language}_{scene}.png"
-        for language in ("zh", "en")
+        for language in languages
         for scene in SHOP_SCENES
     }
     screenshots = sorted(output.glob("*.png"))
@@ -254,15 +280,27 @@ def test_shop_smoke_renders_bilingual_state_matrix_without_touching_real_state(
     report_start = completed.stdout.find('{\n  "output"')
     assert report_start >= 0, completed.stdout
     report = json.loads(completed.stdout[report_start:])
-    assert len(report["screenshots"]) == 10
+    assert len(report["screenshots"]) == len(languages) * len(SHOP_SCENES)
     assert {item["scene"] for item in report["screenshots"]} == set(SHOP_SCENES)
 
-    for language in ("zh", "en"):
+    for language in languages:
         hashes = {
             hashlib.sha256((output / f"{language}_{scene}.png").read_bytes()).hexdigest()
             for scene in SHOP_SCENES
         }
         assert len(hashes) == len(SHOP_SCENES)
+
+    if "zh" in languages:
+        assert len(screenshots) == 10
+        assert all(
+            hashlib.sha256((output / f"zh_{scene}.png").read_bytes()).digest()
+            != hashlib.sha256((output / f"en_{scene}.png").read_bytes()).digest()
+            for scene in SHOP_SCENES
+        )
+    else:
+        assert len(screenshots) == 5
+        assert all(path.name.startswith("en_") for path in screenshots)
+        assert not list(output.glob("zh_*.png"))
 
     assert {
         name: (ROOT / name).read_bytes()
