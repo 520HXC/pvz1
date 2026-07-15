@@ -92,6 +92,18 @@ class SceneFlowTests(unittest.TestCase):
         self.game.start_level(0, selected_cards=["peashooter"], mode_rules=rules)
         self.assertNotEqual(first_seed, self.game.current_mode_base_rules["random_seed"])
 
+    def test_battle_settings_cannot_replace_pause_menu_and_leave_hidden_pause(self):
+        self.game.start_level(0, selected_cards=["peashooter"], mode_rules={})
+        self.game.open_battle_menu()
+
+        self.game.open_battle_settings()
+
+        self.assertTrue(self.game.battle_menu_open)
+        self.assertFalse(self.game.battle_settings_open)
+        self.assertTrue(self.game.battle.paused)
+        self.game.close_battle_menu(resume=True)
+        self.assertFalse(self.game.battle.paused)
+
     def test_survival_rounds_keep_base_seed_and_derive_round_seed(self):
         first_rules = self.game.build_survival_round_rules("survival_day", 1, 5)
         self.game.start_level(0, selected_cards=["sunflower", "peashooter"], mode_rules=first_rules)

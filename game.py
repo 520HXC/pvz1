@@ -9638,7 +9638,7 @@ class BattleState:
             return
         roster_caps = self.special_roster_caps()
         active_counts = self.active_zombie_counts()
-        composition_rng = self.wave_rng if self.is_adventure_mainline() else random
+        composition_rng = self.wave_rng if self.is_adventure_mainline() else self.mode_rng
         combat_rng = self.gameplay_rng()
         if forced_kind and forced_kind in self.zombie_types and active_counts.get(forced_kind, 0) < roster_caps.get(forced_kind, 999):
             kind = forced_kind
@@ -12904,7 +12904,7 @@ class Game:
         return rules
 
     def open_battle_settings(self) -> None:
-        if self.scene != "battle":
+        if self.scene != "battle" or self.battle_menu_open or self.battle.almanac_open:
             return
         self.battle_settings_open = True
         self.battle_settings_prev_paused = bool(self.battle.paused)

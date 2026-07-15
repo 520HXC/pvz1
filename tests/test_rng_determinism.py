@@ -38,6 +38,20 @@ class RuntimeRngDeterminismTests(unittest.TestCase):
         )
         return battle
 
+    def make_mixed_roster_battle(self, seed=410):
+        battle = game.BattleState(
+            game.build_plants(),
+            game.build_zombies(),
+            game.build_battlefields(),
+            {"upgrades": {}},
+        )
+        level = next(item for item in game.build_levels() if item.display_code == "4-10")
+        battle.reset(
+            level,
+            mode_rules={"mode_name": "mini_column_like_you_see_em", "random_seed": seed},
+        )
+        return battle
+
     def test_battle_owns_separate_mode_and_visual_rngs(self):
         battle = self.make_battle()
         self.assertIsInstance(battle.mode_rng, random.Random)
@@ -55,6 +69,22 @@ class RuntimeRngDeterminismTests(unittest.TestCase):
             random.random()
         actual = [disturbed.gameplay_rng().random() for _ in range(12)]
         self.assertEqual(actual, expected)
+
+    def test_global_random_perturbation_does_not_change_special_mode_zombie_roster(self):
+        control = self.make_mixed_roster_battle()
+        disturbed = self.make_mixed_roster_battle()
+
+        random.seed(100)
+        for _ in range(12):
+            control.spawn_zombie()
+        random.seed(200)
+        for _ in range(12):
+            disturbed.spawn_zombie()
+
+        self.assertEqual(
+            [zombie.kind for zombie in disturbed.zombies],
+            [zombie.kind for zombie in control.zombies],
+        )
 
     def test_visual_effects_do_not_advance_mode_rng(self):
         control = self.make_battle(314)
